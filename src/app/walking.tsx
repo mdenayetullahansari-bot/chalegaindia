@@ -638,9 +638,7 @@ export default function WalkingScreen() {
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>
-              📍
-            </Text>
+            <View style={[styles.statIcon, styles.statIconBlue]}><Text style={styles.statIconEmoji}>📍</Text></View>
 
             <Text style={styles.statNumber}>
               {distanceKm}
@@ -652,9 +650,7 @@ export default function WalkingScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>
-              🔥
-            </Text>
+            <View style={[styles.statIcon, styles.statIconOrange]}><Text style={styles.statIconEmoji}>🔥</Text></View>
 
             <Text style={styles.statNumber}>
               {calories}
@@ -666,9 +662,7 @@ export default function WalkingScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>
-              ⏱️
-            </Text>
+            <View style={[styles.statIcon, styles.statIconGreen]}><Text style={styles.statIconEmoji}>⏱️</Text></View>
 
             <Text style={styles.statNumber}>
               {Math.round(steps / 100)}
@@ -1285,7 +1279,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  statEmoji: {
+  statIcon: { width: 46, height: 46, borderRadius: 15, alignItems: `center`, justifyContent: `center`, marginBottom: 2, shadowColor: `#071522`, shadowOpacity: 0.16, shadowRadius: 7, shadowOffset: { width: 0, height: 4 }, elevation: 4 }, statIconBlue: { backgroundColor: `#1D6FF2` }, statIconOrange: { backgroundColor: `#F47B20` }, statIconGreen: { backgroundColor: `#2FA84F` }, statIconEmoji: { fontSize: 24 },  statEmoji: {
     fontSize: 22,
   },
 
