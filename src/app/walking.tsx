@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pedometer } from 'expo-sensors';
 import {
   Alert,
@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import {
   awardOnce,
   getPoints,
+  setPoints,
 } from '../lib/points';
 
 type DayData = {
@@ -24,12 +25,6 @@ type DayData = {
 
 const DAILY_GOAL = 4000;
 const WALK_MISSION_POINTS = 40;
-const STREAK_MISSION_POINTS = 25;
-
-const STREAK_COUNT_KEY = 'chalega_streak_count';
-const STREAK_LAST_COMPLETED_KEY = 'chalega_streak_last_completed_date';
-const BEST_STREAK_KEY = 'chalega_best_streak';
-const STREAK_RECOVERY_KEY = 'chalega_streak_legacy_recovery_v1';
 
 const initialWeek: DayData[] = [
   { day: 'M', steps: 4200, active: true },
@@ -47,17 +42,11 @@ export default function WalkingScreen() {
   const [steps, setSteps] = useState(2450);
   const [goal, setGoal] = useState(DAILY_GOAL);
   const [streak, setStreak] = useState(6);
-  const [points, setPoints] = useState(0);
+  const [points, setPoints] = useState(240);
   const [week, setWeek] = useState(initialWeek);
   const [tracking, setTracking] = useState(false);
   const [walkMissionComplete, setWalkMissionComplete] =
     useState(false);
-
-  // Prevent duplicate rewards if the step counter and button
-  // both try to complete the mission at the same time.
-  const completionInProgress = useRef(false);
-  const streakCompletionInProgress = useRef(false);
-  const walkingDataLoaded = useRef(false);
 
   const [pedometerAvailable, setPedometerAvailable] =
     useState<boolean | null>(null);
@@ -111,10 +100,6 @@ export default function WalkingScreen() {
   }, []);
 
   useEffect(() => {
-    if (!walkingDataLoaded.current) {
-      return;
-    }
-
     if (steps >= goal) {
       completeWalkMissionIfNeeded();
     }
@@ -122,243 +107,54 @@ export default function WalkingScreen() {
 
   const loadWalkingData = async () => {
     try {
-      const todayKey = getTodayKey();
       const saved = await AsyncStorage.getItem(
         'chalega_walking_data'
       );
 
-      let savedData: any = null;
-
       if (saved) {
-        try {
-          savedData = JSON.parse(saved);
-        } catch {
-          savedData = null;
+        const data = JSON.parse(saved);
+
+        if (typeof data.steps === 'number') {
+          setSteps(data.steps);
+        }
+
+        if (typeof data.goal === 'number') {
+          setGoal(data.goal);
+        }
+
+        if (typeof data.streak === 'number') {
+          setStreak(data.streak);
+        }
+
+        if (typeof data.points === 'number') {
+          setPoints(data.points);
+        }
+
+        if (Array.isArray(data.week)) {
+          setWeek(data.week);
         }
       }
-
-      const savedDate =
-        typeof savedData?.date === 'string'
-          ? savedData.date
-          : null;
-
-      const isNewDay =
-        savedDate !== null && savedDate !== todayKey;
-
-      // New day: reset only today's step count and walking mission.
-      // Lifetime points, streak history and best streak stay intact.
-      if (isNewDay) {
-        setSteps(0);
-        setWalkMissionComplete(false);
-        setTracking(false);
-        setSensorBaseSteps(null);
-
-        await AsyncStorage.removeItem(
-          `chalega_walk_mission_${todayKey}`
-        );
-      } else if (savedData) {
-        if (typeof savedData.steps === 'number') {
-          setSteps(savedData.steps);
-        }
-
-        if (typeof savedData.goal === 'number') {
-          setGoal(savedData.goal);
-        }
-
-        if (typeof savedData.streak === 'number') {
-          setStreak(savedData.streak);
-        }
-
-        if (Array.isArray(savedData.week)) {
-          setWeek(savedData.week);
-        }
-      }
-
-      // Chalega Points have one shared source of truth.
-      // Never restore the wallet from walking data.
-      const currentPoints = await getPoints();
-      setPoints(currentPoints);
 
       const missionKey =
-        `chalega_walk_mission_${todayKey}`;
+        `chalega_walk_mission_${getTodayKey()}`;
 
       const missionComplete =
         await AsyncStorage.getItem(missionKey);
 
-      if (!isNewDay && missionComplete === 'true') {
+      if (missionComplete === 'true') {
         setWalkMissionComplete(true);
-
-        // Migration for users who completed today's goal before the
-        // automatic streak engine existed. Do not change their streak
-        // or award another +25; simply mark today as completed.
-        const existingLastDate = await AsyncStorage.getItem(
-          STREAK_LAST_COMPLETED_KEY
-        );
-
-        if (!existingLastDate) {
-          // Legacy users may already have a valid streak count but no
-          // saved completion date. Preserve that streak instead of
-          // allowing the migration to turn it into a 1-day streak.
-          const legacyStreakRaw = await AsyncStorage.getItem(
-            STREAK_COUNT_KEY
-          );
-          const legacyStreak = legacyStreakRaw
-            ? Number(legacyStreakRaw)
-            : typeof savedData?.streak === 'number'
-            ? savedData.streak
-            : 0;
-
-          if (Number.isFinite(legacyStreak) && legacyStreak > 0) {
-            await AsyncStorage.setItem(
-              STREAK_COUNT_KEY,
-              String(Math.max(0, legacyStreak))
-            );
-          }
-
-          await AsyncStorage.setItem(
-            STREAK_LAST_COMPLETED_KEY,
-            todayKey
-          );
-        }
       }
-
-      // One-time recovery for the original test account. Before the
-      // automatic streak migration was installed, this account had a
-      // verified 6-day streak which was accidentally reduced to 1 during
-      // migration. Restore it once, then permanently mark the recovery
-      // complete so normal users are never affected.
-      const streakRecoveryDone = await AsyncStorage.getItem(
-        STREAK_RECOVERY_KEY
-      );
-
-      if (streakRecoveryDone !== 'true') {
-        const recoveryPoints = await getPoints();
-        const currentSavedStreak = await AsyncStorage.getItem(
-          STREAK_COUNT_KEY
-        );
-        const currentSavedStreakNumber = currentSavedStreak
-          ? Number(currentSavedStreak)
-          : 0;
-
-        if (
-          recoveryPoints >= 525 &&
-          Number.isFinite(currentSavedStreakNumber) &&
-          currentSavedStreakNumber === 1
-        ) {
-          await AsyncStorage.multiSet([
-            [STREAK_COUNT_KEY, '6'],
-            [BEST_STREAK_KEY, '6'],
-            [STREAK_LAST_COMPLETED_KEY, todayKey],
-            [STREAK_RECOVERY_KEY, 'true'],
-          ]);
-
-          setStreak(6);
-        } else {
-          await AsyncStorage.setItem(
-            STREAK_RECOVERY_KEY,
-            'true'
-          );
-        }
-      }
-
-      const savedStreak = await AsyncStorage.getItem(
-        STREAK_COUNT_KEY
-      );
-
-      if (savedStreak !== null) {
-        const parsedStreak = Number(savedStreak);
-        if (Number.isFinite(parsedStreak)) {
-          setStreak(Math.max(0, parsedStreak));
-        }
-      } else if (typeof savedData?.streak === 'number') {
-        await AsyncStorage.setItem(
-          STREAK_COUNT_KEY,
-          String(Math.max(0, savedData.streak))
-        );
-      }
-
-      // If a full day has been missed, the current streak is broken.
-      // The best streak remains untouched.
-      const lastCompletedDate = await AsyncStorage.getItem(
-        STREAK_LAST_COMPLETED_KEY
-      );
-
-      if (lastCompletedDate && lastCompletedDate !== todayKey) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayKey =
-          yesterday.getFullYear() +
-          '-' +
-          String(yesterday.getMonth() + 1).padStart(2, '0') +
-          '-' +
-          String(yesterday.getDate()).padStart(2, '0');
-
-        if (lastCompletedDate !== yesterdayKey) {
-          // Only break a streak when we can positively identify that a
-          // full day was missed. Never replace an existing saved streak
-          // with zero during migration/recovery when the completion date
-          // is unavailable or incomplete.
-          const storedCountRaw = await AsyncStorage.getItem(
-            STREAK_COUNT_KEY
-          );
-          const storedCount = storedCountRaw
-            ? Number(storedCountRaw)
-            : 0;
-
-          if (Number.isFinite(storedCount) && storedCount > 0) {
-            // Keep the existing streak value for now. The next completed
-            // walking day will establish the new consecutive date.
-            setStreak(storedCount);
-          } else {
-            setStreak(0);
-            await AsyncStorage.setItem(STREAK_COUNT_KEY, '0');
-          }
-        }
-      }
-
-      // Stamp today's date so tomorrow can be detected even if the
-      // user never opens the app again today.
-      const persistedStreakValue =
-        await AsyncStorage.getItem(STREAK_COUNT_KEY);
-      const persistedStreak = persistedStreakValue
-        ? Number(persistedStreakValue)
-        : typeof savedData?.streak === 'number'
-        ? savedData.streak
-        : streak;
-
-      await AsyncStorage.setItem(
-        'chalega_walking_data',
-        JSON.stringify({
-          steps: isNewDay
-            ? 0
-            : typeof savedData?.steps === 'number'
-            ? savedData.steps
-            : steps,
-          goal:
-            typeof savedData?.goal === 'number'
-              ? savedData.goal
-              : goal,
-          streak: Number.isFinite(persistedStreak)
-            ? persistedStreak
-            : 0,
-          week: Array.isArray(savedData?.week)
-            ? savedData.week
-            : week,
-          date: todayKey,
-        })
-      );
     } catch (error) {
       console.log(
         'Could not load walking data:',
         error
       );
-    } finally {
-      walkingDataLoaded.current = true;
     }
   };
 
   const saveWalkingData = async (
     nextSteps: number,
+    nextPoints: number,
     nextWeek = week,
     nextGoal = goal,
     nextStreak = streak
@@ -370,14 +166,15 @@ export default function WalkingScreen() {
           steps: nextSteps,
           goal: nextGoal,
           streak: nextStreak,
+          points: nextPoints,
           week: nextWeek,
-          date: getTodayKey(),
         })
       );
 
-      // IMPORTANT:
-      // Do not write chalega_points from walking data.
-      // The shared points engine owns the wallet balance.
+      await AsyncStorage.setItem(
+        'chalega_points',
+        String(nextPoints)
+      );
     } catch (error) {
       console.log(
         'Could not save walking data:',
@@ -386,140 +183,23 @@ export default function WalkingScreen() {
     }
   };
 
-  const advanceStreakAutomatically = async (todayKey: string) => {
-    if (streakCompletionInProgress.current) {
-      return;
-    }
-
-    streakCompletionInProgress.current = true;
-
+  const completeWalkMissionIfNeeded = async () => {
     try {
-      const lastCompletedDate = await AsyncStorage.getItem(
-        STREAK_LAST_COMPLETED_KEY
-      );
-
-      const savedCount = await AsyncStorage.getItem(STREAK_COUNT_KEY);
-      const storedStreak = savedCount ? Number(savedCount) : streak;
-      let currentStreak = Number.isFinite(storedStreak) ? Math.max(0, storedStreak) : Math.max(0, streak);
-
-      // If today's goal was already completed, never advance the
-      // streak a second time. This also makes the migration safe
-      // for users who already completed today's mission.
-      if (lastCompletedDate === todayKey) {
-        await AsyncStorage.setItem(
-          STREAK_COUNT_KEY,
-          String(currentStreak)
-        );
+      if (steps < goal) {
         return;
       }
 
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey =
-        yesterday.getFullYear() +
-        '-' +
-        String(yesterday.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(yesterday.getDate()).padStart(2, '0');
-
-      // Consecutive day = continue the streak. Any missed day
-      // starts a fresh streak at 1.
-      currentStreak =
-        lastCompletedDate === yesterdayKey
-          ? Math.max(currentStreak, 0) + 1
-          : 1;
-
-      const savedBest = await AsyncStorage.getItem(BEST_STREAK_KEY);
-      const previousBest = savedBest ? Number(savedBest) : 0;
-      const bestStreak = Math.max(
-        Number.isFinite(previousBest) ? previousBest : 0,
-        currentStreak
-      );
-
-      await AsyncStorage.multiSet([
-        [STREAK_COUNT_KEY, String(currentStreak)],
-        [STREAK_LAST_COMPLETED_KEY, todayKey],
-        [BEST_STREAK_KEY, String(bestStreak)],
-      ]);
-
-      setStreak(currentStreak);
-
-      await saveWalkingData(
-        steps,
-        week,
-        goal,
-        currentStreak
-      );
-
-      // The points engine makes this idempotent. If the user already
-      // claimed today's streak reward manually, no second +25 is added.
-      const streakReward = await awardOnce(
-        'streak_mission',
-        `streak_mission_${todayKey}`,
-        STREAK_MISSION_POINTS,
-        'Keep your streak alive',
-        `streak_mission_${todayKey}`
-      );
-
-      setPoints(streakReward.balance);
-
-      // Keep Daily Missions in sync so the streak mission becomes
-      // completed automatically when the walking goal is reached.
-      const dailyMissionKey =
-        `chalega_daily_missions_${todayKey}`;
-      const savedMissions = await AsyncStorage.getItem(
-        dailyMissionKey
-      );
-
-      if (savedMissions) {
-        try {
-          const missions = JSON.parse(savedMissions);
-          if (Array.isArray(missions)) {
-            const updatedMissions = missions.map((mission: any) =>
-              mission.id === 'streak'
-                ? { ...mission, completed: true }
-                : mission
-            );
-
-            await AsyncStorage.setItem(
-              dailyMissionKey,
-              JSON.stringify(updatedMissions)
-            );
-          }
-        } catch {
-          // Daily Missions will recover from its own defaults.
-        }
-      }
-
-      if (streakReward.awarded) {
-        Alert.alert(
-          '🔥 Streak Extended!',
-          `You're now on a ${currentStreak}-day Chalega streak.\n\n+${STREAK_MISSION_POINTS} Chalega Points\n\nKeep your healthy routine going tomorrow!`
-        );
-      }
-    } catch (error) {
-      console.log('Could not update automatic streak:', error);
-    } finally {
-      streakCompletionInProgress.current = false;
-    }
-  };
-
-  const completeWalkMissionIfNeeded = async () => {
-    if (steps < goal) {
-      return;
-    }
-
-    if (walkMissionComplete || completionInProgress.current) {
-      return;
-    }
-
-    completionInProgress.current = true;
-
-    try {
       const todayKey = getTodayKey();
 
-      // awardOnce checks the transaction history first, so the
-      // same walking mission can never pay +40 twice for one day.
+      // Sync the shared engine with the existing local balance
+      // while we transition the app to the new points architecture.
+      const enginePoints = await getPoints();
+
+      if (enginePoints !== points) {
+        await setPoints(points);
+      }
+
+      // awardOnce prevents the same walking mission from paying twice.
       const result = await awardOnce(
         'walking_mission',
         `walking_mission_${todayKey}`,
@@ -527,6 +207,11 @@ export default function WalkingScreen() {
         'Walking Mission',
         `walking_mission_${todayKey}`
       );
+
+      if (!result.awarded) {
+        setWalkMissionComplete(true);
+        return;
+      }
 
       const newPoints = result.balance;
 
@@ -538,118 +223,72 @@ export default function WalkingScreen() {
         'true'
       );
 
-      // Also mark the Walk mission complete on Daily Missions.
-      const dailyMissionKey =
-        `chalega_daily_missions_${todayKey}`;
-
-      const savedMissions =
-        await AsyncStorage.getItem(dailyMissionKey);
-
-      const defaultMissions = [
-        {
-          id: 'walk',
-          icon: '🚶',
-          title: 'Walk 4,000 steps',
-          description:
-            'Move your body and complete your daily walking goal.',
-          points: 40,
-          action: 'OPEN WALK',
-          completed: false,
-        },
-        {
-          id: 'water',
-          icon: '💧',
-          title: 'Drink 6 glasses of water',
-          description:
-            'Stay hydrated throughout your day.',
-          points: 18,
-          action: 'MARK DONE',
-          completed: false,
-        },
-        {
-          id: 'health',
-          icon: '❤️',
-          title: 'Complete your health check-in',
-          description:
-            'Take a moment to check in with your health today.',
-          points: 10,
-          action: 'OPEN HEALTH',
-          completed: false,
-        },
-        {
-          id: 'streak',
-          icon: '🔥',
-          title: 'Keep your streak alive',
-          description:
-            "Complete today's healthy activity and keep going.",
-          points: 25,
-          action: 'MARK DONE',
-          completed: false,
-        },
-      ];
-
-      let missions = defaultMissions;
-
-      if (savedMissions) {
-        try {
-          const parsed = JSON.parse(savedMissions);
-          if (Array.isArray(parsed)) {
-            missions = parsed;
-          }
-        } catch {
-          missions = defaultMissions;
-        }
-      }
-
-      const updatedMissions = missions.map(
-        (mission: any) =>
-          mission.id === 'walk'
-            ? { ...mission, completed: true }
-            : mission
-      );
-
-      await AsyncStorage.setItem(
-        dailyMissionKey,
-        JSON.stringify(updatedMissions)
-      );
-
       await saveWalkingData(
         steps,
+        newPoints,
         week,
         goal,
         streak
       );
 
-      // Reaching the daily walking goal automatically advances the
-      // streak and handles today's +25 streak reward.
-      await advanceStreakAutomatically(todayKey);
-
-      if (result.awarded) {
-        Alert.alert(
-          '🎉 Walking Mission Complete!',
-          `You reached ${goal.toLocaleString(
-            'en-IN'
-          )} steps today.\n\n+${WALK_MISSION_POINTS} Chalega Points\n\nYour points have been added to your account.`,
-          [
-            {
-              text: 'VIEW MISSIONS',
-              onPress: () => router.push('/missions'),
-            },
-            {
-              text: 'KEEP WALKING',
-              style: 'cancel',
-            },
-          ]
-        );
-      }
+      Alert.alert(
+        '🎉 Walking Mission Complete!',
+        `You reached ${goal.toLocaleString(
+          'en-IN'
+        )} steps today.\n\n+${WALK_MISSION_POINTS} Chalega Points\n\nYour points have been added to your account.`,
+        [
+          {
+            text: 'VIEW MISSIONS',
+            onPress: () => router.push('/missions'),
+          },
+          {
+            text: 'KEEP WALKING',
+            style: 'cancel',
+          },
+        ]
+      );
     } catch (error) {
       console.log(
         'Could not complete walking mission:',
         error
       );
-    } finally {
-      completionInProgress.current = false;
     }
+  };
+
+  const addSteps = (amount: number) => {
+    const nextSteps = Math.min(
+      steps + amount,
+      20000
+    );
+
+    const pointsForSteps =
+      Math.floor(
+        nextSteps / 100
+      ) -
+      Math.floor(
+        steps / 100
+      );
+
+    const nextPoints =
+      points + Math.max(pointsForSteps, 0);
+
+    const nextWeek = [...week];
+
+    nextWeek[3] = {
+      ...nextWeek[3],
+      steps: nextSteps,
+      active: true,
+    };
+
+    setSteps(nextSteps);
+    setPoints(nextPoints);
+    setWeek(nextWeek);
+
+    saveWalkingData(
+      nextSteps,
+      nextPoints,
+      nextWeek
+    );
   };
 
   const startTracking = async () => {
@@ -684,26 +323,16 @@ export default function WalkingScreen() {
 
       setPedometerPermission(true);
 
-      const now = new Date();
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-      );
+      // Android in Expo SDK 54 does not support getStepCountAsync().
+      // Start the live sensor and preserve the steps already shown on screen.
+      const baseSteps = steps;
 
-      const history = await Pedometer.getStepCountAsync(
-        startOfDay,
-        now
-      );
-
-      const realSteps = history?.steps ?? 0;
-
-      setSensorBaseSteps(realSteps);
-      setSteps(realSteps);
+      setSensorBaseSteps(baseSteps);
       setTracking(true);
 
       await saveWalkingData(
-        realSteps,
+        baseSteps,
+        points,
         week,
         goal,
         streak
@@ -711,9 +340,9 @@ export default function WalkingScreen() {
 
       Alert.alert(
         'Walking Tracking Started 🚶',
-        `Chalega India found ${realSteps.toLocaleString(
+        `Live phone step tracking is now on. You currently have ${baseSteps.toLocaleString(
           'en-IN'
-        )} steps for today. Keep walking!`
+        )} steps. Keep walking!`
       );
     } catch (error) {
       console.log('Pedometer error:', error);
@@ -798,11 +427,18 @@ export default function WalkingScreen() {
             return;
           }
 
-          setSteps(currentSteps =>
-            Math.max(
-              currentSteps,
-              result.steps + (sensorBaseSteps ?? 0)
-            )
+          const nextSteps = Math.max(
+            steps,
+            result.steps + (sensorBaseSteps ?? 0)
+          );
+
+          setSteps(nextSteps);
+          saveWalkingData(
+            nextSteps,
+            points,
+            week,
+            goal,
+            streak
           );
         });
       } catch (error) {
@@ -1583,11 +1219,50 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  testCard: {
+    backgroundColor: '#FFFBEA',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#F0E5B8',
+  },
 
+  testLabel: {
+    color: '#806800',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
 
+  testText: {
+    color: '#777777',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 5,
+  },
 
+  testButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
 
+  testButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingVertical: 9,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8DDAE',
+  },
 
+  testButtonText: {
+    color: '#806800',
+    fontSize: 10,
+    fontWeight: '900',
+  },
 
   sectionTitle: {
     color: '#111111',

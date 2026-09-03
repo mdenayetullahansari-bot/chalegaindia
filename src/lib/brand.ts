@@ -1,0 +1,17 @@
+export const BRAND = {
+  navy: '#0B1F33',
+  navy2: '#12395A',
+  blue: '#1D6FF2',
+  orange: '#F47B20',
+  orangeLight: '#FFF1E6',
+  green: '#2FA84F',
+  greenLight: '#EAF7EE',
+  gold: '#F2B84B',
+  goldLight: '#FFF7E3',
+  cream: '#F7F5F0',
+  white: '#FFFFFF',
+  ink: '#10202F',
+  muted: '#6B7785',
+  line: '#E4E8ED',
+  shadow: '#071522',
+} as const;

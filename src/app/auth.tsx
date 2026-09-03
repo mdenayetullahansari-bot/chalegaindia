@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import {
   ActivityIndicator,
+  Image,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -423,7 +424,7 @@ export default function AuthScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>C</Text>
+              <Image source={require("../../assets/chalega-india-logo.png")} style={styles.logoImage} resizeMode="contain" />
             </View>
 
             <Text style={styles.brand}>
@@ -523,7 +524,7 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>C</Text>
+            <Image source={require("../../assets/chalega-india-logo.png")} style={styles.logoImage} resizeMode="contain" />
           </View>
 
           <Text style={styles.brand}>
@@ -706,6 +707,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingTop: 45,
     paddingBottom: 40,
+  },
+
+  logoImage: {
+    width: 280,
+    height: 180,
+    marginBottom: 8,
   },
 
   logoCircle: {

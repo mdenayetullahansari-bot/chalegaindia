@@ -10,6 +10,7 @@ import {
 } from 'expo-router';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   ActivityIndicator,
@@ -25,6 +26,7 @@ import {
 } from '@/lib/supabase';
 
 export default function RootLayout() {
+  const insets = useSafeAreaInsets();
   const pathname =
     usePathname();
 
@@ -204,9 +206,9 @@ export default function RootLayout() {
           '#888888',
 
         tabBarStyle: {
-          height: 78,
+          height: 56 + insets.bottom,
           paddingTop: 8,
-          paddingBottom: 12,
+          paddingBottom: Math.max(8, insets.bottom),
         },
 
         tabBarLabelStyle: {

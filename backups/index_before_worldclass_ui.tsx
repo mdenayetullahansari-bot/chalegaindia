@@ -11,7 +11,6 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { getPoints } from '@/lib/points';
-import { BRAND } from '@/lib/brand';
 
 const WALKING_DATA_KEY = 'chalega_walking_data';
 const HEALTH_DATA_KEY = 'chalega_health_home';
@@ -405,7 +404,7 @@ export default function HomeScreen() {
         <View style={styles.quickGrid}>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickWalking]}
+            style={styles.quickCard}
             onPress={openWalking}
           >
             <View style={styles.quickIcon}>
@@ -424,7 +423,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickMissions]}
+            style={styles.quickCard}
             onPress={openMissions}
           >
             <View style={styles.quickIcon}>
@@ -445,7 +444,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickHealth]}
+            style={styles.quickCard}
             onPress={openHealth}
           >
             <View style={styles.quickIcon}>
@@ -464,7 +463,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickRewards]}
+            style={styles.quickCard}
             onPress={openRewards}
           >
             <View style={styles.quickIcon}>
@@ -734,7 +733,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F5F0',
+    backgroundColor: '#F5F7FB',
   },
 
   content: {
@@ -761,21 +760,21 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 2.5,
   },
 
   greeting: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 28,
     fontWeight: '900',
     marginTop: 6,
   },
 
   subtitle: {
-    color: BRAND.muted,
+    color: '#777777',
     fontSize: 14,
     fontWeight: '600',
     marginTop: 3,
@@ -784,12 +783,12 @@ const styles = StyleSheet.create({
   pointsButton: {
     width: 70,
     minHeight: 76,
-    backgroundColor: BRAND.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 7,
-    shadowColor: BRAND.shadow,
+    shadowColor: '#000000',
     shadowOpacity: 0.05,
     shadowRadius: 8,
     shadowOffset: {
@@ -804,27 +803,27 @@ const styles = StyleSheet.create({
   },
 
   pointsNumber: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 16,
     fontWeight: '900',
     marginTop: 2,
   },
 
   pointsLabel: {
-    color: BRAND.muted,
+    color: '#888888',
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1,
   },
 
   scoreCard: {
-    backgroundColor: BRAND.blue,
+    backgroundColor: '#1976F3',
     borderRadius: 25,
     padding: 23,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: BRAND.blue,
+    shadowColor: '#1976F3',
     shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: {
@@ -867,11 +866,27 @@ const styles = StyleSheet.create({
     maxWidth: 190,
   },
 
-  scoreCircle: { width: 108, height: 108, borderRadius: 54, backgroundColor: BRAND.white, borderWidth: 7, borderColor: BRAND.green, alignItems: 'center', justifyContent: 'center', shadowColor: BRAND.shadow, shadowOpacity: 0.10, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  scoreCircle: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  scoreCircleText: { color: BRAND.blue, fontSize: 28, fontWeight: '900' },
+  scoreCircleText: {
+    color: '#1976F3',
+    fontSize: 25,
+    fontWeight: '900',
+  },
 
-  scoreCircleLabel: { color: BRAND.muted, fontSize: 8, fontWeight: '900', letterSpacing: 1.2, marginTop: 1 },
+  scoreCircleLabel: {
+    color: '#777777',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
 
   sectionHeader: {
     flexDirection: 'row',
@@ -882,23 +897,23 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 18,
     fontWeight: '900',
   },
 
   viewAll: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 9,
     fontWeight: '900',
     marginBottom: 2,
   },
 
   missionCard: {
-    backgroundColor: BRAND.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 23,
     padding: 20,
-    shadowColor: BRAND.shadow,
+    shadowColor: '#000000',
     shadowOpacity: 0.05,
     shadowRadius: 9,
     shadowOffset: {
@@ -909,7 +924,7 @@ const styles = StyleSheet.create({
   },
 
   missionCardComplete: {
-    backgroundColor: BRAND.greenLight,
+    backgroundColor: '#F0FBF4',
   },
 
   missionTop: {
@@ -921,13 +936,13 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 17,
-    backgroundColor: BRAND.orangeLight,
+    backgroundColor: '#EAF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   missionIconComplete: {
-    backgroundColor: BRAND.greenLight,
+    backgroundColor: '#DFF5E6',
   },
 
   missionEmoji: {
@@ -940,27 +955,27 @@ const styles = StyleSheet.create({
   },
 
   missionTitle: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 16,
     fontWeight: '900',
   },
 
   missionSubtitle: {
-    color: BRAND.muted,
+    color: '#777777',
     fontSize: 11,
     marginTop: 4,
     lineHeight: 16,
   },
 
   missionArrow: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 30,
     fontWeight: '300',
   },
 
   progressBackground: {
     height: 10,
-    backgroundColor: '#E7EBEF',
+    backgroundColor: '#E7EDF7',
     borderRadius: 5,
     marginTop: 20,
     overflow: 'hidden',
@@ -968,12 +983,12 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: '100%',
-    backgroundColor: BRAND.blue,
+    backgroundColor: '#1976F3',
     borderRadius: 5,
   },
 
   progressComplete: {
-    backgroundColor: BRAND.green,
+    backgroundColor: '#2BA84A',
   },
 
   progressRow: {
@@ -983,7 +998,7 @@ const styles = StyleSheet.create({
   },
 
   progressText: {
-    color: BRAND.muted,
+    color: '#777777',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -996,13 +1011,13 @@ const styles = StyleSheet.create({
   },
 
   remainingText: {
-    color: BRAND.muted,
+    color: '#555555',
     fontSize: 10,
     fontWeight: '700',
   },
 
   openText: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 10,
     fontWeight: '900',
   },
@@ -1020,7 +1035,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: BRAND.green,
+    backgroundColor: '#28A745',
   },
 
   connectedText: {
@@ -1029,20 +1044,20 @@ const styles = StyleSheet.create({
   },
 
   connectedTitle: {
-    color: BRAND.green,
+    color: '#217A3C',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.7,
   },
 
   connectedSubtitle: {
-    color: BRAND.muted,
+    color: '#5C7A65',
     fontSize: 9,
     marginTop: 2,
   },
 
   connectedArrow: {
-    color: BRAND.green,
+    color: '#217A3C',
     fontSize: 25,
   },
 
@@ -1053,13 +1068,13 @@ const styles = StyleSheet.create({
   },
 
   quickCard: {
-    width: '48.2%',
-    backgroundColor: BRAND.white,
-    borderRadius: 22,
-    padding: 17,
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
     marginBottom: 12,
-    minHeight: 132,
-    shadowColor: BRAND.shadow,
+    minHeight: 125,
+    shadowColor: '#000000',
     shadowOpacity: 0.04,
     shadowRadius: 8,
     shadowOffset: {
@@ -1073,38 +1088,30 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: '#F0F4FA',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  quickWalking: { backgroundColor: BRAND.blue },
-
-  quickMissions: { backgroundColor: BRAND.orange },
-
-  quickHealth: { backgroundColor: BRAND.green },
-
-  quickRewards: { backgroundColor: BRAND.gold },
 
   quickEmoji: {
     fontSize: 22,
   },
 
   quickTitle: {
-    color: BRAND.white,
+    color: '#111111',
     fontSize: 14,
     fontWeight: '900',
     marginTop: 10,
   },
 
   quickText: {
-    color: 'rgba(255,255,255,0.82)',
+    color: '#888888',
     fontSize: 10,
     marginTop: 3,
   },
 
   hydrationCard: {
-    backgroundColor: BRAND.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 20,
     marginTop: 8,
@@ -1117,21 +1124,21 @@ const styles = StyleSheet.create({
   },
 
   hydrationEyebrow: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.5,
   },
 
   hydrationTitle: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 17,
     fontWeight: '900',
     marginTop: 4,
   },
 
   hydrationCount: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 23,
     fontWeight: '900',
   },
@@ -1146,13 +1153,13 @@ const styles = StyleSheet.create({
     width: 30,
     height: 38,
     borderRadius: 9,
-    backgroundColor: '#EEF6F1',
+    backgroundColor: '#F1F4F8',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   waterGlassFilled: {
-    backgroundColor: '#DDF3E5',
+    backgroundColor: '#E4F0FF',
   },
 
   waterGlassText: {
@@ -1178,7 +1185,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 18,
-    backgroundColor: BRAND.white,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1200,14 +1207,14 @@ const styles = StyleSheet.create({
   },
 
   streakNumber: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 21,
     fontWeight: '900',
     marginTop: 2,
   },
 
   streakMessage: {
-    color: BRAND.muted,
+    color: '#777777',
     fontSize: 11,
     marginTop: 2,
   },
@@ -1218,7 +1225,7 @@ const styles = StyleSheet.create({
   },
 
   communityCard: {
-    backgroundColor: '#10202F',
+    backgroundColor: '#111111',
     borderRadius: 23,
     padding: 20,
     flexDirection: 'row',
@@ -1266,7 +1273,7 @@ const styles = StyleSheet.create({
   communityProgressFill: {
     width: '76%',
     height: '100%',
-    backgroundColor: BRAND.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 4,
   },
 
@@ -1290,10 +1297,10 @@ const styles = StyleSheet.create({
   },
 
   adInner: {
-    backgroundColor: BRAND.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E4E8ED',
+    borderColor: '#E3E7ED',
     borderStyle: 'dashed',
     padding: 15,
     flexDirection: 'row',
@@ -1304,7 +1311,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 13,
-    backgroundColor: BRAND.cream,
+    backgroundColor: '#F0F4FA',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1326,14 +1333,14 @@ const styles = StyleSheet.create({
   },
 
   adText: {
-    color: BRAND.muted,
+    color: '#888888',
     fontSize: 9,
     lineHeight: 13,
     marginTop: 3,
   },
 
   adButton: {
-    backgroundColor: '#10202F',
+    backgroundColor: '#111111',
     borderRadius: 9,
     paddingHorizontal: 9,
     paddingVertical: 8,
@@ -1346,7 +1353,7 @@ const styles = StyleSheet.create({
   },
 
   shopPromo: {
-    backgroundColor: BRAND.blue,
+    backgroundColor: '#1976F3',
     borderRadius: 23,
     padding: 21,
     marginTop: 20,
@@ -1386,8 +1393,8 @@ const styles = StyleSheet.create({
   },
 
   ordersButton: {
-    backgroundColor: BRAND.white,
-    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 17,
     marginTop: 13,
     flexDirection: 'row',
@@ -1404,19 +1411,19 @@ const styles = StyleSheet.create({
   },
 
   ordersTitle: {
-    color: BRAND.ink,
+    color: '#111111',
     fontSize: 15,
     fontWeight: '900',
   },
 
   ordersSubtitle: {
-    color: BRAND.muted,
+    color: '#888888',
     fontSize: 10,
     marginTop: 3,
   },
 
   ordersArrow: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 28,
   },
 
@@ -1427,14 +1434,14 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1D6FF2',
+    color: '#1976F3',
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   footerTagline: {
-    color: BRAND.muted,
+    color: '#555555',
     fontSize: 12,
     fontWeight: '700',
     marginTop: 5,
