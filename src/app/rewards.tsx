@@ -398,6 +398,33 @@ export default function RewardsScreen() {
           EARN MORE
         </Text>
 
+
+        <TouchableOpacity
+          style={styles.watchEarnCard}
+          onPress={() =>
+            Alert.alert(
+              'Watch & Earn',
+              'Rewarded videos will be available soon. Watch voluntarily and unlock in-app rewards.'
+            )
+          }
+        >
+          <View style={styles.watchEarnIcon}>
+            <Text style={styles.watchEarnIconText}>▶</Text>
+          </View>
+
+          <View style={styles.watchEarnBody}>
+            <Text style={styles.watchEarnEyebrow}>CHALEGA EARN</Text>
+            <Text style={styles.watchEarnTitle}>WATCH & EARN</Text>
+            <Text style={styles.watchEarnDescription}>
+              Watch a sponsored video and unlock an in-app reward.
+            </Text>
+          </View>
+
+          <View style={styles.watchEarnBadge}>
+            <Text style={styles.watchEarnBadgeText}>SOON</Text>
+          </View>
+        </TouchableOpacity>
+
         <View style={styles.earnGrid}>
           <TouchableOpacity
             style={styles.earnCard}
@@ -966,6 +993,76 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 0.8,
+  },
+
+  watchEarnCard: {
+    width: '100%',
+    minHeight: 112,
+    backgroundColor: '#0B1F33',
+    borderRadius: 22,
+    padding: 17,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#071522',
+    shadowOpacity: 0.16,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+
+  watchEarnIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: '#F47B20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  watchEarnIconText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
+  watchEarnBody: {
+    flex: 1,
+    paddingHorizontal: 13,
+  },
+
+  watchEarnEyebrow: {
+    color: '#7DB3FF',
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1.3,
+  },
+
+  watchEarnTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  watchEarnDescription: {
+    color: '#C8D4E2',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 3,
+  },
+
+  watchEarnBadge: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 9,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+
+  watchEarnBadgeText: {
+    color: '#0B1F33',
+    fontSize: 7,
+    fontWeight: '900',
   },
 
   earnGrid: {
