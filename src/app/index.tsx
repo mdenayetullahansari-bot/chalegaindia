@@ -408,11 +408,11 @@ export default function HomeScreen() {
             style={[styles.quickCard, styles.quickWalking]}
             onPress={openWalking}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                🚶
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/walking.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Walking
@@ -427,11 +427,11 @@ export default function HomeScreen() {
             style={[styles.quickCard, styles.quickMissions]}
             onPress={openMissions}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                🎯
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/missions.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Missions
@@ -448,11 +448,11 @@ export default function HomeScreen() {
             style={[styles.quickCard, styles.quickHealth]}
             onPress={openHealth}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                ❤️
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/health.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Health
@@ -467,11 +467,11 @@ export default function HomeScreen() {
             style={[styles.quickCard, styles.quickRewards]}
             onPress={openRewards}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                🏆
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/rewards.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Rewards
@@ -1070,12 +1070,19 @@ const styles = StyleSheet.create({
   },
 
   quickIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.24)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.34)',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
 
   quickWalking: { backgroundColor: BRAND.blue },
@@ -1086,8 +1093,10 @@ const styles = StyleSheet.create({
 
   quickRewards: { backgroundColor: BRAND.gold },
 
-  quickEmoji: {
-    fontSize: 22,
+  quickImage: {
+    width: 64,
+    height: 64,
+    marginBottom: -2,
   },
 
   quickTitle: {
