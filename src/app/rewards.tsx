@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -18,8 +19,22 @@ import {
   type PointsTransaction,
 } from '../lib/points';
 import { formatLocalDateTime } from '../lib/date';
+import { createRewardedAd } from '../lib/rewardedAds';
 
 const CLAIMED_REWARDS_KEY = 'chalega_claimed_rewards';
+
+const CHALEGA_ENERGY_KEY = 'chalega_energy';
+const CHALEGA_ENERGY_DATE_KEY = 'chalega_energy_date';
+const MAX_DAILY_ENERGY = 3;
+
+const getLocalDateKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
 
 type Reward = {
   id: string;
@@ -33,7 +48,7 @@ type Reward = {
 const REWARDS: Reward[] = [
   {
     id: 'badge-500',
-    emoji: '🥉',
+    emoji: '🏃',
     category: 'MILESTONE',
     title: 'First 500',
     description: 'Your first major Chalega milestone.',
@@ -41,7 +56,7 @@ const REWARDS: Reward[] = [
   },
   {
     id: 'badge-1000',
-    emoji: '🥈',
+    emoji: '🏆',
     category: 'MILESTONE',
     title: 'Healthy Walker',
     description: 'Reach 1,000 Chalega Points.',
@@ -73,6 +88,15 @@ export default function RewardsScreen() {
   const [history, setHistory] = useState<PointsTransaction[]>([]);
   const [claimed, setClaimed] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [energy, setEnergy] = useState(0);
+  const [adLoaded, setAdLoaded] = useState(false);
+  const [watchingAd, setWatchingAd] = useState(false);
+
+  const rewardedAd = useMemo(
+    () => createRewardedAd(),
+    []
+  );
 
   const loadWallet = useCallback(async () => {
     try {
@@ -116,22 +140,257 @@ export default function RewardsScreen() {
     loadWallet();
   }, [loadWallet]);
 
-  /*
-   * Refresh whenever the user returns to Rewards.
-   * This means Walking or Missions can change the
-   * balance and Rewards immediately reflects it.
-   */
   useFocusEffect(
     useCallback(() => {
       loadWallet();
     }, [loadWallet])
   );
 
+  /*
+   * Load Chalega Energy.
+   *
+   * Energy is intentionally separate from Chalega Points.
+   * Watching rewarded ads never adds Chalega Points.
+   */
+  useEffect(() => {
+    const loadEnergy = async () => {
+      try {
+        const today = getLocalDateKey();
+
+        const [
+          savedEnergy,
+          savedDate,
+        ] = await Promise.all([
+          AsyncStorage.getItem(CHALEGA_ENERGY_KEY),
+          AsyncStorage.getItem(CHALEGA_ENERGY_DATE_KEY),
+        ]);
+
+        if (savedDate !== today) {
+          await AsyncStorage.setItem(
+            CHALEGA_ENERGY_KEY,
+            '0'
+          );
+
+          await AsyncStorage.setItem(
+            CHALEGA_ENERGY_DATE_KEY,
+            today
+          );
+
+          setEnergy(0);
+          return;
+        }
+
+        const parsedEnergy = Number(savedEnergy ?? 0);
+
+        setEnergy(
+          Number.isFinite(parsedEnergy)
+            ? Math.min(
+                Math.max(parsedEnergy, 0),
+                MAX_DAILY_ENERGY
+              )
+            : 0
+        );
+      } catch (error) {
+        console.log(
+          'Could not load Chalega Energy:',
+          error
+        );
+
+        setEnergy(0);
+      }
+    };
+
+    loadEnergy();
+  }, []);
+
+  /*
+   * Prepare rewarded video on native platforms.
+   *
+   * The web helper returns null, so this effect does
+   * nothing in the web preview.
+   */
+  useEffect(() => {
+    if (!rewardedAd) {
+      return;
+    }
+
+    const unsubscribeLoaded = rewardedAd.addListener(
+      'loaded',
+      () => {
+        setAdLoaded(true);
+      }
+    );
+
+    const unsubscribeEarned = rewardedAd.addListener(
+      'earned',
+      async () => {
+        try {
+          const today = getLocalDateKey();
+
+          const [
+            savedEnergy,
+            savedDate,
+          ] = await Promise.all([
+            AsyncStorage.getItem(CHALEGA_ENERGY_KEY),
+            AsyncStorage.getItem(
+              CHALEGA_ENERGY_DATE_KEY
+            ),
+          ]);
+
+          let currentEnergy =
+            savedDate === today
+              ? Number(savedEnergy ?? 0)
+              : 0;
+
+          if (!Number.isFinite(currentEnergy)) {
+            currentEnergy = 0;
+          }
+
+          if (
+            currentEnergy >= MAX_DAILY_ENERGY
+          ) {
+            setEnergy(MAX_DAILY_ENERGY);
+            return;
+          }
+
+          const nextEnergy = Math.min(
+            currentEnergy + 1,
+            MAX_DAILY_ENERGY
+          );
+
+          await AsyncStorage.setItem(
+            CHALEGA_ENERGY_KEY,
+            String(nextEnergy)
+          );
+
+          await AsyncStorage.setItem(
+            CHALEGA_ENERGY_DATE_KEY,
+            today
+          );
+
+          setEnergy(nextEnergy);
+          setWatchingAd(false);
+
+          Alert.alert(
+            '⚡ Chalega Energy Earned!',
+            `You unlocked 1 Chalega Energy.\n\nToday: ${nextEnergy} / ${MAX_DAILY_ENERGY}`,
+            [
+              {
+                text: 'KEEP GOING',
+              },
+            ]
+          );
+        } catch (error) {
+          console.log(
+            'Could not save Chalega Energy:',
+            error
+          );
+
+          setWatchingAd(false);
+        }
+      }
+    );
+
+    const unsubscribeClosed = rewardedAd.addListener(
+      'closed',
+      () => {
+        setWatchingAd(false);
+        setAdLoaded(false);
+
+        rewardedAd.load();
+      }
+    );
+
+    const unsubscribeError = rewardedAd.addListener(
+      'error',
+      error => {
+        console.log(
+          'Rewarded ad error:',
+          error
+        );
+
+        setWatchingAd(false);
+        setAdLoaded(false);
+
+        Alert.alert(
+          'Ad unavailable',
+          'The rewarded video could not be loaded right now. Please try again in a moment.'
+        );
+      }
+    );
+
+    rewardedAd.load();
+
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
+      unsubscribeClosed();
+      unsubscribeError();
+    };
+  }, [rewardedAd]);
+
+  const watchAndEarn = async () => {
+    if (watchingAd) {
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      window.alert('Mobile App Reward - Rewarded videos are available in the Android and iPhone app. This web preview is for UI testing.');
+      return;
+    }
+
+    if (energy >= MAX_DAILY_ENERGY) {
+      Alert.alert(
+        'Daily Limit Reached',
+        'You have already earned the maximum 3 Chalega Energy rewards today. Come back tomorrow.'
+      );
+
+      return;
+    }
+
+    if (!adLoaded) {
+      Alert.alert(
+        'Video Loading',
+        'The rewarded video is still loading. Please try again in a moment.'
+      );
+
+      return;
+    }
+
+    if (!rewardedAd) {
+      return;
+    }
+
+    try {
+      setWatchingAd(true);
+
+      await rewardedAd.show();
+    } catch (error) {
+      console.log(
+        'Could not show rewarded ad:',
+        error
+      );
+
+      setWatchingAd(false);
+      setAdLoaded(false);
+
+      if (rewardedAd) {
+        rewardedAd.load();
+      }
+
+      Alert.alert(
+        'Ad unavailable',
+        'The rewarded video could not be shown right now. Please try again.'
+      );
+    }
+  };
+
   const level = useMemo(() => {
     if (points >= 5000) return 5;
     if (points >= 2500) return 4;
     if (points >= 1000) return 3;
     if (points >= 500) return 2;
+
     return 1;
   }, [points]);
 
@@ -182,16 +441,18 @@ export default function RewardsScreen() {
         'Already Claimed',
         'This reward has already been claimed.'
       );
+
       return;
     }
 
     if (points < reward.cost) {
       Alert.alert(
-        'Keep Walking 🚶',
+        'Keep Walking 🏃',
         `You need ${(
           reward.cost - points
         ).toLocaleString('en-IN')} more Chalega Points.`
       );
+
       return;
     }
 
@@ -224,6 +485,7 @@ export default function RewardsScreen() {
                 );
 
                 await loadWallet();
+
                 return;
               }
 
@@ -277,7 +539,7 @@ export default function RewardsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
           <Text style={styles.loadingEmoji}>
-            🏆
+            🚶
           </Text>
 
           <Text style={styles.loadingText}>
@@ -324,7 +586,7 @@ export default function RewardsScreen() {
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <Text style={styles.heroEmoji}>
-              🏆
+              🚶
             </Text>
           </View>
 
@@ -398,30 +660,54 @@ export default function RewardsScreen() {
           EARN MORE
         </Text>
 
-
         <TouchableOpacity
-          style={styles.watchEarnCard}
-          onPress={() =>
-            Alert.alert(
-              'Watch & Earn',
-              'Rewarded videos will be available soon. Watch voluntarily and unlock in-app rewards.'
-            )
-          }
+          style={[
+            styles.watchEarnCard,
+            watchingAd &&
+              styles.watchEarnCardDisabled,
+          ]}
+          onPress={watchAndEarn}
+          disabled={watchingAd}
+          activeOpacity={0.85}
         >
           <View style={styles.watchEarnIcon}>
-            <Text style={styles.watchEarnIconText}>▶</Text>
+            <Text style={styles.watchEarnIconText}>
+              ▶
+            </Text>
           </View>
 
           <View style={styles.watchEarnBody}>
-            <Text style={styles.watchEarnEyebrow}>CHALEGA EARN</Text>
-            <Text style={styles.watchEarnTitle}>WATCH & EARN</Text>
+            <Text style={styles.watchEarnEyebrow}>
+              CHALEGA EARN
+            </Text>
+
+            <Text style={styles.watchEarnTitle}>
+              {watchingAd
+                ? 'WATCHING...'
+                : 'WATCH & EARN'}
+            </Text>
+
             <Text style={styles.watchEarnDescription}>
-              Watch a sponsored video and unlock an in-app reward.
+              {energy >= MAX_DAILY_ENERGY
+                ? 'Daily video reward limit reached. Come back tomorrow.'
+                : 'Watch a rewarded video and unlock 1 Chalega Energy.'}
+            </Text>
+
+            <Text style={styles.watchEarnCounter}>
+              TODAY {energy} / {MAX_DAILY_ENERGY} ENERGY
             </Text>
           </View>
 
           <View style={styles.watchEarnBadge}>
-            <Text style={styles.watchEarnBadgeText}>SOON</Text>
+            <Text style={styles.watchEarnBadgeText}>
+              {energy >= MAX_DAILY_ENERGY
+                ? 'DONE'
+                : rewardedAd
+                ? adLoaded
+                  ? 'WATCH'
+                  : 'LOADING'
+                : 'APP'}
+            </Text>
           </View>
         </TouchableOpacity>
 
@@ -431,7 +717,7 @@ export default function RewardsScreen() {
             onPress={() => router.push('/walking')}
           >
             <Text style={styles.earnEmoji}>
-              🚶
+              🏃
             </Text>
 
             <Text style={styles.earnTitle}>
@@ -511,7 +797,7 @@ export default function RewardsScreen() {
           {recentHistory.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>
-                ✨
+                💎
               </Text>
 
               <Text style={styles.emptyTitle}>
@@ -538,8 +824,8 @@ export default function RewardsScreen() {
                 <View style={styles.activityIcon}>
                   <Text>
                     {item.amount >= 0
-                      ? '🟢'
-                      : '🔴'}
+                      ? '⬆️'
+                      : '⬇️'}
                   </Text>
                 </View>
 
@@ -702,7 +988,7 @@ export default function RewardsScreen() {
           onPress={() => router.push('/shop')}
         >
           <Text style={styles.shopEmoji}>
-            🛍️
+            🛒
           </Text>
 
           <View style={styles.shopBody}>
@@ -1007,8 +1293,15 @@ const styles = StyleSheet.create({
     shadowColor: '#071522',
     shadowOpacity: 0.16,
     shadowRadius: 9,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
     elevation: 5,
+  },
+
+  watchEarnCardDisabled: {
+    opacity: 0.72,
   },
 
   watchEarnIcon: {
@@ -1050,6 +1343,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
     lineHeight: 14,
     marginTop: 3,
+  },
+
+  watchEarnCounter: {
+    color: '#7DB3FF',
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+    marginTop: 5,
   },
 
   watchEarnBadge: {
@@ -1401,3 +1702,5 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 });
+
+

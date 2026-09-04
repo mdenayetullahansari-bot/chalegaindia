@@ -25,6 +25,11 @@ import {
   supabase,
 } from '@/lib/supabase';
 
+import {
+  hydrateGuestMode,
+  subscribeToGuestMode,
+} from '@/lib/guest-session';
+
 export default function RootLayout() {
   const insets = useSafeAreaInsets();
   const pathname =
@@ -44,6 +49,11 @@ export default function RootLayout() {
   ] =
     useState(true);
 
+  const [
+    guestMode,
+    setGuestMode,
+  ] = useState(false);
+
   /*
    * ----------------------------------------------------
    * LOAD SUPABASE SESSION
@@ -55,11 +65,16 @@ export default function RootLayout() {
 
     const loadSession =
       async () => {
-        const {
-          data,
-          error,
-        } =
-          await supabase.auth.getSession();
+        const [
+          {
+            data,
+            error,
+          },
+          isGuest,
+        ] = await Promise.all([
+          supabase.auth.getSession(),
+          hydrateGuestMode(),
+        ]);
 
         if (error) {
           console.log(
@@ -71,6 +86,10 @@ export default function RootLayout() {
         if (mounted) {
           setSession(
             data.session
+          );
+
+          setGuestMode(
+            isGuest
           );
 
           setLoading(
@@ -99,10 +118,16 @@ export default function RootLayout() {
         }
       );
 
+    const unsubscribeGuest =
+      subscribeToGuestMode(
+        setGuestMode
+      );
+
     return () => {
       mounted = false;
 
       subscription.unsubscribe();
+      unsubscribeGuest();
     };
   }, []);
 
@@ -138,6 +163,7 @@ export default function RootLayout() {
 
   if (
     !session &&
+    !guestMode &&
     pathname !== '/auth'
   ) {
     return (
@@ -155,6 +181,7 @@ export default function RootLayout() {
 
   if (
     !session &&
+    !guestMode &&
     pathname === '/auth'
   ) {
     return (

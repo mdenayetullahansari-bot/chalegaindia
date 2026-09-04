@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -8,12 +8,28 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  endGuestSession,
+  hydrateGuestMode,
+  subscribeToGuestMode,
+} from '@/lib/guest-session';
 
 export default function MoreScreen() {
   const router = useRouter();
+  const [guestMode, setGuestMode] = useState(false);
+
+  useEffect(() => {
+    hydrateGuestMode().then(setGuestMode);
+    return subscribeToGuestMode(setGuestMode);
+  }, []);
 
   const goTo = (route: string) => {
     router.push(route as any);
+  };
+
+  const createAccount = async () => {
+    await endGuestSession();
+    router.replace('/auth');
   };
 
   return (
@@ -62,6 +78,38 @@ export default function MoreScreen() {
             ›
           </Text>
         </View>
+
+        {guestMode && (
+          <View style={styles.guestCard}>
+            <View style={styles.guestIcon}>
+              <Text style={styles.guestEmoji}>✨</Text>
+            </View>
+
+            <View style={styles.guestContent}>
+              <Text style={styles.guestEyebrow}>
+                EXPLORING AS A GUEST
+              </Text>
+
+              <Text style={styles.guestTitle}>
+                Make your journey yours
+              </Text>
+
+              <Text style={styles.guestText}>
+                Create a free account when you are ready. Your current progress stays on this device.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.guestButton}
+                onPress={createAccount}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.guestButtonText}>
+                  CREATE FREE ACCOUNT
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* REWARDS */}
 
@@ -400,6 +448,69 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     marginTop: 4,
+  },
+
+  guestCard: {
+    backgroundColor: '#FFF7E3',
+    borderRadius: 22,
+    padding: 17,
+    marginBottom: 24,
+    flexDirection: 'row',
+  },
+
+  guestIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  guestEmoji: {
+    fontSize: 23,
+  },
+
+  guestContent: {
+    flex: 1,
+    paddingLeft: 13,
+  },
+
+  guestEyebrow: {
+    color: '#A06C00',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  guestTitle: {
+    color: '#10202F',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  guestText: {
+    color: '#665B42',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+
+  guestButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#10202F',
+    borderRadius: 11,
+    marginTop: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+
+  guestButtonText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
 
   arrow: {

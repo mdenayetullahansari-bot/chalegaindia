@@ -17,9 +17,15 @@ import {
 
 import * as Linking from 'expo-linking';
 
+import {
+  useRouter,
+} from 'expo-router';
+
 import { supabase } from '@/lib/supabase';
+import { startGuestSession } from '@/lib/guest-session';
 
 export default function AuthScreen() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
 
@@ -46,6 +52,21 @@ export default function AuthScreen() {
         type === 'success' ? 'Chalega India' : 'Error',
         text
       );
+    }
+  }
+
+  async function handleGuestSession() {
+    try {
+      setLoading(true);
+      await startGuestSession();
+      router.replace('/');
+    } catch {
+      showMessage(
+        'We could not start guest mode. Please try again.',
+        'error'
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -681,6 +702,25 @@ export default function AuthScreen() {
             </Pressable>
           </View>
 
+          {!isLogin && (
+            <Pressable
+              onPress={handleGuestSession}
+              disabled={loading}
+              style={({ pressed }) => [
+                styles.guestButton,
+                pressed && styles.pressed,
+                loading && styles.disabled,
+              ]}
+            >
+              <Text style={styles.guestButtonText}>
+                EXPLORE THE APP FIRST
+              </Text>
+              <Text style={styles.guestButtonHint}>
+                No account needed — your progress stays on this device.
+              </Text>
+            </Pressable>
+          )}
+
           <Text style={styles.footer}>
             Your Chalega profile, steps, points
             and achievements will stay connected
@@ -877,6 +917,26 @@ const styles = StyleSheet.create({
     color: '#1976F3',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  guestButton: {
+    alignItems: 'center',
+    marginTop: 22,
+    paddingVertical: 12,
+  },
+
+  guestButtonText: {
+    color: '#1976F3',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+
+  guestButtonHint: {
+    color: '#788492',
+    fontSize: 12,
+    marginTop: 5,
+    textAlign: 'center',
   },
 
   footer: {
