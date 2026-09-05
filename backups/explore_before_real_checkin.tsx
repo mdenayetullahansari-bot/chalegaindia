@@ -195,7 +195,7 @@ export default function ExploreScreen() {
   };
 
   const openHealthCheckIn = () => {
-    router.push('/daily-health-checkin');
+    router.push('/daily-checkin');
   };
 
   const openHealthTopic = (topic: string) => {

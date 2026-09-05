@@ -19,7 +19,7 @@ import {
 
 import {
   Session,
-} from '@supabase/supabase-js';
+} from '@Supabase/supabase-js';
 
 import {
   supabase,
@@ -435,7 +435,7 @@ export default function RootLayout() {
       {/* Daily Health Check-in */}
 
       <Tabs.Screen
-        name="daily-health-checkin"
+        name="daily-checkin"
         options={{
           href: null,
         }}
