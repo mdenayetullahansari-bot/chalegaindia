@@ -152,7 +152,7 @@ export default function RewardsScreen() {
    * Energy is intentionally separate from Chalega Points.
    * Watching rewarded ads never adds Chalega Points.
    */
-  useFocusEffect(useCallback(() => {
+  useEffect(() => {
     const loadEnergy = async () => {
       try {
         const today = getLocalDateKey();
@@ -201,7 +201,7 @@ export default function RewardsScreen() {
     };
 
     loadEnergy();
-  }, []));
+  }, []);
 
   /*
    * Prepare rewarded video on native platforms.
