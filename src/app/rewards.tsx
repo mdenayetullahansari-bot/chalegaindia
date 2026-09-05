@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  AppState,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -152,56 +153,66 @@ export default function RewardsScreen() {
    * Energy is intentionally separate from Chalega Points.
    * Watching rewarded ads never adds Chalega Points.
    */
-  useFocusEffect(useCallback(() => {
-    const loadEnergy = async () => {
-      try {
-        const today = getLocalDateKey();
+  const loadEnergy = useCallback(async () => {
+    try {
+      const today = getLocalDateKey();
 
-        const [
-          savedEnergy,
-          savedDate,
-        ] = await Promise.all([
+      const [savedEnergy, savedDate] =
+        await Promise.all([
           AsyncStorage.getItem(CHALEGA_ENERGY_KEY),
           AsyncStorage.getItem(CHALEGA_ENERGY_DATE_KEY),
         ]);
 
-        if (savedDate !== today) {
-          await AsyncStorage.setItem(
-            CHALEGA_ENERGY_KEY,
-            '0'
-          );
-
-          await AsyncStorage.setItem(
-            CHALEGA_ENERGY_DATE_KEY,
-            today
-          );
-
-          setEnergy(0);
-          return;
-        }
-
-        const parsedEnergy = Number(savedEnergy ?? 0);
-
-        setEnergy(
-          Number.isFinite(parsedEnergy)
-            ? Math.min(
-                Math.max(parsedEnergy, 0),
-                MAX_DAILY_ENERGY
-              )
-            : 0
-        );
-      } catch (error) {
-        console.log(
-          'Could not load Chalega Energy:',
-          error
-        );
+      if (savedDate !== today) {
+        await AsyncStorage.multiSet([
+          [CHALEGA_ENERGY_KEY, '0'],
+          [CHALEGA_ENERGY_DATE_KEY, today],
+        ]);
 
         setEnergy(0);
+        return;
       }
-    };
 
-    loadEnergy();
-  }, []));
+      const parsedEnergy = Number(savedEnergy ?? 0);
+
+      setEnergy(
+        Number.isFinite(parsedEnergy)
+          ? Math.min(
+              Math.max(parsedEnergy, 0),
+              MAX_DAILY_ENERGY
+            )
+          : 0
+      );
+    } catch (error) {
+      console.log(
+        'Could not load Chalega Energy:',
+        error
+      );
+
+      setEnergy(0);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadEnergy();
+    }, [loadEnergy])
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      nextState => {
+        if (nextState === 'active') {
+          loadEnergy();
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [loadEnergy]);
 
   /*
    * Prepare rewarded video on native platforms.
