@@ -27,6 +27,10 @@ export default function MoreScreen() {
     router.push(route as any);
   };
 
+  const openProfile = () => {
+    router.push('/profile');
+  };
+
   const createAccount = async () => {
     await endGuestSession();
     router.replace('/auth');
@@ -38,7 +42,6 @@ export default function MoreScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-
         {/* HEADER */}
 
         <View style={styles.header}>
@@ -57,7 +60,11 @@ export default function MoreScreen() {
 
         {/* PROFILE / JOURNEY CARD */}
 
-        <View style={styles.journeyCard}>
+        <TouchableOpacity
+          style={styles.journeyCard}
+          onPress={openProfile}
+          activeOpacity={0.88}
+        >
           <View style={styles.journeyIcon}>
             <Text style={styles.journeyEmoji}>
               🚶
@@ -77,12 +84,12 @@ export default function MoreScreen() {
           <Text style={styles.arrow}>
             ›
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {guestMode && (
           <View style={styles.guestCard}>
             <View style={styles.guestIcon}>
-              <Text style={styles.guestEmoji}>✨</Text>
+              <Text style={styles.guestEmoji}>🔒</Text>
             </View>
 
             <View style={styles.guestContent}>
@@ -124,7 +131,7 @@ export default function MoreScreen() {
         >
           <View style={styles.iconBlue}>
             <Text style={styles.iconText}>
-              🏆
+              🏅
             </Text>
           </View>
 
@@ -152,7 +159,7 @@ export default function MoreScreen() {
         >
           <View style={styles.iconBlue}>
             <Text style={styles.iconText}>
-              🎯
+              🏃
             </Text>
           </View>
 
@@ -335,7 +342,7 @@ export default function MoreScreen() {
 
           <View style={styles.smallCard}>
             <Text style={styles.smallEmoji}>
-              🌟
+              🏆
             </Text>
 
             <Text style={styles.smallTitle}>
