@@ -18,22 +18,12 @@ type HealthData = {
   mood?: string;
   activity?: string;
   sleep?: string;
-  lastCheckInDate?: string;
 };
 
 type WalkingData = {
   steps?: number;
   goal?: number;
   streak?: number;
-};
-
-const getLocalDateKey = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
 };
 
 const HEALTH_TOPICS = [
@@ -110,29 +100,24 @@ export default function ExploreScreen() {
 
   const [water, setWater] = useState(0);
   const [mood, setMood] = useState('');
-  const [activity, setActivity] = useState('');
-  const [sleep, setSleep] = useState('');
-  const [lastCheckInDate, setLastCheckInDate] = useState('');
-
   const [steps, setSteps] = useState(0);
   const [goal, setGoal] = useState(4000);
   const [streak, setStreak] = useState(0);
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const todayKey = getLocalDateKey();
-  const checkInCompletedToday = lastCheckInDate === todayKey;
-
   const loadHealthData = useCallback(async () => {
     try {
-      const [healthSaved, walkingSaved] = await Promise.all([
-        AsyncStorage.getItem(HEALTH_DATA_KEY),
-        AsyncStorage.getItem(WALKING_DATA_KEY),
-      ]);
+      const [healthSaved, walkingSaved] =
+        await Promise.all([
+          AsyncStorage.getItem(HEALTH_DATA_KEY),
+          AsyncStorage.getItem(WALKING_DATA_KEY),
+        ]);
 
       if (healthSaved) {
         try {
-          const data: HealthData = JSON.parse(healthSaved);
+          const data: HealthData =
+            JSON.parse(healthSaved);
 
           setWater(
             typeof data.water === 'number'
@@ -145,42 +130,19 @@ export default function ExploreScreen() {
               ? data.mood
               : ''
           );
-
-          setActivity(
-            typeof data.activity === 'string'
-              ? data.activity
-              : ''
-          );
-
-          setSleep(
-            typeof data.sleep === 'string'
-              ? data.sleep
-              : ''
-          );
-
-          setLastCheckInDate(
-            typeof data.lastCheckInDate === 'string'
-              ? data.lastCheckInDate
-              : ''
-          );
         } catch {
           setWater(0);
           setMood('');
-          setActivity('');
-          setSleep('');
-          setLastCheckInDate('');
         }
       } else {
         setWater(0);
         setMood('');
-        setActivity('');
-        setSleep('');
-        setLastCheckInDate('');
       }
 
       if (walkingSaved) {
         try {
-          const data: WalkingData = JSON.parse(walkingSaved);
+          const data: WalkingData =
+            JSON.parse(walkingSaved);
 
           setSteps(
             typeof data.steps === 'number'
@@ -224,10 +186,6 @@ export default function ExploreScreen() {
     }, [loadHealthData])
   );
 
-  useEffect(() => {
-    loadHealthData();
-  }, [loadHealthData]);
-
   const onRefresh = async () => {
     setRefreshing(true);
 
@@ -253,22 +211,6 @@ export default function ExploreScreen() {
     router.push('/walking');
   };
 
-  /*
-   * ----------------------------------------------------
-   * DYNAMIC HEALTH SCORE
-   * ----------------------------------------------------
-   *
-   * Walking       30 points
-   * Hydration     20 points
-   * Mood          15 points
-   * Activity      15 points
-   * Sleep         10 points
-   * Streak         5 points
-   * Check-in       5 points
-   *
-   * Total = 100
-   */
-
   const stepProgress =
     goal > 0
       ? Math.min(steps / goal, 1)
@@ -277,112 +219,22 @@ export default function ExploreScreen() {
   const waterProgress =
     Math.min(water / 8, 1);
 
-  const walkingScore = Math.round(
-    stepProgress * 30
-  );
-
-  const hydrationScore = Math.round(
-    waterProgress * 20
-  );
-
-  const moodScore =
-    mood === 'great'
-      ? 15
-      : mood === 'good'
-      ? 13
-      : mood === 'okay'
-      ? 9
-      : mood === 'care'
-      ? 6
-      : 0;
-
-  const activityScore =
-    activity === 'walked'
-      ? 15
-      : activity === 'movement'
-      ? 11
-      : activity === 'not-yet'
-      ? 3
-      : 0;
-
-  const sleepScore =
-    sleep === 'good'
-      ? 10
-      : sleep === 'okay'
-      ? 7
-      : sleep === 'not-enough'
-      ? 4
-      : 0;
-
-  const streakScore = Math.min(
-    streak,
-    5
-  );
-
-  const checkInScore =
-    checkInCompletedToday
-      ? 5
-      : 0;
-
   const healthScore = Math.min(
     100,
-    walkingScore +
-      hydrationScore +
-      moodScore +
-      activityScore +
-      sleepScore +
-      streakScore +
-      checkInScore
+    Math.round(
+      stepProgress * 45 +
+        waterProgress * 25 +
+        Math.min(streak * 3, 15) +
+        (mood ? 15 : 8)
+    )
   );
 
   const scoreMessage =
-    healthScore >= 90
-      ? 'Outstanding! You are building a great healthy routine.'
-      : healthScore >= 80
+    healthScore >= 80
       ? 'Excellent work. Keep your healthy routine going!'
-      : healthScore >= 65
+      : healthScore >= 60
       ? 'Good progress. A few small habits can make it even better.'
-      : healthScore >= 45
-      ? 'You are moving in the right direction. Keep building your habits.'
       : 'Every healthy choice counts. Start with one small step today.';
-
-  const scoreBreakdown = [
-    {
-      label: 'Walking',
-      value: walkingScore,
-      max: 30,
-    },
-    {
-      label: 'Hydration',
-      value: hydrationScore,
-      max: 20,
-    },
-    {
-      label: 'Mood',
-      value: moodScore,
-      max: 15,
-    },
-    {
-      label: 'Activity',
-      value: activityScore,
-      max: 15,
-    },
-    {
-      label: 'Sleep',
-      value: sleepScore,
-      max: 10,
-    },
-    {
-      label: 'Streak',
-      value: streakScore,
-      max: 5,
-    },
-    {
-      label: 'Check-in',
-      value: checkInScore,
-      max: 5,
-    },
-  ];
 
   return (
     <View style={styles.screen}>
@@ -412,7 +264,8 @@ export default function ExploreScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              Small daily choices. A healthier you.
+              Small daily choices. A healthier
+              you.
             </Text>
           </View>
 
@@ -427,7 +280,7 @@ export default function ExploreScreen() {
 
         <View style={styles.scoreCard}>
           <View style={styles.scoreTop}>
-            <View style={styles.scoreMessageWrap}>
+            <View>
               <Text style={styles.scoreEyebrow}>
                 TODAY'S HEALTH SCORE
               </Text>
@@ -479,60 +332,6 @@ export default function ExploreScreen() {
             <Text style={styles.scoreFooterValue}>
               {water}/8 glasses
             </Text>
-          </View>
-        </View>
-
-        {/* SCORE BREAKDOWN */}
-
-        <View style={styles.breakdownCard}>
-          <View style={styles.breakdownHeader}>
-            <View>
-              <Text style={styles.breakdownEyebrow}>
-                SCORE BREAKDOWN
-              </Text>
-
-              <Text style={styles.breakdownTitle}>
-                What's driving your score?
-              </Text>
-            </View>
-
-            <View style={styles.breakdownBadge}>
-              <Text style={styles.breakdownBadgeText}>
-                {healthScore}/100
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.breakdownGrid}>
-            {scoreBreakdown.map(item => (
-              <View
-                key={item.label}
-                style={styles.breakdownItem}
-              >
-                <View style={styles.breakdownItemTop}>
-                  <Text style={styles.breakdownItemLabel}>
-                    {item.label}
-                  </Text>
-
-                  <Text style={styles.breakdownItemValue}>
-                    {item.value}/{item.max}
-                  </Text>
-                </View>
-
-                <View style={styles.breakdownTrack}>
-                  <View
-                    style={[
-                      styles.breakdownFill,
-                      {
-                        width: `${Math.round(
-                          (item.value / item.max) * 100
-                        )}%`,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
           </View>
         </View>
 
@@ -630,23 +429,13 @@ export default function ExploreScreen() {
         </View>
 
         <TouchableOpacity
-          style={[
-            styles.checkinCard,
-            checkInCompletedToday &&
-              styles.checkinCardCompleted,
-          ]}
+          style={styles.checkinCard}
           activeOpacity={0.88}
           onPress={openHealthCheckIn}
         >
-          <View
-            style={[
-              styles.checkinIcon,
-              checkInCompletedToday &&
-                styles.checkinIconCompleted,
-            ]}
-          >
+          <View style={styles.checkinIcon}>
             <Text style={styles.checkinIconText}>
-              {checkInCompletedToday ? '✓' : '❤️'}
+              ❤️
             </Text>
           </View>
 
@@ -656,28 +445,17 @@ export default function ExploreScreen() {
             </Text>
 
             <Text style={styles.checkinTitle}>
-              {checkInCompletedToday
-                ? "Today's check-in is complete"
-                : 'How are you feeling today?'}
+              How are you feeling today?
             </Text>
 
             <Text style={styles.checkinDescription}>
-              {checkInCompletedToday
-                ? 'Your mood, water, activity and sleep answers are saved for today.'
-                : 'Take 30 seconds to check in with your mood, water, activity and sleep.'}
+              Take 30 seconds to check in with
+              your mood, water, activity and sleep.
             </Text>
 
-            <View
-              style={[
-                styles.checkinButton,
-                checkInCompletedToday &&
-                  styles.checkinButtonCompleted,
-              ]}
-            >
+            <View style={styles.checkinButton}>
               <Text style={styles.checkinButtonText}>
-                {checkInCompletedToday
-                  ? 'VIEW TODAY’S CHECK-IN'
-                  : 'START CHECK-IN'}
+                START CHECK-IN
               </Text>
 
               <Text style={styles.checkinArrow}>
@@ -719,7 +497,8 @@ export default function ExploreScreen() {
                 style={[
                   styles.topicIcon,
                   {
-                    backgroundColor: topic.light,
+                    backgroundColor:
+                      topic.light,
                   },
                 ]}
               >
@@ -778,36 +557,39 @@ export default function ExploreScreen() {
         </View>
 
         <View style={styles.habitsCard}>
-          {HEALTHY_HABITS.map((habit, index) => (
-            <View
-              key={habit.title}
-              style={[
-                styles.habitRow,
-                index !== HEALTHY_HABITS.length - 1 &&
-                  styles.habitBorder,
-              ]}
-            >
-              <View style={styles.habitIcon}>
-                <Text style={styles.habitIconText}>
-                  {habit.icon}
+          {HEALTHY_HABITS.map(
+            (habit, index) => (
+              <View
+                key={habit.title}
+                style={[
+                  styles.habitRow,
+                  index !==
+                    HEALTHY_HABITS.length - 1 &&
+                    styles.habitBorder,
+                ]}
+              >
+                <View style={styles.habitIcon}>
+                  <Text style={styles.habitIconText}>
+                    {habit.icon}
+                  </Text>
+                </View>
+
+                <View style={styles.habitBody}>
+                  <Text style={styles.habitTitle}>
+                    {habit.title}
+                  </Text>
+
+                  <Text style={styles.habitDescription}>
+                    {habit.description}
+                  </Text>
+                </View>
+
+                <Text style={styles.habitCheck}>
+                  ✓
                 </Text>
               </View>
-
-              <View style={styles.habitBody}>
-                <Text style={styles.habitTitle}>
-                  {habit.title}
-                </Text>
-
-                <Text style={styles.habitDescription}>
-                  {habit.description}
-                </Text>
-              </View>
-
-              <Text style={styles.habitCheck}>
-                ✓
-              </Text>
-            </View>
-          ))}
+            )
+          )}
         </View>
 
         {/* WALKING CTA */}
@@ -948,11 +730,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  scoreMessageWrap: {
-    flex: 1,
-    paddingRight: 10,
-  },
-
   scoreEyebrow: {
     color: '#8FB9E8',
     fontSize: 9,
@@ -1031,89 +808,6 @@ const styles = StyleSheet.create({
     color: '#5C748A',
     marginHorizontal: 8,
     fontSize: 10,
-  },
-
-  breakdownCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#E4E8ED',
-    padding: 17,
-    marginBottom: 18,
-  },
-
-  breakdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-
-  breakdownEyebrow: {
-    color: '#2FA84F',
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-  },
-
-  breakdownTitle: {
-    color: '#0B1F33',
-    fontSize: 17,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-
-  breakdownBadge: {
-    backgroundColor: '#EAF7EE',
-    borderRadius: 11,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-  },
-
-  breakdownBadgeText: {
-    color: '#17662D',
-    fontSize: 10,
-    fontWeight: '900',
-  },
-
-  breakdownGrid: {
-    gap: 10,
-  },
-
-  breakdownItem: {
-    width: '100%',
-  },
-
-  breakdownItemTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-
-  breakdownItemLabel: {
-    color: '#43515F',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-
-  breakdownItemValue: {
-    color: '#0B1F33',
-    fontSize: 10,
-    fontWeight: '900',
-  },
-
-  breakdownTrack: {
-    height: 6,
-    backgroundColor: '#EEF1F4',
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-
-  breakdownFill: {
-    height: '100%',
-    backgroundColor: '#2FA84F',
-    borderRadius: 6,
   },
 
   statsRow: {
@@ -1198,6 +892,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  topicCount: {
+    color: '#6B7785',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+
   checkinCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
@@ -1206,11 +908,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E4E8ED',
     marginBottom: 27,
-  },
-
-  checkinCardCompleted: {
-    backgroundColor: '#F5FBF7',
-    borderColor: '#BDE3C8',
   },
 
   checkinIcon: {
@@ -1223,13 +920,8 @@ const styles = StyleSheet.create({
     marginRight: 13,
   },
 
-  checkinIconCompleted: {
-    backgroundColor: '#2FA84F',
-  },
-
   checkinIconText: {
     fontSize: 24,
-    color: '#FFFFFF',
   },
 
   checkinBody: {
@@ -1270,10 +962,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
 
-  checkinButtonCompleted: {
-    backgroundColor: '#2FA84F',
-  },
-
   checkinButtonText: {
     color: '#FFFFFF',
     fontSize: 8,
@@ -1285,14 +973,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     marginLeft: 7,
-  },
-
-  topicCount: {
-    color: '#6B7785',
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-    marginBottom: 3,
   },
 
   topicGrid: {
