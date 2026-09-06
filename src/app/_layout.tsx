@@ -32,323 +32,139 @@ import {
 
 export default function RootLayout() {
   const insets = useSafeAreaInsets();
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
 
-  const [
-    session,
-    setSession,
-  ] =
-    useState<Session | null>(
-      null
-    );
-
-  const [
-    loading,
-    setLoading,
-  ] =
-    useState(true);
-
-  const [
-    guestMode,
-    setGuestMode,
-  ] = useState(false);
-
-  /*
-   * ----------------------------------------------------
-   * LOAD SUPABASE SESSION
-   * ----------------------------------------------------
-   */
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [guestMode, setGuestMode] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadSession =
-      async () => {
-        const [
-          {
-            data,
-            error,
-          },
-          isGuest,
-        ] = await Promise.all([
-          supabase.auth.getSession(),
-          hydrateGuestMode(),
-        ]);
+    const loadSession = async () => {
+      const [{ data, error }, isGuest] = await Promise.all([
+        supabase.auth.getSession(),
+        hydrateGuestMode(),
+      ]);
 
-        if (error) {
-          console.log(
-            'Supabase session error:',
-            error.message
-          );
-        }
+      if (error) {
+        console.log('Supabase session error:', error.message);
+      }
 
-        if (mounted) {
-          setSession(
-            data.session
-          );
-
-          setGuestMode(
-            isGuest
-          );
-
-          setLoading(
-            false
-          );
-        }
-      };
+      if (mounted) {
+        setSession(data.session);
+        setGuestMode(isGuest);
+        setLoading(false);
+      }
+    };
 
     loadSession();
 
     const {
-      data: {
-        subscription,
-      },
-    } =
-      supabase.auth.onAuthStateChange(
-        (
-          _event,
-          newSession
-        ) => {
-          if (mounted) {
-            setSession(
-              newSession
-            );
-          }
-        }
-      );
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (mounted) {
+        setSession(newSession);
+      }
+    });
 
-    const unsubscribeGuest =
-      subscribeToGuestMode(
-        setGuestMode
-      );
+    const unsubscribeGuest = subscribeToGuestMode(setGuestMode);
 
     return () => {
       mounted = false;
-
       subscription.unsubscribe();
       unsubscribeGuest();
     };
   }, []);
 
-  /*
-   * ----------------------------------------------------
-   * LOADING
-   * ----------------------------------------------------
-   */
-
   if (loading) {
     return (
-      <View
-        style={
-          styles.loadingContainer
-        }
-      >
-        <ActivityIndicator
-          size="large"
-          color="#1976F3"
-        />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1976F3" />
       </View>
     );
   }
 
-  /*
-   * ----------------------------------------------------
-   * NOT LOGGED IN
-   * ----------------------------------------------------
-   */
-
-  if (
-    !session &&
-    !guestMode &&
-    pathname !== '/auth'
-  ) {
-    return (
-      <Redirect
-        href="/auth"
-      />
-    );
+  if (!session && !guestMode && pathname !== '/auth') {
+    return <Redirect href="/auth" />;
   }
 
-  /*
-   * ----------------------------------------------------
-   * AUTH SCREEN
-   * ----------------------------------------------------
-   */
-
-  if (
-    !session &&
-    !guestMode &&
-    pathname === '/auth'
-  ) {
+  if (!session && !guestMode && pathname === '/auth') {
     return (
       <Tabs
         screenOptions={{
           headerShown: false,
-
-          tabBarStyle: {
-            display: 'none',
-          },
+          tabBarStyle: { display: 'none' },
         }}
       >
-        <Tabs.Screen
-          name="auth"
-          options={{
-            href: null,
-          }}
-        />
+        <Tabs.Screen name="auth" options={{ href: null }} />
       </Tabs>
     );
   }
-
-  /*
-   * ----------------------------------------------------
-   * LOGGED-IN USER
-   * ----------------------------------------------------
-   *
-   * Main Chalega India navigation:
-   *
-   * Home
-   * Walk
-   * Health
-   * Shop
-   * More
-   *
-   * All other screens are hidden from
-   * the bottom navigation.
-   */
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-
-        tabBarActiveTintColor:
-          '#1976F3',
-
-        tabBarInactiveTintColor:
-          '#888888',
-
+        tabBarActiveTintColor: '#1976F3',
+        tabBarInactiveTintColor: '#888888',
         tabBarStyle: {
           height: 56 + insets.bottom,
           paddingTop: 8,
-          paddingBottom: Math.max(
-            8,
-            insets.bottom
-          ),
+          paddingBottom: Math.max(8, insets.bottom),
         },
-
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '700',
         },
-
-        tabBarHideOnKeyboard:
-          true,
+        tabBarHideOnKeyboard: true,
       }}
     >
-
-      {/* ------------------------------------------------
-       * HOME
-       * ------------------------------------------------ */}
-
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-
-          tabBarIcon: ({
-            color,
-            size,
-          }) => (
-            <Ionicons
-              name="home"
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
-
-      {/* ------------------------------------------------
-       * WALK
-       * ------------------------------------------------ */}
 
       <Tabs.Screen
         name="walking"
         options={{
           title: 'Walk',
-
-          tabBarIcon: ({
-            color,
-            size,
-          }) => (
-            <Ionicons
-              name="walk"
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="walk" size={size} color={color} />
           ),
         }}
       />
-
-      {/* ------------------------------------------------
-       * HEALTH
-       * ------------------------------------------------ */}
 
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Health',
-
-          tabBarIcon: ({
-            color,
-            size,
-          }) => (
-            <Ionicons
-              name="heart"
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="heart" size={size} color={color} />
           ),
         }}
       />
-
-      {/* ------------------------------------------------
-       * SHOP
-       * ------------------------------------------------ */}
 
       <Tabs.Screen
         name="shop"
         options={{
           title: 'Shop',
-
-          tabBarIcon: ({
-            color,
-            size,
-          }) => (
-            <Ionicons
-              name="cart"
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="cart" size={size} color={color} />
           ),
         }}
       />
-
-      {/* ------------------------------------------------
-       * MORE
-       * ------------------------------------------------ */}
 
       <Tabs.Screen
         name="more"
         options={{
           title: 'More',
-
-          tabBarIcon: ({
-            color,
-            size,
-          }) => (
+          tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="ellipsis-horizontal-circle"
               size={size}
@@ -358,117 +174,35 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN SCREENS
-       * ================================================= */}
-
+      {/* Entally Assembly community hub — hidden from bottom navigation. */}
       <Tabs.Screen
-        name="rewards"
+        name="entally"
         options={{
           href: null,
         }}
       />
 
-      <Tabs.Screen
-        name="points-activity"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="missions"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="product"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="checkout"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="order-confirmed"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="track-order"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="orders"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="customer-orders"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="health-topic"
-        options={{
-          href: null,
-        }}
-      />
-
-      {/* Daily Health Check-in */}
-
-      <Tabs.Screen
-        name="daily-health-checkin"
-        options={{
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="auth"
-        options={{
-          href: null,
-        }}
-      />
-
+      <Tabs.Screen name="rewards" options={{ href: null }} />
+      <Tabs.Screen name="points-activity" options={{ href: null }} />
+      <Tabs.Screen name="missions" options={{ href: null }} />
+      <Tabs.Screen name="product" options={{ href: null }} />
+      <Tabs.Screen name="checkout" options={{ href: null }} />
+      <Tabs.Screen name="order-confirmed" options={{ href: null }} />
+      <Tabs.Screen name="track-order" options={{ href: null }} />
+      <Tabs.Screen name="orders" options={{ href: null }} />
+      <Tabs.Screen name="customer-orders" options={{ href: null }} />
+      <Tabs.Screen name="health-topic" options={{ href: null }} />
+      <Tabs.Screen name="daily-health-checkin" options={{ href: null }} />
+      <Tabs.Screen name="auth" options={{ href: null }} />
     </Tabs>
   );
 }
 
-/*
- * ======================================================
- * STYLES
- * ======================================================
- */
-
 const styles = {
   loadingContainer: {
     flex: 1,
-
-    justifyContent:
-      'center' as const,
-
-    alignItems:
-      'center' as const,
-
-    backgroundColor:
-      '#F5F7FB',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#F5F7FB',
   },
 };
