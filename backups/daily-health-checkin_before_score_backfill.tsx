@@ -101,6 +101,86 @@ export default function DailyHealthCheckIn() {
     loadTodayCheckIn();
   }, [todayKey]);
 
+  const loadTodayCheckIn = async () => {
+    try {
+      const [savedCheckIn, savedWalking] =
+        await Promise.all([
+          AsyncStorage.getItem(
+            `${CHECKIN_PREFIX}${todayKey}`
+          ),
+          AsyncStorage.getItem(WALKING_DATA_KEY),
+        ]);
+
+      if (savedWalking) {
+        try {
+          const walkingData: WalkingData =
+            JSON.parse(savedWalking);
+
+          setSteps(
+            typeof walkingData.steps === 'number'
+              ? Math.max(0, walkingData.steps)
+              : 0
+          );
+
+          setGoal(
+            typeof walkingData.goal === 'number' &&
+              walkingData.goal > 0
+              ? walkingData.goal
+              : 4000
+          );
+
+          setStreak(
+            typeof walkingData.streak === 'number'
+              ? Math.max(0, walkingData.streak)
+              : 0
+          );
+        } catch {
+          setSteps(0);
+          setGoal(4000);
+          setStreak(0);
+        }
+      }
+
+      if (!savedCheckIn) {
+        return;
+      }
+
+      const data = JSON.parse(
+        savedCheckIn
+      ) as CheckInData;
+
+      setMood(data.mood);
+      setWater(data.water);
+      setActivity(data.activity);
+      setSleep(data.sleep);
+      setCompleted(true);
+
+      if (typeof data.healthScore === 'number') {
+        setSavedScore(data.healthScore);
+      }
+
+      if (typeof data.steps === 'number') {
+        setSteps(Math.max(0, data.steps));
+      }
+
+      if (
+        typeof data.goal === 'number' &&
+        data.goal > 0
+      ) {
+        setGoal(data.goal);
+      }
+
+      if (typeof data.streak === 'number') {
+        setStreak(Math.max(0, data.streak));
+      }
+    } catch (error) {
+      console.log(
+        'Failed to load health check-in:',
+        error
+      );
+    }
+  };
+
   const calculateHealthScore = (
     currentSteps: number,
     currentGoal: number,
@@ -112,7 +192,10 @@ export default function DailyHealthCheckIn() {
   ) => {
     const stepProgress =
       currentGoal > 0
-        ? Math.min(currentSteps / currentGoal, 1)
+        ? Math.min(
+            currentSteps / currentGoal,
+            1
+          )
         : 0;
 
     const waterProgress = Math.min(
@@ -176,113 +259,6 @@ export default function DailyHealthCheckIn() {
     );
   };
 
-  const loadTodayCheckIn = async () => {
-    try {
-      const [savedCheckIn, savedWalking] =
-        await Promise.all([
-          AsyncStorage.getItem(
-            `${CHECKIN_PREFIX}${todayKey}`
-          ),
-          AsyncStorage.getItem(
-            WALKING_DATA_KEY
-          ),
-        ]);
-
-      let currentSteps = 0;
-      let currentGoal = 4000;
-      let currentStreak = 0;
-
-      if (savedWalking) {
-        try {
-          const walkingData: WalkingData =
-            JSON.parse(savedWalking);
-
-          currentSteps =
-            typeof walkingData.steps === 'number'
-              ? Math.max(0, walkingData.steps)
-              : 0;
-
-          currentGoal =
-            typeof walkingData.goal === 'number' &&
-            walkingData.goal > 0
-              ? walkingData.goal
-              : 4000;
-
-          currentStreak =
-            typeof walkingData.streak === 'number'
-              ? Math.max(0, walkingData.streak)
-              : 0;
-
-          setSteps(currentSteps);
-          setGoal(currentGoal);
-          setStreak(currentStreak);
-        } catch {
-          setSteps(0);
-          setGoal(4000);
-          setStreak(0);
-        }
-      }
-
-      if (!savedCheckIn) {
-        return;
-      }
-
-      const data = JSON.parse(
-        savedCheckIn
-      ) as CheckInData;
-
-      const savedSteps =
-        typeof data.steps === 'number'
-          ? Math.max(0, data.steps)
-          : currentSteps;
-
-      const savedGoal =
-        typeof data.goal === 'number' &&
-        data.goal > 0
-          ? data.goal
-          : currentGoal;
-
-      const savedStreak =
-        typeof data.streak === 'number'
-          ? Math.max(0, data.streak)
-          : currentStreak;
-
-      setMood(data.mood);
-      setWater(data.water);
-      setActivity(data.activity);
-      setSleep(data.sleep);
-
-      setSteps(savedSteps);
-      setGoal(savedGoal);
-      setStreak(savedStreak);
-      setCompleted(true);
-
-      if (typeof data.healthScore === 'number') {
-        setSavedScore(data.healthScore);
-      } else {
-        const calculatedScore =
-          calculateHealthScore(
-            savedSteps,
-            savedGoal,
-            savedStreak,
-            data.mood,
-            typeof data.water === 'number'
-              ? Math.max(0, data.water)
-              : 0,
-            data.activity,
-            data.sleep
-          );
-
-        setSavedScore(calculatedScore);
-      }
-    } catch (error) {
-      console.log(
-        'Failed to load health check-in:',
-        error
-      );
-    }
-  };
-
   const updateHealthHome = async () => {
     const existing =
       await AsyncStorage.getItem(
@@ -336,6 +312,11 @@ export default function DailyHealthCheckIn() {
     setSaving(true);
 
     try {
+      /*
+       * Take a snapshot of the walking data
+       * at the moment the check-in is completed.
+       * This becomes the day's historical record.
+       */
       let currentSteps = steps;
       let currentGoal = goal;
       let currentStreak = streak;

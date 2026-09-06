@@ -13,7 +13,6 @@ import { useRouter } from 'expo-router';
 import { awardOnce } from '@/lib/points';
 
 const HEALTH_HOME_KEY = 'chalega_health_home';
-const WALKING_DATA_KEY = 'chalega_walking_data';
 const CHECKIN_PREFIX = 'chalega_health_checkin_';
 
 const getLocalDateKey = () => {
@@ -31,22 +30,12 @@ type Option<T extends string | number> = {
   emoji?: string;
 };
 
-type WalkingData = {
-  steps?: number;
-  goal?: number;
-  streak?: number;
-};
-
 type CheckInData = {
   mood: string;
   water: number;
   activity: string;
   sleep: string;
   completedAt: string;
-  healthScore?: number;
-  steps?: number;
-  goal?: number;
-  streak?: number;
 };
 
 const moodOptions: Option<string>[] = [
@@ -83,216 +72,41 @@ export default function DailyHealthCheckIn() {
   const [water, setWater] = useState<number | null>(null);
   const [activity, setActivity] = useState<string | null>(null);
   const [sleep, setSleep] = useState<string | null>(null);
-
-  const [steps, setSteps] = useState(0);
-  const [goal, setGoal] = useState(4000);
-  const [streak, setStreak] = useState(0);
-
   const [completed, setCompleted] = useState(false);
-  const [savedScore, setSavedScore] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const todayKey = useMemo(
-    () => getLocalDateKey(),
-    []
-  );
+  const todayKey = useMemo(() => getLocalDateKey(), []);
 
   useEffect(() => {
     loadTodayCheckIn();
   }, [todayKey]);
 
-  const calculateHealthScore = (
-    currentSteps: number,
-    currentGoal: number,
-    currentStreak: number,
-    currentMood: string,
-    currentWater: number,
-    currentActivity: string,
-    currentSleep: string
-  ) => {
-    const stepProgress =
-      currentGoal > 0
-        ? Math.min(currentSteps / currentGoal, 1)
-        : 0;
-
-    const waterProgress = Math.min(
-      currentWater / 8,
-      1
-    );
-
-    const walkingScore = Math.round(
-      stepProgress * 30
-    );
-
-    const hydrationScore = Math.round(
-      waterProgress * 20
-    );
-
-    const moodScore =
-      currentMood === 'great'
-        ? 15
-        : currentMood === 'good'
-        ? 13
-        : currentMood === 'okay'
-        ? 9
-        : currentMood === 'care'
-        ? 6
-        : 0;
-
-    const activityScore =
-      currentActivity === 'walked'
-        ? 15
-        : currentActivity === 'movement'
-        ? 11
-        : currentActivity === 'not-yet'
-        ? 3
-        : 0;
-
-    const sleepScore =
-      currentSleep === 'good'
-        ? 10
-        : currentSleep === 'okay'
-        ? 7
-        : currentSleep === 'not-enough'
-        ? 4
-        : 0;
-
-    const streakScore = Math.min(
-      currentStreak,
-      5
-    );
-
-    const checkInScore = 5;
-
-    return Math.min(
-      100,
-      walkingScore +
-        hydrationScore +
-        moodScore +
-        activityScore +
-        sleepScore +
-        streakScore +
-        checkInScore
-    );
-  };
-
   const loadTodayCheckIn = async () => {
     try {
-      const [savedCheckIn, savedWalking] =
-        await Promise.all([
-          AsyncStorage.getItem(
-            `${CHECKIN_PREFIX}${todayKey}`
-          ),
-          AsyncStorage.getItem(
-            WALKING_DATA_KEY
-          ),
-        ]);
+      const saved = await AsyncStorage.getItem(
+        `${CHECKIN_PREFIX}${todayKey}`
+      );
 
-      let currentSteps = 0;
-      let currentGoal = 4000;
-      let currentStreak = 0;
-
-      if (savedWalking) {
-        try {
-          const walkingData: WalkingData =
-            JSON.parse(savedWalking);
-
-          currentSteps =
-            typeof walkingData.steps === 'number'
-              ? Math.max(0, walkingData.steps)
-              : 0;
-
-          currentGoal =
-            typeof walkingData.goal === 'number' &&
-            walkingData.goal > 0
-              ? walkingData.goal
-              : 4000;
-
-          currentStreak =
-            typeof walkingData.streak === 'number'
-              ? Math.max(0, walkingData.streak)
-              : 0;
-
-          setSteps(currentSteps);
-          setGoal(currentGoal);
-          setStreak(currentStreak);
-        } catch {
-          setSteps(0);
-          setGoal(4000);
-          setStreak(0);
-        }
-      }
-
-      if (!savedCheckIn) {
+      if (!saved) {
         return;
       }
 
-      const data = JSON.parse(
-        savedCheckIn
-      ) as CheckInData;
-
-      const savedSteps =
-        typeof data.steps === 'number'
-          ? Math.max(0, data.steps)
-          : currentSteps;
-
-      const savedGoal =
-        typeof data.goal === 'number' &&
-        data.goal > 0
-          ? data.goal
-          : currentGoal;
-
-      const savedStreak =
-        typeof data.streak === 'number'
-          ? Math.max(0, data.streak)
-          : currentStreak;
+      const data = JSON.parse(saved) as CheckInData;
 
       setMood(data.mood);
       setWater(data.water);
       setActivity(data.activity);
       setSleep(data.sleep);
-
-      setSteps(savedSteps);
-      setGoal(savedGoal);
-      setStreak(savedStreak);
       setCompleted(true);
-
-      if (typeof data.healthScore === 'number') {
-        setSavedScore(data.healthScore);
-      } else {
-        const calculatedScore =
-          calculateHealthScore(
-            savedSteps,
-            savedGoal,
-            savedStreak,
-            data.mood,
-            typeof data.water === 'number'
-              ? Math.max(0, data.water)
-              : 0,
-            data.activity,
-            data.sleep
-          );
-
-        setSavedScore(calculatedScore);
-      }
     } catch (error) {
-      console.log(
-        'Failed to load health check-in:',
-        error
-      );
+      console.log('Failed to load health check-in:', error);
     }
   };
 
   const updateHealthHome = async () => {
-    const existing =
-      await AsyncStorage.getItem(
-        HEALTH_HOME_KEY
-      );
+    const existing = await AsyncStorage.getItem(HEALTH_HOME_KEY);
 
-    let healthData: Record<
-      string,
-      unknown
-    > = {};
+    let healthData: Record<string, unknown> = {};
 
     if (existing) {
       try {
@@ -336,71 +150,12 @@ export default function DailyHealthCheckIn() {
     setSaving(true);
 
     try {
-      let currentSteps = steps;
-      let currentGoal = goal;
-      let currentStreak = streak;
-
-      const savedWalking =
-        await AsyncStorage.getItem(
-          WALKING_DATA_KEY
-        );
-
-      if (savedWalking) {
-        try {
-          const walkingData: WalkingData =
-            JSON.parse(savedWalking);
-
-          if (
-            typeof walkingData.steps === 'number'
-          ) {
-            currentSteps = Math.max(
-              0,
-              walkingData.steps
-            );
-          }
-
-          if (
-            typeof walkingData.goal === 'number' &&
-            walkingData.goal > 0
-          ) {
-            currentGoal = walkingData.goal;
-          }
-
-          if (
-            typeof walkingData.streak === 'number'
-          ) {
-            currentStreak = Math.max(
-              0,
-              walkingData.streak
-            );
-          }
-        } catch {
-          // Keep the values already held in state.
-        }
-      }
-
-      const healthScore =
-        calculateHealthScore(
-          currentSteps,
-          currentGoal,
-          currentStreak,
-          mood,
-          water,
-          activity,
-          sleep
-        );
-
       const checkIn: CheckInData = {
         mood,
         water,
         activity,
         sleep,
-        completedAt:
-          new Date().toISOString(),
-        healthScore,
-        steps: currentSteps,
-        goal: currentGoal,
-        streak: currentStreak,
+        completedAt: new Date().toISOString(),
       };
 
       await AsyncStorage.setItem(
@@ -418,28 +173,21 @@ export default function DailyHealthCheckIn() {
         `health_checkin_${todayKey}`
       );
 
-      setSteps(currentSteps);
-      setGoal(currentGoal);
-      setStreak(currentStreak);
-      setSavedScore(healthScore);
       setCompleted(true);
 
       if (result.awarded) {
         Alert.alert(
           '❤️ Health Check-in Complete!',
-          `+10 Chalega Points\n\nToday's wellness score is ${healthScore}/100.\n\nYour check-in has been saved for your Health History.`
+          '+10 Chalega Points\n\nYour wellness check-in has been saved for today.'
         );
       } else {
         Alert.alert(
           '❤️ Check-in Complete',
-          `Today's wellness score is ${healthScore}/100.\n\nYour check-in has been saved. You have already received today's points.`
+          'Your wellness check-in has been saved for today.\n\nYou have already received today’s points.'
         );
       }
     } catch (error) {
-      console.log(
-        'Failed to save health check-in:',
-        error
-      );
+      console.log('Failed to save health check-in:', error);
 
       Alert.alert(
         'Something went wrong',
@@ -450,33 +198,26 @@ export default function DailyHealthCheckIn() {
     }
   };
 
-  const renderOptions = <
-    T extends string | number
-  >(
+  const renderOptions = <T extends string | number>(
     options: Option<T>[],
     selected: T | null,
     onSelect: (value: T) => void,
     disabled = false
   ) => (
     <View style={styles.optionsWrap}>
-      {options.map(option => {
-        const selectedOption =
-          selected === option.value;
+      {options.map((option) => {
+        const selectedOption = selected === option.value;
 
         return (
           <TouchableOpacity
             key={String(option.value)}
             activeOpacity={0.8}
             disabled={disabled}
-            onPress={() =>
-              onSelect(option.value)
-            }
+            onPress={() => onSelect(option.value)}
             style={[
               styles.option,
-              selectedOption &&
-                styles.optionSelected,
-              disabled &&
-                styles.optionDisabled,
+              selectedOption && styles.optionSelected,
+              disabled && styles.optionDisabled,
             ]}
           >
             {option.emoji ? (
@@ -488,8 +229,7 @@ export default function DailyHealthCheckIn() {
             <Text
               style={[
                 styles.optionText,
-                selectedOption &&
-                  styles.optionTextSelected,
+                selectedOption && styles.optionTextSelected,
               ]}
             >
               {option.label}
@@ -497,9 +237,7 @@ export default function DailyHealthCheckIn() {
 
             {selectedOption ? (
               <View style={styles.checkCircle}>
-                <Text style={styles.checkText}>
-                  ✓
-                </Text>
+                <Text style={styles.checkText}>✓</Text>
               </View>
             ) : null}
           </TouchableOpacity>
@@ -520,9 +258,7 @@ export default function DailyHealthCheckIn() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Text style={styles.backText}>
-              ‹
-            </Text>
+            <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
 
           <View style={styles.headerTextWrap}>
@@ -543,9 +279,7 @@ export default function DailyHealthCheckIn() {
         {completed ? (
           <View style={styles.completedCard}>
             <View style={styles.completedIcon}>
-              <Text style={styles.completedIconText}>
-                ✓
-              </Text>
+              <Text style={styles.completedIconText}>✓</Text>
             </View>
 
             <View style={styles.completedContent}>
@@ -554,22 +288,14 @@ export default function DailyHealthCheckIn() {
               </Text>
 
               <Text style={styles.completedText}>
-                Your wellness answers and today’s health snapshot have been saved.
+                Your wellness answers have been saved. Come back tomorrow for your next check-in.
               </Text>
-
-              {savedScore !== null ? (
-                <Text style={styles.scoreSnapshot}>
-                  TODAY’S SCORE • {savedScore}/100
-                </Text>
-              ) : null}
             </View>
           </View>
         ) : null}
 
         <View style={styles.introCard}>
-          <Text style={styles.introEmoji}>
-            ❤️
-          </Text>
+          <Text style={styles.introEmoji}>❤️</Text>
 
           <View style={styles.introContent}>
             <Text style={styles.introTitle}>
@@ -582,67 +308,9 @@ export default function DailyHealthCheckIn() {
           </View>
         </View>
 
-        <View style={styles.snapshotCard}>
-          <View style={styles.snapshotHeader}>
-            <View>
-              <Text style={styles.snapshotEyebrow}>
-                TODAY’S SNAPSHOT
-              </Text>
-
-              <Text style={styles.snapshotTitle}>
-                Your activity so far
-              </Text>
-            </View>
-
-            <View style={styles.snapshotScore}>
-              <Text style={styles.snapshotScoreText}>
-                {savedScore ?? '—'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.snapshotRow}>
-            <View style={styles.snapshotItem}>
-              <Text style={styles.snapshotLabel}>
-                STEPS
-              </Text>
-
-              <Text style={styles.snapshotValue}>
-                {steps.toLocaleString('en-IN')}
-              </Text>
-            </View>
-
-            <View style={styles.snapshotDivider} />
-
-            <View style={styles.snapshotItem}>
-              <Text style={styles.snapshotLabel}>
-                GOAL
-              </Text>
-
-              <Text style={styles.snapshotValue}>
-                {goal.toLocaleString('en-IN')}
-              </Text>
-            </View>
-
-            <View style={styles.snapshotDivider} />
-
-            <View style={styles.snapshotItem}>
-              <Text style={styles.snapshotLabel}>
-                STREAK
-              </Text>
-
-              <Text style={styles.snapshotValue}>
-                {streak}
-              </Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.questionCard}>
           <View style={styles.questionNumber}>
-            <Text style={styles.questionNumberText}>
-              1
-            </Text>
+            <Text style={styles.questionNumberText}>1</Text>
           </View>
 
           <Text style={styles.question}>
@@ -659,9 +327,7 @@ export default function DailyHealthCheckIn() {
 
         <View style={styles.questionCard}>
           <View style={styles.questionNumber}>
-            <Text style={styles.questionNumberText}>
-              2
-            </Text>
+            <Text style={styles.questionNumberText}>2</Text>
           </View>
 
           <Text style={styles.question}>
@@ -682,9 +348,7 @@ export default function DailyHealthCheckIn() {
 
         <View style={styles.questionCard}>
           <View style={styles.questionNumber}>
-            <Text style={styles.questionNumberText}>
-              3
-            </Text>
+            <Text style={styles.questionNumberText}>3</Text>
           </View>
 
           <Text style={styles.question}>
@@ -701,9 +365,7 @@ export default function DailyHealthCheckIn() {
 
         <View style={styles.questionCard}>
           <View style={styles.questionNumber}>
-            <Text style={styles.questionNumberText}>
-              4
-            </Text>
+            <Text style={styles.questionNumberText}>4</Text>
           </View>
 
           <Text style={styles.question}>
@@ -725,8 +387,7 @@ export default function DailyHealthCheckIn() {
             onPress={completeCheckIn}
             style={[
               styles.submitButton,
-              saving &&
-                styles.submitButtonDisabled,
+              saving && styles.submitButtonDisabled,
             ]}
           >
             <Text style={styles.submitButtonText}>
@@ -745,9 +406,7 @@ export default function DailyHealthCheckIn() {
 
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() =>
-            router.replace('/explore')
-          }
+          onPress={() => router.replace('/explore')}
           style={styles.dashboardButton}
         >
           <Text style={styles.dashboardButtonText}>
@@ -904,90 +563,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: '#39734A',
-  },
-
-  scoreSnapshot: {
-    fontSize: 10,
-    lineHeight: 15,
-    fontWeight: '900',
-    color: '#2FA84F',
-    marginTop: 6,
-    letterSpacing: 0.7,
-  },
-
-  snapshotCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E4E8ED',
-    padding: 16,
-    marginBottom: 16,
-  },
-
-  snapshotHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-
-  snapshotEyebrow: {
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-    color: '#2FA84F',
-  },
-
-  snapshotTitle: {
-    marginTop: 4,
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0B1F33',
-  },
-
-  snapshotScore: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#1D6FF2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  snapshotScoreText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '900',
-  },
-
-  snapshotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  snapshotItem: {
-    flex: 1,
-  },
-
-  snapshotLabel: {
-    color: '#7A8793',
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-  },
-
-  snapshotValue: {
-    color: '#0B1F33',
-    fontSize: 17,
-    fontWeight: '900',
-    marginTop: 3,
-  },
-
-  snapshotDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: '#E4E8ED',
-    marginHorizontal: 12,
   },
 
   questionCard: {
