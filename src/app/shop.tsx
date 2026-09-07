@@ -1,4 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -9,137 +14,125 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import {
+  products,
+  Product,
+  ProductCategory,
+} from '@/data/products';
+import {
+  addToCart as addCartItem,
+  getCart,
+  removeFromCart,
+  removeProductFromCart,
+} from '@/lib/cart';
 
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
+const CATEGORIES: {
+  name: 'All' | ProductCategory;
   emoji: string;
-  description: string;
-};
-
-const products: Product[] = [
+  subtitle: string;
+}[] = [
   {
-    id: '1',
-    name: 'Chalega India Water Bottle',
-    price: 399,
-    category: 'Hydration',
-    emoji: '💧',
-    description: 'Reusable bottle for everyday hydration.',
+    name: 'All',
+    emoji: '✨',
+    subtitle: 'Everything fresh',
   },
   {
-    id: '2',
-    name: 'Chalega India Walking T-Shirt',
-    price: 699,
-    category: 'Fitness',
-    emoji: '👕',
-    description: 'Comfortable T-shirt for walking and exercise.',
+    name: 'Vegetables',
+    emoji: '🥬',
+    subtitle: 'Daily essentials',
   },
   {
-    id: '3',
-    name: 'Healthy Snack Pack',
-    price: 249,
-    category: 'Healthy Food',
-    emoji: '🥜',
-    description: 'A convenient everyday healthy snack option.',
-  },
-  {
-    id: '4',
-    name: 'Fresh Fruit Box',
-    price: 499,
-    category: 'Fruits',
+    name: 'Fruits',
     emoji: '🍎',
-    description: 'Seasonal fresh fruits packed for your home.',
+    subtitle: 'Fresh every day',
   },
   {
-    id: '5',
-    name: 'Dry Fruits Wellness Pack',
-    price: 599,
-    category: 'Healthy Food',
-    emoji: '🥜',
-    description: 'A selection of dry fruits for everyday snacking.',
+    name: 'Breakfast & Dairy',
+    emoji: '🥛',
+    subtitle: 'Start your day',
   },
   {
-    id: '6',
-    name: 'Morning Fruit Basket',
-    price: 699,
-    category: 'Fruits',
-    emoji: '🍊',
-    description: 'A family-friendly selection of fresh fruits.',
+    name: 'Seasonal',
+    emoji: '🌱',
+    subtitle: 'What is in season',
   },
   {
-    id: '7',
-    name: 'Walking Cap',
-    price: 299,
-    category: 'Fitness',
-    emoji: '🧢',
-    description: 'Lightweight cap for outdoor walks.',
+    name: "Today's Fresh Market",
+    emoji: '⭐',
+    subtitle: 'Picked for today',
   },
   {
-    id: '8',
-    name: 'Healthy Home Kit',
-    price: 899,
-    category: 'Home Health',
-    emoji: '🏠',
-    description: 'Simple essentials for a healthier home.',
-  },
-  {
-    id: '9',
-    name: 'Family Health Combo',
-    price: 999,
-    category: 'Health Combos',
-    emoji: '🎁',
-    description: 'A useful combination of everyday wellness products.',
-  },
-  {
-    id: '10',
-    name: 'Walking Starter Combo',
-    price: 1199,
-    category: 'Health Combos',
+    name: 'Wellness & Fitness',
     emoji: '🚶',
-    description: 'Everything you need to get started with walking.',
+    subtitle: 'Walk & live better',
   },
-];
-
-const categories = [
-  { name: 'All', emoji: '✨' },
-  { name: 'Healthy Food', emoji: '🥗' },
-  { name: 'Fruits', emoji: '🍎' },
-  { name: 'Hydration', emoji: '💧' },
-  { name: 'Fitness', emoji: '🚶' },
-  { name: 'Home Health', emoji: '🏠' },
-  { name: 'Health Combos', emoji: '🎁' },
 ];
 
 export default function ShopScreen() {
   const router = useRouter();
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState<
+    'All' | ProductCategory
+  >('All');
+
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<Record<string, number>>({});
   const [showCart, setShowCart] = useState(false);
+  const [cartLoading, setCartLoading] = useState(true);
+
+  const loadCart = useCallback(async () => {
+    try {
+      const savedCart = await getCart();
+      setCart(savedCart);
+    } catch (error) {
+      console.log('Failed to load Shop cart:', error);
+      setCart({});
+    } finally {
+      setCartLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCart();
+    }, [loadCart])
+  );
 
   const filteredProducts = useMemo(() => {
-    const searchText = search.toLowerCase().trim();
+    const searchText = search.trim().toLowerCase();
 
-    return products.filter((product) => {
+    return products.filter(product => {
       const categoryMatch =
         selectedCategory === 'All' ||
         product.category === selectedCategory;
 
       const searchMatch =
         !searchText ||
-        product.name.toLowerCase().includes(searchText) ||
-        product.category.toLowerCase().includes(searchText);
+        product.name
+          .toLowerCase()
+          .includes(searchText) ||
+        product.category
+          .toLowerCase()
+          .includes(searchText) ||
+        product.description
+          .toLowerCase()
+          .includes(searchText);
 
-      return categoryMatch && searchMatch;
+      return (
+        categoryMatch &&
+        searchMatch &&
+        product.available
+      );
     });
   }, [selectedCategory, search]);
 
   const cartProducts = products.filter(
-    (product) => (cart[product.id] || 0) > 0
+    product => (cart[product.id] || 0) > 0
   );
 
   const cartItemCount = Object.values(cart).reduce(
@@ -147,49 +140,101 @@ export default function ShopScreen() {
     0
   );
 
-  const cartTotal = cartProducts.reduce(
+  const cartSubtotal = cartProducts.reduce(
     (total, product) =>
-      total + product.price * (cart[product.id] || 0),
+      total +
+      product.price *
+        (cart[product.id] || 0),
     0
   );
 
-  const addToCart = (product: Product) => {
-    setCart((current) => ({
-      ...current,
-      [product.id]: (current[product.id] || 0) + 1,
-    }));
+  const deliveryFee =
+    cartSubtotal >= 499
+      ? 0
+      : cartSubtotal >= 299
+      ? 29
+      : cartSubtotal > 0
+      ? 49
+      : 0;
+
+  const cartTotal =
+    cartSubtotal + deliveryFee;
+
+  const addToCart = async (
+    product: Product
+  ) => {
+    try {
+      const nextCart = await addCartItem(
+        product.id,
+        1
+      );
+
+      setCart(nextCart);
+    } catch (error) {
+      console.log(
+        'Failed to add product to cart:',
+        error
+      );
+
+      Alert.alert(
+        'Could not add to cart',
+        'Please try again.'
+      );
+    }
   };
 
-  const removeOne = (productId: string) => {
-    setCart((current) => {
-      const quantity = current[productId] || 0;
+  const removeOne = async (
+    productId: string
+  ) => {
+    try {
+      const nextCart =
+        await removeFromCart(
+          productId,
+          1
+        );
 
-      if (quantity <= 1) {
-        const next = { ...current };
-        delete next[productId];
-        return next;
-      }
+      setCart(nextCart);
+    } catch (error) {
+      console.log(
+        'Failed to remove item from cart:',
+        error
+      );
 
-      return {
-        ...current,
-        [productId]: quantity - 1,
-      };
-    });
+      Alert.alert(
+        'Could not update cart',
+        'Please try again.'
+      );
+    }
   };
 
-  const removeProduct = (productId: string) => {
-    setCart((current) => {
-      const next = { ...current };
-      delete next[productId];
-      return next;
-    });
+  const removeProduct = async (
+    productId: string
+  ) => {
+    try {
+      const nextCart =
+        await removeProductFromCart(
+          productId
+        );
+
+      setCart(nextCart);
+    } catch (error) {
+      console.log(
+        'Failed to remove product from cart:',
+        error
+      );
+
+      Alert.alert(
+        'Could not update cart',
+        'Please try again.'
+      );
+    }
   };
 
   const goToCheckout = () => {
     if (cartItemCount === 0) {
       Alert.alert(
         'Your cart is empty',
-        'Please add a product before checkout.'
+        'Add something fresh before checkout.'
       );
       return;
     }
@@ -198,141 +243,447 @@ export default function ShopScreen() {
       pathname: '/checkout',
       params: {
         total: cartTotal.toString(),
-        items: cartItemCount.toString(),
+        subtotal:
+          cartSubtotal.toString(),
+        deliveryFee:
+          deliveryFee.toString(),
+        items:
+          cartItemCount.toString(),
         cart: JSON.stringify(cart),
       },
     });
   };
 
-  /*
-   * CART SCREEN
-   */
+  const getFreeDeliveryMessage =
+    () => {
+      if (cartSubtotal >= 499) {
+        return '✓ You unlocked FREE delivery';
+      }
+
+      const amountLeft =
+        499 - cartSubtotal;
+
+      return `Add ₹${amountLeft.toLocaleString(
+        'en-IN'
+      )} more for FREE delivery`;
+    };
 
   if (showCart) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.cartHeader}>
+      <SafeAreaView
+        style={styles.container}
+      >
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => setShowCart(false)}
+            onPress={() =>
+              setShowCart(false)
+            }
           >
-            <Text style={styles.backText}>‹</Text>
+            <Text style={styles.backText}>
+              ‹
+            </Text>
           </TouchableOpacity>
 
-          <Text style={styles.cartTitle}>Your Cart</Text>
+          <View
+            style={styles.headerCenter}
+          >
+            <Text
+              style={styles.headerTitle}
+            >
+              Your Cart
+            </Text>
 
-          <View style={styles.headerSpacer} />
+            <Text
+              style={styles.headerSubtitle}
+            >
+              Fresh for your family
+            </Text>
+          </View>
+
+          <View
+            style={styles.headerSpacer}
+          />
         </View>
 
         <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.cartContent}
+          contentContainerStyle={
+            styles.cartContent
+          }
+          showsVerticalScrollIndicator={
+            false
+          }
         >
-          {cartProducts.length === 0 ? (
-            <View style={styles.emptyCart}>
-              <Text style={styles.emptyEmoji}>🛒</Text>
+          {cartLoading ? (
+            <View
+              style={styles.emptyCart}
+            >
+              <Text
+                style={styles.emptyCartTitle}
+              >
+                Loading your cart...
+              </Text>
+            </View>
+          ) : cartProducts.length ===
+            0 ? (
+            <View
+              style={styles.emptyCart}
+            >
+              <Text
+                style={
+                  styles.emptyCartEmoji
+                }
+              >
+                🛒
+              </Text>
 
-              <Text style={styles.emptyTitle}>
+              <Text
+                style={styles.emptyCartTitle}
+              >
                 Your cart is empty
               </Text>
 
-              <Text style={styles.emptyText}>
-                Add some healthy products to continue.
+              <Text
+                style={styles.emptyCartText}
+              >
+                Add fresh fruits,
+                vegetables or breakfast
+                essentials.
               </Text>
 
               <TouchableOpacity
-                style={styles.shopButton}
-                onPress={() => setShowCart(false)}
+                style={
+                  styles.primaryButton
+                }
+                onPress={() =>
+                  setShowCart(false)
+                }
               >
-                <Text style={styles.shopButtonText}>
-                  CONTINUE SHOPPING
+                <Text
+                  style={
+                    styles.primaryButtonText
+                  }
+                >
+                  START SHOPPING
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <>
-              {cartProducts.map((product) => {
-                const quantity = cart[product.id] || 0;
-
-                return (
-                  <View
-                    key={product.id}
-                    style={styles.cartProduct}
-                  >
-                    <View style={styles.cartEmojiBox}>
-                      <Text style={styles.cartEmoji}>
-                        {product.emoji}
-                      </Text>
-                    </View>
-
-                    <View style={styles.cartProductInfo}>
-                      <Text style={styles.cartProductName}>
-                        {product.name}
-                      </Text>
-
-                      <Text style={styles.cartProductPrice}>
-                        ₹{product.price.toLocaleString('en-IN')}
-                      </Text>
-
-                      <View style={styles.quantityRow}>
-                        <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() =>
-                            removeOne(product.id)
-                          }
-                        >
-                          <Text style={styles.quantityButtonText}>
-                            −
-                          </Text>
-                        </TouchableOpacity>
-
-                        <Text style={styles.quantityNumber}>
-                          {quantity}
-                        </Text>
-
-                        <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() =>
-                            addToCart(product)
-                          }
-                        >
-                          <Text style={styles.quantityButtonText}>
-                            +
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={() =>
-                        removeProduct(product.id)
-                      }
-                    >
-                      <Text style={styles.removeText}>
-                        Remove
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-
-              <View style={styles.totalCard}>
-                <Text style={styles.totalLabel}>
-                  {cartItemCount} item
-                  {cartItemCount === 1 ? '' : 's'}
+              <View
+                style={
+                  styles.deliveryPromise
+                }
+              >
+                <Text
+                  style={
+                    styles.deliveryPromiseEmoji
+                  }
+                >
+                  🚚
                 </Text>
 
-                <Text style={styles.totalAmount}>
-                  ₹{cartTotal.toLocaleString('en-IN')}
+                <View
+                  style={
+                    styles.deliveryPromiseBody
+                  }
+                >
+                  <Text
+                    style={
+                      styles.deliveryPromiseTitle
+                    }
+                  >
+                    CHALEGA 24-HOUR DELIVERY
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.deliveryPromiseText
+                    }
+                  >
+                    Your fresh order will
+                    arrive within 24 hours.
+                  </Text>
+                </View>
+              </View>
+
+              <View
+                style={styles.cartItemsCard}
+              >
+                {cartProducts.map(
+                  product => {
+                    const quantity =
+                      cart[product.id] || 0;
+
+                    return (
+                      <View
+                        key={product.id}
+                        style={
+                          styles.cartItem
+                        }
+                      >
+                        <View
+                          style={
+                            styles.cartItemEmoji
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.cartItemEmojiText
+                            }
+                          >
+                            {product.emoji}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={
+                            styles.cartItemInfo
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.cartItemName
+                            }
+                          >
+                            {product.name}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.cartItemUnit
+                            }
+                          >
+                            ₹
+                            {product.price.toLocaleString(
+                              'en-IN'
+                            )}{' '}
+                            / {product.unit}
+                          </Text>
+
+                          <TouchableOpacity
+                            onPress={() =>
+                              removeProduct(
+                                product.id
+                              )
+                            }
+                          >
+                            <Text
+                              style={
+                                styles.removeText
+                              }
+                            >
+                              Remove
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <View
+                          style={
+                            styles.cartItemRight
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.cartItemTotal
+                            }
+                          >
+                            ₹
+                            {(
+                              product.price *
+                              quantity
+                            ).toLocaleString(
+                              'en-IN'
+                            )}
+                          </Text>
+
+                          <View
+                            style={
+                              styles.quantityRow
+                            }
+                          >
+                            <TouchableOpacity
+                              style={
+                                styles.quantityButton
+                              }
+                              onPress={() =>
+                                removeOne(
+                                  product.id
+                                )
+                              }
+                            >
+                              <Text
+                                style={
+                                  styles.quantityButtonText
+                                }
+                              >
+                                −
+                              </Text>
+                            </TouchableOpacity>
+
+                            <Text
+                              style={
+                                styles.quantityNumber
+                              }
+                            >
+                              {quantity}
+                            </Text>
+
+                            <TouchableOpacity
+                              style={
+                                styles.quantityButton
+                              }
+                              onPress={() =>
+                                addToCart(
+                                  product
+                                )
+                              }
+                            >
+                              <Text
+                                style={
+                                  styles.quantityButtonText
+                                }
+                              >
+                                +
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  }
+                )}
+              </View>
+
+              <View
+                style={
+                  styles.freeDeliveryCard
+                }
+              >
+                <Text
+                  style={
+                    styles.freeDeliveryTitle
+                  }
+                >
+                  {getFreeDeliveryMessage()}
+                </Text>
+
+                <Text
+                  style={
+                    styles.freeDeliveryText
+                  }
+                >
+                  ₹499+ orders get free
+                  delivery.
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.checkoutButton}
-                onPress={goToCheckout}
+              <View
+                style={styles.summaryCard}
               >
-                <Text style={styles.checkoutText}>
-                  PROCEED TO CHECKOUT →
+                <View
+                  style={styles.summaryRow}
+                >
+                  <Text
+                    style={
+                      styles.summaryLabel
+                    }
+                  >
+                    Items
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.summaryValue
+                    }
+                  >
+                    ₹
+                    {cartSubtotal.toLocaleString(
+                      'en-IN'
+                    )}
+                  </Text>
+                </View>
+
+                <View
+                  style={styles.summaryRow}
+                >
+                  <Text
+                    style={
+                      styles.summaryLabel
+                    }
+                  >
+                    Delivery
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      deliveryFee === 0 &&
+                        styles.freeValue,
+                    ]}
+                  >
+                    {deliveryFee === 0
+                      ? 'FREE'
+                      : `₹${deliveryFee}`}
+                  </Text>
+                </View>
+
+                <View
+                  style={
+                    styles.summaryDivider
+                  }
+                />
+
+                <View
+                  style={styles.summaryRow}
+                >
+                  <Text
+                    style={
+                      styles.totalLabel
+                    }
+                  >
+                    Total
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.totalValue
+                    }
+                  >
+                    ₹
+                    {cartTotal.toLocaleString(
+                      'en-IN'
+                    )}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={
+                  styles.checkoutButton
+                }
+                onPress={
+                  goToCheckout
+                }
+                activeOpacity={0.85}
+              >
+                <Text
+                  style={
+                    styles.checkoutButtonText
+                  }
+                >
+                  CHECKOUT
+                </Text>
+
+                <Text
+                  style={
+                    styles.checkoutButtonTotal
+                  }
+                >
+                  ₹
+                  {cartTotal.toLocaleString(
+                    'en-IN'
+                  )}
                 </Text>
               </TouchableOpacity>
             </>
@@ -342,313 +693,613 @@ export default function ShopScreen() {
     );
   }
 
-  /*
-   * MAIN SHOP SCREEN
-   */
-
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={
+          false
+        }
+        contentContainerStyle={
+          styles.content
+        }
       >
+        <View style={styles.hero}>
+          <View
+            style={styles.heroTopRow}
+          >
+            <View
+              style={styles.heroBadge}
+            >
+              <Text
+                style={styles.heroBadgeText}
+              >
+                SHOP TO FEED
+              </Text>
+            </View>
 
-        {/* HEADER */}
+            <TouchableOpacity
+              style={styles.cartButton}
+              onPress={() =>
+                setShowCart(true)
+              }
+            >
+              <Text
+                style={
+                  styles.cartButtonEmoji
+                }
+              >
+                🛒
+              </Text>
 
-        <View style={styles.header}>
-          <View style={styles.headerBrandBox}>
-            <Text style={styles.brand}>
-              C H A L E G A  I N D I A
-            </Text>
-
-            <Text style={styles.title}>
-              Health Shop
-            </Text>
-
-            <Text style={styles.subtitle}>
-              Healthy choices for everyday life.
-            </Text>
+              {cartItemCount > 0 && (
+                <View
+                  style={styles.cartBadge}
+                >
+                  <Text
+                    style={
+                      styles.cartBadgeText
+                    }
+                  >
+                    {cartItemCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.cartIcon}
-            onPress={() => setShowCart(true)}
+          <Text
+            style={styles.heroTitle}
           >
-            <Text style={styles.cartIconEmoji}>
-              🛒
+            Chalega Fresh
+          </Text>
+
+          <Text
+            style={styles.heroSubtitle}
+          >
+            Fresh for your family.
+            {'\n'}
+            Good for the community.
+          </Text>
+
+          <View
+            style={styles.heroPromise}
+          >
+            <Text
+              style={
+                styles.heroPromiseEmoji
+              }
+            >
+              🚚
             </Text>
 
-            {cartItemCount > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>
-                  {cartItemCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+            <View
+              style={
+                styles.heroPromiseBody
+              }
+            >
+              <Text
+                style={
+                  styles.heroPromiseTitle
+                }
+              >
+                24-HOUR FRESH DELIVERY
+              </Text>
+
+              <Text
+                style={
+                  styles.heroPromiseText
+                }
+              >
+                Order today. Get your fresh
+                essentials within 24 hours.
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* MY ORDERS BUTTON */}
-
-        <TouchableOpacity
-          style={styles.ordersButton}
-          onPress={() => router.push('/customer-orders')}
+        <View
+          style={styles.impactCard}
         >
-          <View style={styles.ordersButtonIcon}>
-            <Text style={styles.ordersButtonIconText}>
-              📦
+          <View
+            style={styles.impactIcon}
+          >
+            <Text
+              style={
+                styles.impactIconText
+              }
+            >
+              ❤️
             </Text>
           </View>
 
-          <View style={styles.ordersButtonContent}>
-            <Text style={styles.ordersButtonTitle}>
-              My Orders
+          <View
+            style={styles.impactBody}
+          >
+            <Text
+              style={styles.impactTitle}
+            >
+              SHOP WITH PURPOSE
             </Text>
 
-            <Text style={styles.ordersButtonSubtitle}>
-              View and track your previous orders
+            <Text
+              style={styles.impactText}
+            >
+              Your purchase supports
+              Chalega's community food
+              initiatives.
             </Text>
           </View>
+        </View>
 
-          <Text style={styles.ordersArrow}>
-            →
+        <View
+          style={styles.searchCard}
+        >
+          <Text
+            style={styles.searchEmoji}
+          >
+            🔎
           </Text>
-        </TouchableOpacity>
-
-        {/* SEARCH */}
-
-        <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>⌕</Text>
 
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search health products..."
-            placeholderTextColor="#999999"
+            placeholder="Search fruits, vegetables, milk..."
+            placeholderTextColor="#7A8490"
             style={styles.searchInput}
+            returnKeyType="search"
           />
         </View>
 
-        {/* CATEGORIES */}
-
-        <Text style={styles.sectionTitle}>
+        <Text
+          style={styles.sectionTitle}
+        >
           Shop by category
         </Text>
 
         <ScrollView
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryRow}
+          showsHorizontalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.categoryRow
+          }
         >
-          {categories.map((category) => {
-            const selected =
-              selectedCategory === category.name;
+          {CATEGORIES.map(
+            category => {
+              const selected =
+                selectedCategory ===
+                category.name;
 
-            return (
-              <TouchableOpacity
-                key={category.name}
-                style={[
-                  styles.category,
-                  selected && styles.categorySelected,
-                ]}
-                onPress={() =>
-                  setSelectedCategory(category.name)
-                }
-              >
-                <Text style={styles.categoryEmoji}>
-                  {category.emoji}
-                </Text>
-
-                <Text
+              return (
+                <TouchableOpacity
+                  key={category.name}
                   style={[
-                    styles.categoryText,
-                    selected && styles.categoryTextSelected,
+                    styles.category,
+                    selected &&
+                      styles.categorySelected,
                   ]}
+                  onPress={() =>
+                    setSelectedCategory(
+                      category.name
+                    )
+                  }
+                  activeOpacity={0.85}
                 >
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    style={
+                      styles.categoryEmoji
+                    }
+                  >
+                    {category.emoji}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      selected &&
+                        styles.categoryTextSelected,
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.categorySubtitle,
+                      selected &&
+                        styles.categorySubtitleSelected,
+                    ]}
+                  >
+                    {category.subtitle}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
+          )}
         </ScrollView>
 
-        {/* BANNER */}
-
-        <View style={styles.banner}>
-          <Text style={styles.bannerEmoji}>
-            ❤️
-          </Text>
-
-          <View style={styles.bannerTextBox}>
-            <Text style={styles.bannerSmall}>
-              HEALTHY LIVING
+        {selectedCategory ===
+          "Today's Fresh Market" && (
+          <View
+            style={styles.todayBanner}
+          >
+            <Text
+              style={
+                styles.todayBannerTitle
+              }
+            >
+              ⭐ Today's Fresh Market
             </Text>
 
-            <Text style={styles.bannerTitle}>
-              Har kadam zaroori hai.
-              {'\n'}
-              Har choice bhi.
+            <Text
+              style={
+                styles.todayBannerText
+              }
+            >
+              A changing selection based
+              on what is fresh and available
+              today.
+            </Text>
+          </View>
+        )}
+
+        {selectedCategory ===
+          'Seasonal' && (
+          <View
+            style={
+              styles.seasonalBanner
+            }
+          >
+            <Text
+              style={
+                styles.seasonalBannerTitle
+              }
+            >
+              🌱 Seasonal Picks
+            </Text>
+
+            <Text
+              style={
+                styles.seasonalBannerText
+              }
+            >
+              Seasonal availability can
+              change with the local market
+              supply.
+            </Text>
+          </View>
+        )}
+
+        <View
+          style={styles.productHeader}
+        >
+          <View>
+            <Text
+              style={styles.sectionTitle}
+            >
+              {selectedCategory === 'All'
+                ? 'Fresh picks'
+                : selectedCategory}
+            </Text>
+
+            <Text
+              style={styles.productCount}
+            >
+              {filteredProducts.length}{' '}
+              available
             </Text>
           </View>
         </View>
 
-        {/* PRODUCTS */}
+        {filteredProducts.map(
+          product => {
+            const quantity =
+              cart[product.id] || 0;
 
-        <View style={styles.productsHeader}>
-          <Text style={styles.sectionTitle}>
-            Products
-          </Text>
-
-          <Text style={styles.productCount}>
-            {filteredProducts.length} products
-          </Text>
-        </View>
-
-        {filteredProducts.map((product) => {
-          const quantity = cart[product.id] || 0;
-
-          return (
-            <View
-              key={product.id}
-              style={styles.productCard}
-            >
-              <TouchableOpacity
-                style={styles.productImage}
-                onPress={() =>
-                  router.push({
-                    pathname: '/product',
-                    params: {
-                      id: product.id,
-                    },
-                  })
+            return (
+              <View
+                key={product.id}
+                style={
+                  styles.productCard
                 }
               >
-                <Text style={styles.productEmoji}>
-                  {product.emoji}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.productInfo}>
-                <Text style={styles.productCategory}>
-                  {product.category.toUpperCase()}
-                </Text>
-
                 <TouchableOpacity
+                  style={
+                    styles.productImage
+                  }
                   onPress={() =>
                     router.push({
-                      pathname: '/product',
+                      pathname:
+                        '/product',
                       params: {
                         id: product.id,
                       },
                     })
                   }
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.productName}>
-                    {product.name}
+                  <Text
+                    style={
+                      styles.productEmoji
+                    }
+                  >
+                    {product.emoji}
                   </Text>
                 </TouchableOpacity>
 
-                <Text style={styles.productDescription}>
-                  {product.description}
-                </Text>
-
-                <View style={styles.productBottom}>
-                  <Text style={styles.productPrice}>
-                    ₹{product.price.toLocaleString('en-IN')}
-                  </Text>
-
-                  {quantity === 0 ? (
-                    <TouchableOpacity
-                      style={styles.addButton}
-                      onPress={() =>
-                        addToCart(product)
+                <View
+                  style={
+                    styles.productInfo
+                  }
+                >
+                  <View
+                    style={
+                      styles.productMetaRow
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.productCategory
                       }
                     >
-                      <Text style={styles.addButtonText}>
-                        + ADD
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.miniQuantity}>
-                      <TouchableOpacity
-                        style={styles.miniButton}
-                        onPress={() =>
-                          removeOne(product.id)
+                      {product.category.toUpperCase()}
+                    </Text>
+
+                    {product.seasonal && (
+                      <View
+                        style={
+                          styles.seasonBadge
                         }
                       >
-                        <Text style={styles.miniButtonText}>
-                          −
+                        <Text
+                          style={
+                            styles.seasonBadgeText
+                          }
+                        >
+                          SEASONAL
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({
+                        pathname:
+                          '/product',
+                        params: {
+                          id: product.id,
+                        },
+                      })
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.productName
+                      }
+                    >
+                      {product.name}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <Text
+                    style={
+                      styles.productDescription
+                    }
+                  >
+                    {product.description}
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.productUnit
+                    }
+                  >
+                    ₹
+                    {product.price.toLocaleString(
+                      'en-IN'
+                    )}{' '}
+                    / {product.unit}
+                  </Text>
+
+                  <View
+                    style={
+                      styles.productBottom
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.productPrice
+                      }
+                    >
+                      ₹
+                      {product.price.toLocaleString(
+                        'en-IN'
+                      )}
+                    </Text>
+
+                    {quantity === 0 ? (
+                      <TouchableOpacity
+                        style={
+                          styles.addButton
+                        }
+                        onPress={() =>
+                          addToCart(
+                            product
+                          )
+                        }
+                        activeOpacity={0.85}
+                      >
+                        <Text
+                          style={
+                            styles.addButtonText
+                          }
+                        >
+                          + ADD
                         </Text>
                       </TouchableOpacity>
-
-                      <Text style={styles.miniNumber}>
-                        {quantity}
-                      </Text>
-
-                      <TouchableOpacity
-                        style={styles.miniButton}
-                        onPress={() =>
-                          addToCart(product)
+                    ) : (
+                      <View
+                        style={
+                          styles.miniQuantity
                         }
                       >
-                        <Text style={styles.miniButtonText}>
-                          +
+                        <TouchableOpacity
+                          style={
+                            styles.miniButton
+                          }
+                          onPress={() =>
+                            removeOne(
+                              product.id
+                            )
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.miniButtonText
+                            }
+                          >
+                            −
+                          </Text>
+                        </TouchableOpacity>
+
+                        <Text
+                          style={
+                            styles.miniNumber
+                          }
+                        >
+                          {quantity}
                         </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+
+                        <TouchableOpacity
+                          style={
+                            styles.miniButton
+                          }
+                          onPress={() =>
+                            addToCart(
+                              product
+                            )
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.miniButtonText
+                            }
+                          >
+                            +
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          }
+        )}
 
-        {/* NO RESULTS */}
-
-        {filteredProducts.length === 0 && (
-          <View style={styles.noResults}>
-            <Text style={styles.noResultsEmoji}>
+        {filteredProducts.length ===
+          0 && (
+          <View
+            style={styles.noResults}
+          >
+            <Text
+              style={
+                styles.noResultsEmoji
+              }
+            >
               🔎
             </Text>
 
-            <Text style={styles.noResultsTitle}>
-              No products found
+            <Text
+              style={
+                styles.noResultsTitle
+              }
+            >
+              Nothing available right now
             </Text>
 
-            <Text style={styles.noResultsText}>
-              Try another search or category.
+            <Text
+              style={
+                styles.noResultsText
+              }
+            >
+              Try another category or
+              search.
             </Text>
           </View>
         )}
 
-        {/* FLOATING CART */}
-
-        {cartItemCount > 0 && (
-          <TouchableOpacity
-            style={styles.floatingCart}
-            onPress={() => setShowCart(true)}
+        <View
+          style={styles.footerCard}
+        >
+          <Text
+            style={styles.footerTitle}
           >
-            <Text style={styles.floatingCartText}>
-              VIEW CART • {cartItemCount} ITEMS
-            </Text>
+            Fresh for your family.
+          </Text>
 
-            <Text style={styles.floatingCartTotal}>
-              ₹{cartTotal.toLocaleString('en-IN')}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* FOOTER */}
+          <Text
+            style={styles.footerText}
+          >
+            Chalega Fresh connects
+            everyday shopping with
+            healthy living and community
+            impact.
+          </Text>
+        </View>
 
         <Text style={styles.footer}>
           C H A L E G A  I N D I A 🇮🇳
         </Text>
-
-        <Text style={styles.footerSmall}>
-          Chalo Health Banaye
-        </Text>
-
       </ScrollView>
+
+      {cartItemCount > 0 && (
+        <TouchableOpacity
+          style={styles.floatingCart}
+          onPress={() =>
+            setShowCart(true)
+          }
+          activeOpacity={0.9}
+        >
+          <View>
+            <Text
+              style={
+                styles.floatingCartTitle
+              }
+            >
+              {cartItemCount} item
+              {cartItemCount === 1
+                ? ''
+                : 's'} · ₹
+              {cartTotal.toLocaleString(
+                'en-IN'
+              )}
+            </Text>
+
+            <Text
+              style={
+                styles.floatingCartSubtitle
+              }
+            >
+              {deliveryFee === 0
+                ? 'FREE 24-hour delivery'
+                : `Delivery ₹${deliveryFee} · 24-hour delivery`}
+            </Text>
+          </View>
+
+          <Text
+            style={
+              styles.floatingCartAction
+            }
+          >
+            CART →
+          </Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
@@ -660,611 +1311,854 @@ const styles = StyleSheet.create({
   },
 
   content: {
+    paddingBottom: 140,
+  },
+
+  hero: {
+    backgroundColor: '#123B2A',
     paddingHorizontal: 20,
-    paddingTop: 25,
-    paddingBottom: 100,
+    paddingTop: 18,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
 
-  header: {
+  heroTopRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
   },
 
-  headerBrandBox: {
-    flex: 1,
-    paddingRight: 10,
+  heroBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#E9F6EE',
   },
 
-  brand: {
-    color: '#1976F3',
-    fontSize: 12,
+  heroBadgeText: {
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 4,
+    letterSpacing: 1.2,
+    color: '#123B2A',
   },
 
-  title: {
-    color: '#111111',
-    fontSize: 40,
-    fontWeight: '900',
-    marginTop: 7,
-  },
-
-  subtitle: {
-    color: '#777777',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 3,
-  },
-
-  cartIcon: {
-    width: 65,
-    height: 65,
-    borderRadius: 33,
+  cartButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  cartIconEmoji: {
-    fontSize: 28,
+  cartButtonEmoji: {
+    fontSize: 23,
   },
 
   cartBadge: {
     position: 'absolute',
-    right: -2,
     top: -2,
-    minWidth: 25,
-    height: 25,
-    borderRadius: 13,
-    backgroundColor: '#1976F3',
+    right: -2,
+    minWidth: 19,
+    height: 19,
+    borderRadius: 10,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 5,
+    backgroundColor: '#E5484D',
   },
 
   cartBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '900',
   },
 
-  /*
-   * MY ORDERS
-   */
-
-  ordersButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginTop: 22,
-    padding: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
+  heroTitle: {
+    marginTop: 14,
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.6,
   },
 
-  ordersButtonIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-    backgroundColor: '#EEF4FF',
+  heroSubtitle: {
+    marginTop: 7,
+    fontSize: 17,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: '#E5F4EB',
+  },
+
+  heroPromise: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 13,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+  },
+
+  heroPromiseEmoji: {
+    fontSize: 24,
+    marginRight: 11,
+  },
+
+  heroPromiseBody: {
+    flex: 1,
+  },
+
+  heroPromiseTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#123B2A',
+    letterSpacing: 0.5,
+  },
+
+  heroPromiseText: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#52606D',
+    fontWeight: '600',
+  },
+
+  impactCard: {
+    marginHorizontal: 18,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+  },
+
+  impactIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FCECEE',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
 
-  ordersButtonIconText: {
-    fontSize: 24,
+  impactIconText: {
+    fontSize: 19,
   },
 
-  ordersButtonContent: {
+  impactBody: {
     flex: 1,
-    paddingLeft: 12,
   },
 
-  ordersButtonTitle: {
-    color: '#111111',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  ordersButtonSubtitle: {
-    color: '#888888',
+  impactTitle: {
     fontSize: 11,
-    marginTop: 3,
-  },
-
-  ordersArrow: {
-    color: '#1976F3',
-    fontSize: 25,
     fontWeight: '900',
-    paddingHorizontal: 8,
+    letterSpacing: 0.8,
+    color: '#7B1E27',
   },
 
-  /*
-   * SEARCH
-   */
+  impactText: {
+    marginTop: 3,
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#53606C',
+  },
 
-  searchBox: {
+  searchCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    height: 52,
+    borderRadius: 17,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    height: 58,
-    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E1E6EC',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
 
-  searchIcon: {
-    fontSize: 28,
-    color: '#777777',
+  searchEmoji: {
+    fontSize: 18,
+    marginRight: 9,
   },
 
   searchInput: {
     flex: 1,
-    color: '#111111',
-    fontSize: 16,
-    marginLeft: 8,
+    fontSize: 15,
+    color: '#13202B',
   },
 
   sectionTitle: {
-    color: '#111111',
-    fontSize: 25,
+    marginHorizontal: 18,
+    marginTop: 20,
+    fontSize: 20,
     fontWeight: '900',
+    color: '#152330',
   },
 
   categoryRow: {
-    paddingVertical: 15,
-    gap: 10,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
 
   category: {
-    minWidth: 105,
-    height: 105,
+    width: 142,
+    minHeight: 92,
+    marginRight: 10,
+    padding: 12,
+    borderRadius: 18,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#E2E7EC',
   },
 
   categorySelected: {
-    backgroundColor: '#1976F3',
+    backgroundColor: '#EAF6EE',
+    borderColor: '#2FA84F',
   },
 
   categoryEmoji: {
-    fontSize: 27,
+    fontSize: 24,
   },
 
   categoryText: {
-    color: '#666666',
-    fontSize: 12,
+    marginTop: 5,
+    fontSize: 13,
     fontWeight: '900',
-    textAlign: 'center',
-    marginTop: 7,
+    color: '#1B2935',
   },
 
   categoryTextSelected: {
-    color: '#FFFFFF',
+    color: '#14582B',
   },
 
-  /*
-   * BANNER
-   */
-
-  banner: {
-    backgroundColor: '#1976F3',
-    borderRadius: 25,
-    padding: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-
-  bannerEmoji: {
-    fontSize: 50,
-    marginRight: 20,
-  },
-
-  bannerTextBox: {
-    flex: 1,
-  },
-
-  bannerSmall: {
-    color: '#DDEAFF',
+  categorySubtitle: {
+    marginTop: 3,
     fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 3,
+    lineHeight: 14,
+    color: '#71808D',
+    fontWeight: '600',
   },
 
-  bannerTitle: {
-    color: '#FFFFFF',
-    fontSize: 21,
-    lineHeight: 29,
-    fontWeight: '900',
-    marginTop: 7,
+  categorySubtitleSelected: {
+    color: '#39704D',
   },
 
-  /*
-   * PRODUCTS
-   */
+  todayBanner: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: '#FFF8E8',
+    borderWidth: 1,
+    borderColor: '#F2D48D',
+  },
 
-  productsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 28,
-    marginBottom: 15,
+  todayBannerTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#6C4A00',
+  },
+
+  todayBannerText: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#775E2A',
+  },
+
+  seasonalBanner: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: '#EDF8F0',
+    borderWidth: 1,
+    borderColor: '#C8E6D0',
+  },
+
+  seasonalBannerTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#175B2E',
+  },
+
+  seasonalBannerText: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#4F7058',
+  },
+
+  productHeader: {
+    marginTop: 8,
+    marginBottom: 10,
   },
 
   productCount: {
-    color: '#1976F3',
-    fontSize: 15,
-    fontWeight: '900',
+    marginHorizontal: 18,
+    marginTop: 3,
+    fontSize: 12,
+    color: '#7A8793',
+    fontWeight: '600',
   },
 
   productCard: {
+    marginHorizontal: 18,
+    marginBottom: 12,
+    padding: 13,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 14,
-    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E5E9EE',
     flexDirection: 'row',
   },
 
   productImage: {
-    width: 150,
-    height: 170,
-    borderRadius: 20,
-    backgroundColor: '#EEF4FF',
+    width: 82,
+    height: 82,
+    borderRadius: 19,
+    backgroundColor: '#F2F7F3',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
 
   productEmoji: {
-    fontSize: 65,
+    fontSize: 39,
   },
 
   productInfo: {
     flex: 1,
-    paddingLeft: 15,
-    justifyContent: 'space-between',
+  },
+
+  productMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
 
   productCategory: {
-    color: '#1976F3',
     fontSize: 9,
+    letterSpacing: 0.7,
     fontWeight: '900',
-    letterSpacing: 2,
+    color: '#71808D',
+  },
+
+  seasonBadge: {
+    marginLeft: 7,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 7,
+    backgroundColor: '#E8F5EB',
+  },
+
+  seasonBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#2E7D43',
   },
 
   productName: {
-    color: '#111111',
-    fontSize: 17,
-    lineHeight: 21,
+    marginTop: 3,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '900',
-    marginTop: 7,
+    color: '#1A2732',
   },
 
   productDescription: {
-    color: '#777777',
+    marginTop: 3,
     fontSize: 11,
     lineHeight: 16,
-    marginTop: 5,
+    color: '#6D7A86',
+  },
+
+  productUnit: {
+    marginTop: 7,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#4D5B67',
   },
 
   productBottom: {
+    marginTop: 9,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'space-between',
   },
 
   productPrice: {
-    color: '#1976F3',
-    fontSize: 21,
+    fontSize: 17,
     fontWeight: '900',
+    color: '#123B2A',
   },
 
   addButton: {
-    backgroundColor: '#111111',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 13,
+    minWidth: 76,
+    height: 34,
+    paddingHorizontal: 10,
+    borderRadius: 11,
+    backgroundColor: '#1976F3',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
+    color: '#FFFFFF',
   },
 
   miniQuantity: {
+    height: 34,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111111',
-    borderRadius: 14,
-    overflow: 'hidden',
+    borderRadius: 11,
+    backgroundColor: '#EEF4FF',
   },
 
   miniButton: {
-    width: 30,
+    width: 31,
     height: 34,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   miniButtonText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#1D6FF2',
   },
 
   miniNumber: {
-    color: '#FFFFFF',
+    minWidth: 24,
+    textAlign: 'center',
     fontSize: 13,
     fontWeight: '900',
-    minWidth: 20,
-    textAlign: 'center',
+    color: '#1F2B36',
   },
-
-  /*
-   * FLOATING CART
-   */
-
-  floatingCart: {
-    backgroundColor: '#111111',
-    borderRadius: 18,
-    padding: 17,
-    marginTop: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  floatingCartText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  floatingCartTotal: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '900',
-  },
-
-  /*
-   * NO RESULTS
-   */
 
   noResults: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 35,
+    marginHorizontal: 18,
+    marginTop: 28,
+    padding: 24,
+    borderRadius: 20,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
   },
 
   noResultsEmoji: {
-    fontSize: 40,
+    fontSize: 28,
   },
 
   noResultsTitle: {
-    color: '#111111',
-    fontSize: 20,
+    marginTop: 9,
+    fontSize: 17,
     fontWeight: '900',
-    marginTop: 10,
+    color: '#1C2935',
   },
 
   noResultsText: {
-    color: '#777777',
-    marginTop: 5,
+    marginTop: 4,
+    fontSize: 13,
+    color: '#71808D',
   },
 
-  /*
-   * FOOTER
-   */
+  footerCard: {
+    marginHorizontal: 18,
+    marginTop: 24,
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: '#123B2A',
+  },
+
+  footerTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  footerText: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#DCEEE2',
+  },
 
   footer: {
-    color: '#1976F3',
-    fontSize: 16,
-    fontWeight: '900',
+    marginTop: 18,
+    textAlign: 'center',
+    fontSize: 11,
     letterSpacing: 3,
-    textAlign: 'center',
-    marginTop: 40,
+    color: '#8B98A4',
   },
 
-  footerSmall: {
-    color: '#999999',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 5,
-  },
-
-  /*
-   * CART
-   */
-
-  cartHeader: {
-    height: 75,
-    paddingHorizontal: 20,
+  floatingCart: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 12,
+    minHeight: 66,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: 18,
+    backgroundColor: '#123B2A',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
 
-  backButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
+  floatingCartTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  floatingCartSubtitle: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D6E8DC',
+  },
+
+  floatingCartAction: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+
+  header: {
+    height: 72,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
+  },
+
+  backButton: {
+    width: 43,
+    height: 43,
+    borderRadius: 22,
+    backgroundColor: '#F0F4F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   backText: {
-    color: '#1976F3',
-    fontSize: 38,
-    lineHeight: 40,
+    fontSize: 34,
+    lineHeight: 38,
+    color: '#123B2A',
   },
 
-  cartTitle: {
-    color: '#111111',
-    fontSize: 28,
+  headerCenter: {
+    alignItems: 'center',
+  },
+
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '900',
+    color: '#152330',
+  },
+
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 10,
+    color: '#7A8793',
+    fontWeight: '700',
   },
 
   headerSpacer: {
-    width: 45,
+    width: 43,
   },
 
   cartContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 50,
+    paddingBottom: 35,
   },
 
-  emptyCart: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 25,
-    padding: 40,
-    alignItems: 'center',
-    marginTop: 25,
-  },
-
-  emptyEmoji: {
-    fontSize: 55,
-  },
-
-  emptyTitle: {
-    color: '#111111',
-    fontSize: 23,
-    fontWeight: '900',
-    marginTop: 12,
-  },
-
-  emptyText: {
-    color: '#777777',
-    fontSize: 14,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-
-  shopButton: {
-    backgroundColor: '#111111',
-    borderRadius: 15,
-    padding: 16,
-    marginTop: 20,
-  },
-
-  shopButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-  },
-
-  cartProduct: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    marginTop: 12,
+  deliveryPromise: {
+    marginHorizontal: 18,
+    marginTop: 16,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: '#EAF6EE',
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CBE6D2',
   },
 
-  cartEmojiBox: {
-    width: 75,
-    height: 75,
-    borderRadius: 17,
-    backgroundColor: '#EEF4FF',
+  deliveryPromiseEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+
+  deliveryPromiseBody: {
+    flex: 1,
+  },
+
+  deliveryPromiseTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    color: '#175A2D',
+  },
+
+  deliveryPromiseText: {
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#4B6A54',
+  },
+
+  cartItemsCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E9EE',
+    overflow: 'hidden',
+  },
+
+  cartItem: {
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F4',
+  },
+
+  cartItemEmoji: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#F3F7F4',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 11,
   },
 
-  cartEmoji: {
-    fontSize: 38,
+  cartItemEmojiText: {
+    fontSize: 26,
   },
 
-  cartProductInfo: {
+  cartItemInfo: {
     flex: 1,
-    paddingLeft: 13,
+    paddingRight: 8,
   },
 
-  cartProductName: {
-    color: '#111111',
+  cartItemName: {
     fontSize: 14,
     fontWeight: '900',
+    color: '#1C2934',
   },
 
-  cartProductPrice: {
-    color: '#1976F3',
-    fontSize: 15,
+  cartItemUnit: {
+    marginTop: 3,
+    fontSize: 11,
+    color: '#74818C',
+    fontWeight: '700',
+  },
+
+  removeText: {
+    marginTop: 7,
+    fontSize: 10,
+    color: '#B23A48',
+    fontWeight: '800',
+  },
+
+  cartItemRight: {
+    alignItems: 'flex-end',
+  },
+
+  cartItemTotal: {
+    fontSize: 14,
     fontWeight: '900',
-    marginTop: 4,
+    color: '#173E2A',
   },
 
   quantityRow: {
+    marginTop: 8,
+    height: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    borderRadius: 10,
+    backgroundColor: '#EEF4FF',
   },
 
   quantityButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#111111',
+    width: 31,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   quantityButtonText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1D6FF2',
   },
 
   quantityNumber: {
-    color: '#111111',
-    fontSize: 15,
+    minWidth: 23,
+    textAlign: 'center',
+    fontSize: 13,
     fontWeight: '900',
-    marginHorizontal: 12,
+    color: '#1C2934',
   },
 
-  removeText: {
-    color: '#E53935',
-    fontSize: 10,
-    fontWeight: '800',
+  freeDeliveryCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: '#FFF9E9',
+    borderWidth: 1,
+    borderColor: '#F1DA9C',
   },
 
-  totalCard: {
-    backgroundColor: '#1976F3',
-    borderRadius: 22,
-    padding: 20,
-    marginTop: 20,
+  freeDeliveryTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#6B4A00',
+  },
+
+  freeDeliveryText: {
+    marginTop: 3,
+    fontSize: 11,
+    color: '#7B6430',
+  },
+
+  summaryCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E9EE',
+  },
+
+  summaryRow: {
+    minHeight: 29,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
 
-  totalLabel: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  summaryLabel: {
+    fontSize: 13,
+    color: '#6D7985',
+    fontWeight: '700',
+  },
+
+  summaryValue: {
+    fontSize: 13,
+    color: '#1B2934',
     fontWeight: '800',
   },
 
-  totalAmount: {
-    color: '#FFFFFF',
-    fontSize: 27,
+  freeValue: {
+    color: '#2B7A42',
+  },
+
+  summaryDivider: {
+    height: 1,
+    marginVertical: 5,
+    backgroundColor: '#E9EDF1',
+  },
+
+  totalLabel: {
+    fontSize: 16,
     fontWeight: '900',
+    color: '#1A2731',
+  },
+
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#123B2A',
   },
 
   checkoutButton: {
-    backgroundColor: '#111111',
-    borderRadius: 18,
-    paddingVertical: 18,
+    marginHorizontal: 18,
+    marginTop: 16,
+    minHeight: 58,
+    paddingHorizontal: 18,
+    borderRadius: 17,
+    backgroundColor: '#1976F3',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
+    justifyContent: 'space-between',
   },
 
-  checkoutText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  checkoutButtonText: {
+    fontSize: 14,
+    letterSpacing: 0.5,
     fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  checkoutButtonTotal: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  emptyCart: {
+    marginHorizontal: 18,
+    marginTop: 80,
+    padding: 30,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E9EE',
+  },
+
+  emptyCartEmoji: {
+    fontSize: 45,
+  },
+
+  emptyCartTitle: {
+    marginTop: 15,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#152330',
+  },
+
+  emptyCartText: {
+    marginTop: 7,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    color: '#6F7C87',
+  },
+
+  primaryButton: {
+    marginTop: 18,
+    minHeight: 46,
+    paddingHorizontal: 18,
+    borderRadius: 13,
+    backgroundColor: '#1976F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  primaryButtonText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
 });

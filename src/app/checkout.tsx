@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,146 +16,156 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
+import { products } from '@/data/products';
 
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  emoji: string;
-  description: string;
+type Cart = Record<string, number>;
+
+type DeliveryType = 'Chalega 24-Hour';
+
+const FREE_DELIVERY_THRESHOLD = 499;
+
+const getDeliveryFee = (subtotal: number) => {
+  if (subtotal >= FREE_DELIVERY_THRESHOLD) {
+    return 0;
+  }
+
+  if (subtotal >= 299) {
+    return 29;
+  }
+
+  return 49;
 };
 
-const products: Product[] = [
-  {
-    id: '1',
-    name: 'Chalega India Water Bottle',
-    price: 399,
-    category: 'Hydration',
-    emoji: '💧',
-    description: 'Reusable bottle for everyday hydration.',
-  },
-  {
-    id: '2',
-    name: 'Chalega India Walking T-Shirt',
-    price: 699,
-    category: 'Fitness',
-    emoji: '👕',
-    description: 'Comfortable T-shirt for walking and exercise.',
-  },
-  {
-    id: '3',
-    name: 'Healthy Snack Pack',
-    price: 249,
-    category: 'Healthy Food',
-    emoji: '🥜',
-    description: 'A convenient everyday healthy snack option.',
-  },
-  {
-    id: '4',
-    name: 'Fresh Fruit Box',
-    price: 499,
-    category: 'Fruits',
-    emoji: '🍎',
-    description: 'Seasonal fresh fruits packed for your home.',
-  },
-  {
-    id: '5',
-    name: 'Dry Fruits Wellness Pack',
-    price: 599,
-    category: 'Healthy Food',
-    emoji: '🥜',
-    description: 'A selection of dry fruits for everyday snacking.',
-  },
-  {
-    id: '6',
-    name: 'Morning Fruit Basket',
-    price: 699,
-    category: 'Fruits',
-    emoji: '🍇',
-    description: 'A family-friendly selection of fresh fruits.',
-  },
-  {
-    id: '7',
-    name: 'Walking Cap',
-    price: 299,
-    category: 'Fitness',
-    emoji: '🧢',
-    description: 'Lightweight cap for outdoor walks.',
-  },
-  {
-    id: '8',
-    name: 'Healthy Home Kit',
-    price: 899,
-    category: 'Home Health',
-    emoji: '🏠',
-    description: 'Simple essentials for a healthier home.',
-  },
-  {
-    id: '9',
-    name: 'Family Health Combo',
-    price: 999,
-    category: 'Health Combos',
-    emoji: '🎁',
-    description: 'A useful combination of everyday wellness products.',
-  },
-  {
-    id: '10',
-    name: 'Walking Starter Combo',
-    price: 1199,
-    category: 'Health Combos',
-    emoji: '🚶',
-    description: 'Everything you need to get started with walking.',
-  },
-];
+const getDeliveryDeadline = (
+  createdAt: string
+) => {
+  const created = new Date(createdAt);
+  const deadline = new Date(
+    created.getTime() + 24 * 60 * 60 * 1000
+  );
+
+  return deadline.toISOString();
+};
+
+const formatDeliveryDate = (
+  value: string
+) => {
+  const date = new Date(value);
+
+  return date.toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
 
 export default function CheckoutScreen() {
   const router = useRouter();
 
   const {
-    total,
-    items,
-    cart,
+    cart: cartParam,
+    items: itemsParam,
   } = useLocalSearchParams<{
-    total?: string;
-    items?: string;
     cart?: string;
+    items?: string;
   }>();
 
-  const orderTotal = Number(total || 0);
-  const itemCount = Number(items || 0);
-
-  let cartQuantities: Record<string, number> = {};
-
-  try {
-    if (cart) {
-      cartQuantities = JSON.parse(cart);
+  const cart = useMemo<Cart>(() => {
+    if (!cartParam) {
+      return {};
     }
-  } catch {
-    cartQuantities = {};
-  }
 
-  const selectedProducts = products
-    .filter((product) => (cartQuantities[product.id] || 0) > 0)
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      emoji: product.emoji,
-      quantity: cartQuantities[product.id],
-      total:
-        product.price * cartQuantities[product.id],
-    }));
+    try {
+      const parsed = JSON.parse(cartParam);
+
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed)
+      ) {
+        return {};
+      }
+
+      const safeCart: Cart = {};
+
+      for (const [productId, quantity] of Object.entries(
+        parsed
+      )) {
+        if (
+          typeof quantity === 'number' &&
+          Number.isFinite(quantity) &&
+          quantity > 0
+        ) {
+          safeCart[productId] =
+            Math.floor(quantity);
+        }
+      }
+
+      return safeCart;
+    } catch {
+      return {};
+    }
+  }, [cartParam]);
+
+  const selectedProducts = useMemo(() => {
+    return products
+      .filter(
+        product => (cart[product.id] || 0) > 0
+      )
+      .map(product => ({
+        ...product,
+        quantity: cart[product.id],
+      }));
+  }, [cart]);
+
+  const itemCount = selectedProducts.reduce(
+    (sum, product) =>
+      sum + (product.quantity || 0),
+    0
+  );
+
+  const subtotal = selectedProducts.reduce(
+    (sum, product) =>
+      sum +
+      product.price *
+        (product.quantity || 0),
+    0
+  );
+
+  const deliveryFee =
+    getDeliveryFee(subtotal);
+
+  const orderTotal =
+    subtotal + deliveryFee;
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+  const [address, setAddress] =
+    useState('');
   const [area, setArea] = useState('');
   const [pin, setPin] = useState('');
-  const [delivery, setDelivery] = useState('Standard');
-  const [saving, setSaving] = useState(false);
+
+  const [
+    delivery,
+    setDelivery,
+  ] = useState<DeliveryType>(
+    'Chalega 24-Hour'
+  );
+
+  const [saving, setSaving] =
+    useState(false);
 
   const placeOrder = async () => {
+    if (selectedProducts.length === 0) {
+      Alert.alert(
+        'Your cart is empty',
+        'Please return to Shop to Feed and add a product.'
+      );
+      return;
+    }
+
     if (!name.trim()) {
       Alert.alert(
         'Missing information',
@@ -164,7 +174,7 @@ export default function CheckoutScreen() {
       return;
     }
 
-    if (phone.length !== 10) {
+    if (phone.trim().length !== 10) {
       Alert.alert(
         'Invalid mobile number',
         'Please enter a valid 10-digit mobile number.'
@@ -188,7 +198,7 @@ export default function CheckoutScreen() {
       return;
     }
 
-    if (pin.length !== 6) {
+    if (pin.trim().length !== 6) {
       Alert.alert(
         'Invalid PIN code',
         'Please enter your 6-digit PIN code.'
@@ -200,14 +210,33 @@ export default function CheckoutScreen() {
       setSaving(true);
 
       const existingOrdersText =
-        await AsyncStorage.getItem('chalega_orders');
+        await AsyncStorage.getItem(
+          'chalega_orders'
+        );
 
-      const existingOrders = existingOrdersText
-        ? JSON.parse(existingOrdersText)
-        : [];
+      let existingOrders: any[] = [];
+
+      if (existingOrdersText) {
+        try {
+          const parsed =
+            JSON.parse(existingOrdersText);
+
+          if (Array.isArray(parsed)) {
+            existingOrders = parsed;
+          }
+        } catch {
+          existingOrders = [];
+        }
+      }
 
       const orderNumber =
         existingOrders.length + 1;
+
+      const createdAt =
+        new Date().toISOString();
+
+      const deliveryDeadline =
+        getDeliveryDeadline(createdAt);
 
       const orderId =
         `CI-${new Date().getFullYear()}-${String(
@@ -216,6 +245,7 @@ export default function CheckoutScreen() {
 
       const newOrder = {
         id: orderId,
+        orderId,
 
         customer: {
           name: name.trim(),
@@ -228,17 +258,40 @@ export default function CheckoutScreen() {
           pin: pin.trim(),
         },
 
-        products: selectedProducts,
+        products: selectedProducts.map(
+          product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            unit: product.unit,
+            category: product.category,
+            emoji: product.emoji,
+            quantity:
+              product.quantity || 1,
+          })
+        ),
 
         items: itemCount,
+
+        subtotal,
+
+        deliveryFee,
 
         total: orderTotal,
 
         delivery,
 
-        status: 'Order Received',
+        deliveryPromise:
+          'Within 24 hours',
 
-        createdAt: new Date().toISOString(),
+        createdAt,
+
+        deliveryDeadline,
+
+        deliveryWindow:
+          'Within 24 hours of order placement',
+
+        status: 'Order Received',
       };
 
       const updatedOrders = [
@@ -252,15 +305,21 @@ export default function CheckoutScreen() {
       );
 
       router.replace({
-        pathname: '/order-confirmed',
+        pathname:
+          '/order-confirmed',
         params: {
           orderId,
           name: name.trim(),
-          total: orderTotal.toString(),
+          total:
+            orderTotal.toString(),
+          deliveryDeadline,
         },
       });
     } catch (error) {
-      console.log('Order save error:', error);
+      console.log(
+        'Order save error:',
+        error
+      );
 
       Alert.alert(
         'Order error',
@@ -272,7 +331,9 @@ export default function CheckoutScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={
@@ -282,304 +343,575 @@ export default function CheckoutScreen() {
         }
       >
         <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={
+            false
+          }
+          contentContainerStyle={
+            styles.content
+          }
         >
-          {/* HEADER */}
-
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() =>
+                router.back()
+              }
             >
-              <Text style={styles.backText}>‹</Text>
+              <Text
+                style={
+                  styles.backText
+                }
+              >
+                ‹
+              </Text>
             </TouchableOpacity>
 
-            <View>
-              <Text style={styles.brand}>
-                C H A L E G A  I N D I A
-              </Text>
-
-              <Text style={styles.title}>
+            <View
+              style={
+                styles.headerCenter
+              }
+            >
+              <Text
+                style={
+                  styles.headerTitle
+                }
+              >
                 Checkout
               </Text>
-            </View>
-          </View>
 
-          {/* TOTAL */}
-
-          <View style={styles.summaryCard}>
-            <View>
-              <Text style={styles.summaryLabel}>
-                ORDER TOTAL
-              </Text>
-
-              <Text style={styles.summaryAmount}>
-                ₹{orderTotal.toLocaleString('en-IN')}
-              </Text>
-
-              <Text style={styles.summaryItems}>
-                {itemCount} item
-                {itemCount === 1 ? '' : 's'}
+              <Text
+                style={
+                  styles.headerSubtitle
+                }
+              >
+                Shop to Feed
               </Text>
             </View>
 
-            <Text style={styles.summaryEmoji}>
-              🛒
-            </Text>
+            <View
+              style={
+                styles.headerSpacer
+              }
+            />
           </View>
 
-          {/* PRODUCTS */}
-
-          <Text style={styles.sectionTitle}>
-            Your Products
-          </Text>
-
-          <View style={styles.productsCard}>
-            {selectedProducts.length === 0 ? (
-              <Text style={styles.emptyProducts}>
-                No products found in this order.
+          <View
+            style={styles.promiseHero}
+          >
+            <View
+              style={
+                styles.promiseIcon
+              }
+            >
+              <Text
+                style={
+                  styles.promiseIconText
+                }
+              >
+                🚚
               </Text>
-            ) : (
-              selectedProducts.map((product) => (
-                <View
-                  key={product.id}
-                  style={styles.productRow}
-                >
-                  <View style={styles.productEmojiBox}>
-                    <Text style={styles.productEmoji}>
-                      {product.emoji}
-                    </Text>
-                  </View>
+            </View>
 
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>
-                      {product.name}
-                    </Text>
+            <View
+              style={
+                styles.promiseBody
+              }
+            >
+              <Text
+                style={
+                  styles.promiseTitle
+                }
+              >
+                CHALEGA 24-HOUR DELIVERY
+              </Text>
 
-                    <Text style={styles.quantityText}>
-                      Quantity: {product.quantity}
-                    </Text>
-
-                    <Text style={styles.priceText}>
-                      ₹{product.price.toLocaleString('en-IN')}
-                      {' '}each
-                    </Text>
-                  </View>
-
-                  <Text style={styles.productTotal}>
-                    ₹{product.total.toLocaleString('en-IN')}
-                  </Text>
-                </View>
-              ))
-            )}
+              <Text
+                style={
+                  styles.promiseText
+                }
+              >
+                Your fresh order will be
+                delivered within 24 hours
+                of order placement.
+              </Text>
+            </View>
           </View>
 
-          {/* CUSTOMER */}
-
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={styles.sectionTitle}
+          >
             Your Details
           </Text>
 
-          <Text style={styles.label}>
-            Full Name
+          <View
+            style={styles.formCard}
+          >
+            <Text
+              style={styles.inputLabel}
+            >
+              Full Name
+            </Text>
+
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your full name"
+              placeholderTextColor="#88939D"
+              style={styles.input}
+              autoCapitalize="words"
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              Mobile Number
+            </Text>
+
+            <TextInput
+              value={phone}
+              onChangeText={text =>
+                setPhone(
+                  text.replace(
+                    /\D/g,
+                    ''
+                  )
+                )
+              }
+              placeholder="10-digit mobile number"
+              placeholderTextColor="#88939D"
+              keyboardType="number-pad"
+              maxLength={10}
+              style={styles.input}
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              Delivery Address
+            </Text>
+
+            <TextInput
+              value={address}
+              onChangeText={setAddress}
+              placeholder="House / flat / street"
+              placeholderTextColor="#88939D"
+              style={[
+                styles.input,
+                styles.textarea,
+              ]}
+              multiline
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              Area / Locality
+            </Text>
+
+            <TextInput
+              value={area}
+              onChangeText={setArea}
+              placeholder="Area or locality"
+              placeholderTextColor="#88939D"
+              style={styles.input}
+              autoCapitalize="words"
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              PIN Code
+            </Text>
+
+            <TextInput
+              value={pin}
+              onChangeText={text =>
+                setPin(
+                  text.replace(
+                    /\D/g,
+                    ''
+                  )
+                )
+              }
+              placeholder="6-digit PIN code"
+              placeholderTextColor="#88939D"
+              keyboardType="number-pad"
+              maxLength={6}
+              style={styles.input}
+            />
+          </View>
+
+          <Text
+            style={styles.sectionTitle}
+          >
+            Your Products
           </Text>
 
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter your full name"
-            placeholderTextColor="#999999"
-            style={styles.input}
-          />
+          <View
+            style={styles.productsCard}
+          >
+            {selectedProducts.length ===
+            0 ? (
+              <Text
+                style={
+                  styles.emptyProducts
+                }
+              >
+                No products found in
+                this order.
+              </Text>
+            ) : (
+              selectedProducts.map(
+                product => (
+                  <View
+                    key={product.id}
+                    style={
+                      styles.productRow
+                    }
+                  >
+                    <View
+                      style={
+                        styles.productEmoji
+                      }
+                    >
+                      <Text>
+                        {
+                          product.emoji
+                        }
+                      </Text>
+                    </View>
 
-          <Text style={styles.label}>
-            Mobile Number
-          </Text>
+                    <View
+                      style={
+                        styles.productInfo
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.productName
+                        }
+                      >
+                        {product.name}
+                      </Text>
 
-          <TextInput
-            value={phone}
-            onChangeText={(text) =>
-              setPhone(
-                text.replace(/[^0-9]/g, '')
+                      <Text
+                        style={
+                          styles.productUnit
+                        }
+                      >
+                        {product.quantity}{' '}
+                        × ₹
+                        {product.price.toLocaleString(
+                          'en-IN'
+                        )}{' '}
+                        / {product.unit}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={
+                        styles.productTotal
+                      }
+                    >
+                      ₹
+                      {(
+                        product.price *
+                        (product.quantity ||
+                          0)
+                      ).toLocaleString(
+                        'en-IN'
+                      )}
+                    </Text>
+                  </View>
+                )
               )
-            }
-            placeholder="10-digit mobile number"
-            placeholderTextColor="#999999"
-            keyboardType="phone-pad"
-            maxLength={10}
-            style={styles.input}
-          />
+            )}
+          </View>
 
-          {/* ADDRESS */}
-
-          <Text style={styles.sectionTitle}>
-            Delivery Address
-          </Text>
-
-          <Text style={styles.label}>
-            House / Street / Building
-          </Text>
-
-          <TextInput
-            value={address}
-            onChangeText={setAddress}
-            placeholder="House number, street, building..."
-            placeholderTextColor="#999999"
-            multiline
-            style={[
-              styles.input,
-              styles.addressInput,
-            ]}
-          />
-
-          <Text style={styles.label}>
-            Area / Locality
-          </Text>
-
-          <TextInput
-            value={area}
-            onChangeText={setArea}
-            placeholder="e.g. Park Circus"
-            placeholderTextColor="#999999"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>
-            PIN Code
-          </Text>
-
-          <TextInput
-            value={pin}
-            onChangeText={(text) =>
-              setPin(
-                text.replace(/[^0-9]/g, '')
-              )
-            }
-            placeholder="6-digit PIN code"
-            placeholderTextColor="#999999"
-            keyboardType="number-pad"
-            maxLength={6}
-            style={styles.input}
-          />
-
-          {/* DELIVERY */}
-
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={styles.sectionTitle}
+          >
             Delivery
           </Text>
 
           <TouchableOpacity
             style={[
-              styles.option,
-              delivery === 'Standard' &&
-                styles.optionSelected,
+              styles.deliveryOption,
+              styles.deliveryOptionSelected,
             ]}
+            activeOpacity={0.85}
             onPress={() =>
-              setDelivery('Standard')
+              setDelivery(
+                'Chalega 24-Hour'
+              )
             }
           >
-            <View>
-              <Text style={styles.optionTitle}>
-                🛵 Standard Delivery
-              </Text>
-
-              <Text style={styles.optionText}>
-                Delivery within Kolkata
+            <View
+              style={
+                styles.deliveryOptionIcon
+              }
+            >
+              <Text>
+                🚚
               </Text>
             </View>
 
             <View
-              style={[
-                styles.radio,
-                delivery === 'Standard' &&
-                  styles.radioSelected,
-              ]}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.option,
-              delivery === 'Express' &&
-                styles.optionSelected,
-            ]}
-            onPress={() =>
-              setDelivery('Express')
-            }
-          >
-            <View>
-              <Text style={styles.optionTitle}>
-                ⚡ Express Delivery
+              style={
+                styles.deliveryOptionBody
+              }
+            >
+              <Text
+                style={
+                  styles.deliveryOptionTitle
+                }
+              >
+                Chalega 24-Hour Delivery
               </Text>
 
-              <Text style={styles.optionText}>
-                Faster delivery where available
+              <Text
+                style={
+                  styles.deliveryOptionText
+                }
+              >
+                Guaranteed delivery
+                within 24 hours of
+                order placement.
               </Text>
             </View>
 
             <View
-              style={[
-                styles.radio,
-                delivery === 'Express' &&
-                  styles.radioSelected,
-              ]}
-            />
+              style={
+                styles.selectedRadio
+              }
+            >
+              <View
+                style={
+                  styles.selectedRadioDot
+                }
+              />
+            </View>
           </TouchableOpacity>
 
-          {/* PAYMENT */}
-
-          <Text style={styles.sectionTitle}>
-            Payment
+          <Text
+            style={styles.sectionTitle}
+          >
+            Order Summary
           </Text>
 
-          <View style={styles.paymentCard}>
-            <Text style={styles.paymentEmoji}>
-              💵
-            </Text>
-
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentTitle}>
-                Cash on Delivery
+          <View
+            style={styles.summaryCard}
+          >
+            <View
+              style={styles.summaryRow}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Items
               </Text>
 
-              <Text style={styles.paymentText}>
-                Payment gateway can be connected later.
+              <Text
+                style={
+                  styles.summaryValue
+                }
+              >
+                ₹
+                {subtotal.toLocaleString(
+                  'en-IN'
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={styles.summaryRow}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Delivery
+              </Text>
+
+              <Text
+                style={[
+                  styles.summaryValue,
+                  deliveryFee === 0 &&
+                    styles.freeValue,
+                ]}
+              >
+                {deliveryFee === 0
+                  ? 'FREE'
+                  : `₹${deliveryFee}`}
+              </Text>
+            </View>
+
+            <Text
+              style={styles.freeDeliveryNote}
+            >
+              {subtotal >=
+              FREE_DELIVERY_THRESHOLD
+                ? '✓ You unlocked free delivery.'
+                : `Add ₹${(
+                    FREE_DELIVERY_THRESHOLD -
+                    subtotal
+                  ).toLocaleString(
+                    'en-IN'
+                  )} more for free delivery.`}
+            </Text>
+
+            <View
+              style={
+                styles.summaryDivider
+              }
+            />
+
+            <View
+              style={styles.summaryRow}
+            >
+              <Text
+                style={styles.totalLabel}
+              >
+                Total
+              </Text>
+
+              <Text
+                style={styles.totalValue}
+              >
+                ₹
+                {orderTotal.toLocaleString(
+                  'en-IN'
+                )}
               </Text>
             </View>
           </View>
 
-          {/* FINAL TOTAL */}
-
-          <View style={styles.finalTotal}>
-            <Text style={styles.finalLabel}>
-              Total to Pay
+          <View
+            style={styles.paymentCard}
+          >
+            <Text
+              style={styles.paymentTitle}
+            >
+              Payment
             </Text>
 
-            <Text style={styles.finalAmount}>
-              ₹{orderTotal.toLocaleString('en-IN')}
-            </Text>
+            <View
+              style={
+                styles.codOption
+              }
+            >
+              <View
+                style={
+                  styles.codIcon
+                }
+              >
+                <Text>₹</Text>
+              </View>
+
+              <View
+                style={
+                  styles.codBody
+                }
+              >
+                <Text
+                  style={
+                    styles.codTitle
+                  }
+                >
+                  Cash on Delivery
+                </Text>
+
+                <Text
+                  style={
+                    styles.codText
+                  }
+                >
+                  Pay when your order
+                  arrives.
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.selectedRadio
+                }
+              >
+                <View
+                  style={
+                    styles.selectedRadioDot
+                  }
+                />
+              </View>
+            </View>
           </View>
-
-          {/* BUTTON */}
 
           <TouchableOpacity
             style={[
-              styles.placeButton,
-              saving && styles.disabledButton,
+              styles.placeOrderButton,
+              saving &&
+                styles.placeOrderDisabled,
             ]}
-            onPress={placeOrder}
+            onPress={
+              placeOrder
+            }
             disabled={saving}
+            activeOpacity={0.85}
           >
-            <Text style={styles.placeButtonText}>
-              {saving
-                ? 'SAVING ORDER...'
-                : 'PLACE ORDER →'}
-            </Text>
+            <View>
+              <Text
+                style={
+                  styles.placeOrderText
+                }
+              >
+                {saving
+                  ? 'SAVING ORDER...'
+                  : 'PLACE ORDER'}
+              </Text>
+
+              {!saving && (
+                <Text
+                  style={
+                    styles.placeOrderSubtext
+                  }
+                >
+                  Delivered within 24 hours
+                </Text>
+              )}
+            </View>
+
+            {!saving && (
+              <Text
+                style={
+                  styles.placeOrderTotal
+                }
+              >
+                ₹
+                {orderTotal.toLocaleString(
+                  'en-IN'
+                )}
+              </Text>
+            )}
           </TouchableOpacity>
 
-          <Text style={styles.note}>
-            Your order will be saved on this device.
+          <Text
+            style={styles.orderNote}
+          >
+            {itemsParam ||
+              itemCount}{' '}
+            item
+            {itemCount === 1
+              ? ''
+              : 's'} · Fresh order ·
+            Chalega 24-hour delivery
+          </Text>
+
+          <Text
+            style={styles.footer}
+          >
+            C H A L E G A  I N D I A 🇮🇳
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -598,20 +930,69 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 55,
+    paddingBottom: 45,
   },
 
   header: {
+    height: 72,
+    paddingHorizontal: 18,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
   },
 
   backButton: {
-    width: 45,
-    height: 45,
+    width: 43,
+    height: 43,
+    borderRadius: 22,
+    backgroundColor: '#F0F4F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  backText: {
+    fontSize: 34,
+    lineHeight: 38,
+    color: '#123B2A',
+  },
+
+  headerCenter: {
+    alignItems: 'center',
+  },
+
+  headerTitle: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: '#162530',
+  },
+
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#7A8793',
+  },
+
+  headerSpacer: {
+    width: 43,
+  },
+
+  promiseHero: {
+    marginHorizontal: 18,
+    marginTop: 16,
+    padding: 15,
+    borderRadius: 20,
+    backgroundColor: '#EAF6EE',
+    borderWidth: 1,
+    borderColor: '#C9E4D0',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  promiseIcon: {
+    width: 46,
+    height: 46,
     borderRadius: 23,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
@@ -619,269 +1000,350 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  backText: {
-    color: '#1976F3',
-    fontSize: 38,
-    lineHeight: 40,
+  promiseIconText: {
+    fontSize: 23,
   },
 
-  brand: {
-    color: '#1976F3',
-    fontSize: 10,
+  promiseBody: {
+    flex: 1,
+  },
+
+  promiseTitle: {
+    fontSize: 12,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 0.6,
+    color: '#14592C',
   },
 
-  title: {
-    color: '#111111',
-    fontSize: 31,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-
-  summaryCard: {
-    backgroundColor: '#1976F3',
-    borderRadius: 24,
-    padding: 22,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  summaryLabel: {
-    color: '#DCEAFF',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-
-  summaryAmount: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '900',
+  promiseText: {
     marginTop: 3,
-  },
-
-  summaryItems: {
-    color: '#E6F0FF',
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-
-  summaryEmoji: {
-    fontSize: 48,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#536A5A',
+    fontWeight: '600',
   },
 
   sectionTitle: {
-    color: '#111111',
-    fontSize: 23,
+    marginHorizontal: 18,
+    marginTop: 21,
+    marginBottom: 9,
+    fontSize: 18,
     fontWeight: '900',
-    marginTop: 25,
-    marginBottom: 13,
+    color: '#172630',
+  },
+
+  formCard: {
+    marginHorizontal: 18,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+  },
+
+  inputLabel: {
+    marginBottom: 6,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#596875',
+  },
+
+  input: {
+    minHeight: 46,
+    marginBottom: 14,
+    paddingHorizontal: 13,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#DCE2E8',
+    backgroundColor: '#FAFBFC',
+    fontSize: 14,
+    color: '#192832',
+  },
+
+  textarea: {
+    minHeight: 82,
+    paddingTop: 12,
+    textAlignVertical: 'top',
   },
 
   productsCard: {
-    backgroundColor: '#FFFFFF',
+    marginHorizontal: 18,
     borderRadius: 20,
-    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+    overflow: 'hidden',
   },
 
   productRow: {
+    padding: 13,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-
-  productEmojiBox: {
-    width: 62,
-    height: 62,
-    borderRadius: 16,
-    backgroundColor: '#EEF4FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomColor: '#EEF1F4',
   },
 
   productEmoji: {
-    fontSize: 31,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#F3F7F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
 
   productInfo: {
     flex: 1,
-    paddingLeft: 12,
-    paddingRight: 7,
+    paddingRight: 10,
   },
 
   productName: {
-    color: '#111111',
     fontSize: 13,
     fontWeight: '900',
+    color: '#1B2934',
   },
 
-  quantityText: {
-    color: '#555555',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-
-  priceText: {
-    color: '#888888',
+  productUnit: {
+    marginTop: 3,
     fontSize: 10,
-    marginTop: 2,
+    color: '#78858F',
+    fontWeight: '700',
   },
 
   productTotal: {
-    color: '#1976F3',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
+    color: '#123B2A',
   },
 
   emptyProducts: {
-    color: '#777777',
-    padding: 15,
-    textAlign: 'center',
-  },
-
-  label: {
-    color: '#444444',
+    padding: 20,
     fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 7,
+    textAlign: 'center',
+    color: '#71808D',
   },
 
-  input: {
+  deliveryOption: {
+    marginHorizontal: 18,
+    padding: 15,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    minHeight: 54,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#111111',
-    marginBottom: 15,
-  },
-
-  addressInput: {
-    minHeight: 90,
-    paddingTop: 15,
-    textAlignVertical: 'top',
-  },
-
-  option: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 17,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
-    marginBottom: 10,
+    borderColor: '#E2E7EC',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
-  optionSelected: {
-    borderColor: '#1976F3',
+  deliveryOptionSelected: {
+    borderColor: '#2FA84F',
+    backgroundColor: '#F4FAF5',
   },
 
-  optionTitle: {
-    color: '#111111',
-    fontSize: 15,
+  deliveryOptionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#EAF6EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  deliveryOptionBody: {
+    flex: 1,
+  },
+
+  deliveryOptionTitle: {
+    fontSize: 13,
     fontWeight: '900',
+    color: '#183129',
   },
 
-  optionText: {
-    color: '#777777',
+  deliveryOptionText: {
+    marginTop: 3,
     fontSize: 11,
-    marginTop: 4,
+    lineHeight: 16,
+    color: '#607168',
   },
 
-  radio: {
+  selectedRadio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#BBBBBB',
+    borderColor: '#2FA84F',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  radioSelected: {
-    borderColor: '#1976F3',
-    backgroundColor: '#1976F3',
+  selectedRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2FA84F',
+  },
+
+  summaryCard: {
+    marginHorizontal: 18,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+  },
+
+  summaryRow: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  summaryLabel: {
+    fontSize: 13,
+    color: '#687681',
+    fontWeight: '700',
+  },
+
+  summaryValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1B2934',
+  },
+
+  freeValue: {
+    color: '#25773D',
+  },
+
+  freeDeliveryNote: {
+    marginTop: 6,
+    fontSize: 11,
+    color: '#6A6F57',
+    fontWeight: '700',
+  },
+
+  summaryDivider: {
+    height: 1,
+    marginVertical: 6,
+    backgroundColor: '#E8ECEF',
+  },
+
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1A2731',
+  },
+
+  totalValue: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: '#123B2A',
   },
 
   paymentCard: {
+    marginHorizontal: 18,
+    marginTop: 2,
+    padding: 16,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  paymentEmoji: {
-    fontSize: 30,
-    marginRight: 13,
-  },
-
-  paymentInfo: {
-    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
   },
 
   paymentTitle: {
-    color: '#111111',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
+    color: '#172630',
+    marginBottom: 11,
   },
 
-  paymentText: {
-    color: '#777777',
-    fontSize: 11,
-    marginTop: 4,
-  },
-
-  finalTotal: {
-    marginTop: 24,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: '#DDDDDD',
+  codOption: {
+    padding: 12,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFB',
+    borderWidth: 1,
+    borderColor: '#E4E8EC',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
 
-  finalLabel: {
-    color: '#555555',
-    fontSize: 16,
-    fontWeight: '800',
+  codIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#EAF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
 
-  finalAmount: {
-    color: '#111111',
-    fontSize: 28,
+  codBody: {
+    flex: 1,
+  },
+
+  codTitle: {
+    fontSize: 12,
     fontWeight: '900',
+    color: '#263540',
   },
 
-  placeButton: {
-    backgroundColor: '#111111',
+  codText: {
+    marginTop: 2,
+    fontSize: 10,
+    color: '#77838D',
+  },
+
+  placeOrderButton: {
+    marginHorizontal: 18,
+    marginTop: 17,
+    minHeight: 60,
+    paddingHorizontal: 18,
     borderRadius: 18,
-    paddingVertical: 18,
+    backgroundColor: '#1976F3',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
+    justifyContent: 'space-between',
   },
 
-  disabledButton: {
-    opacity: 0.6,
+  placeOrderDisabled: {
+    opacity: 0.65,
   },
 
-  placeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  placeOrderText: {
+    fontSize: 14,
     fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
 
-  note: {
-    color: '#999999',
-    fontSize: 11,
-    textAlign: 'center',
+  placeOrderSubtext: {
+    marginTop: 3,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#DCEAFF',
+  },
+
+  placeOrderTotal: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  orderNote: {
+    marginHorizontal: 18,
     marginTop: 12,
+    textAlign: 'center',
+    fontSize: 10,
+    color: '#7B8791',
+    fontWeight: '700',
+  },
+
+  footer: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 10,
+    letterSpacing: 3,
+    color: '#8A96A0',
   },
 });
