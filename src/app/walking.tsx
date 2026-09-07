@@ -14,7 +14,6 @@ import { useRouter } from 'expo-router';
 import {
   awardOnce,
   getPoints,
-  setPoints,
 } from '../lib/points';
 
 type DayData = {
@@ -42,7 +41,7 @@ export default function WalkingScreen() {
   const [steps, setSteps] = useState(2450);
   const [goal, setGoal] = useState(DAILY_GOAL);
   const [streak, setStreak] = useState(6);
-  const [points, setPoints] = useState(240);
+  const [points, setPoints] = useState(0);
   const [week, setWeek] = useState(initialWeek);
   const [tracking, setTracking] = useState(false);
   const [walkMissionComplete, setWalkMissionComplete] =
@@ -95,16 +94,18 @@ export default function WalkingScreen() {
     );
   };
 
-  useEffect(() => {
-    loadWalkingData();
-  }, []);
-
-  useEffect(() => {
-    if (steps >= goal) {
-      completeWalkMissionIfNeeded();
-    }
-  }, [steps, goal]);
-
+  /*
+   * -------------------------------------------------------
+   * LOAD WALKING DATA
+   * -------------------------------------------------------
+   *
+   * Walking progress is stored separately from the central
+   * Chalega Points wallet.
+   *
+   * IMPORTANT:
+   * data.points is intentionally NOT used as the wallet.
+   * The wallet always comes from getPoints().
+   */
   const loadWalkingData = async () => {
     try {
       const saved = await AsyncStorage.getItem(
@@ -126,14 +127,13 @@ export default function WalkingScreen() {
           setStreak(data.streak);
         }
 
-        if (typeof data.points === 'number') {
-          setPoints(data.points);
-        }
-
         if (Array.isArray(data.week)) {
           setWeek(data.week);
         }
       }
+
+      const currentPoints = await getPoints();
+      setPoints(currentPoints);
 
       const missionKey =
         `chalega_walk_mission_${getTodayKey()}`;
@@ -152,9 +152,63 @@ export default function WalkingScreen() {
     }
   };
 
+  useEffect(() => {
+    loadWalkingData();
+  }, []);
+
+  /*
+   * Keep checking the central wallet while this screen
+   * is focused and alive. No local walking value is allowed
+   * to overwrite it.
+   */
+  useEffect(() => {
+    const refreshPoints = async () => {
+      try {
+        const currentPoints = await getPoints();
+        setPoints(currentPoints);
+      } catch (error) {
+        console.log(
+          'Could not refresh Chalega Points:',
+          error
+        );
+      }
+    };
+
+    refreshPoints();
+
+    const interval = setInterval(
+      refreshPoints,
+      2000
+    );
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /*
+   * Automatic walking mission completion when the goal
+   * is reached.
+   */
+  useEffect(() => {
+    if (steps >= goal && !walkMissionComplete) {
+      completeWalkMissionIfNeeded();
+    }
+  }, [steps, goal, walkMissionComplete]);
+
+  /*
+   * -------------------------------------------------------
+   * SAVE WALKING DATA
+   * -------------------------------------------------------
+   *
+   * This function stores walking state only.
+   *
+   * It DOES NOT write to:
+   * chalega_points
+   *
+   * That prevents stale walking state from overwriting
+   * mission, health, streak, or reward points.
+   */
   const saveWalkingData = async (
     nextSteps: number,
-    nextPoints: number,
     nextWeek = week,
     nextGoal = goal,
     nextStreak = streak
@@ -166,14 +220,8 @@ export default function WalkingScreen() {
           steps: nextSteps,
           goal: nextGoal,
           streak: nextStreak,
-          points: nextPoints,
           week: nextWeek,
         })
-      );
-
-      await AsyncStorage.setItem(
-        'chalega_points',
-        String(nextPoints)
       );
     } catch (error) {
       console.log(
@@ -183,6 +231,11 @@ export default function WalkingScreen() {
     }
   };
 
+  /*
+   * -------------------------------------------------------
+   * WALKING MISSION
+   * -------------------------------------------------------
+   */
   const completeWalkMissionIfNeeded = async () => {
     try {
       if (steps < goal) {
@@ -191,15 +244,6 @@ export default function WalkingScreen() {
 
       const todayKey = getTodayKey();
 
-      // Sync the shared engine with the existing local balance
-      // while we transition the app to the new points architecture.
-      const enginePoints = await getPoints();
-
-      if (enginePoints !== points) {
-        await setPoints(points);
-      }
-
-      // awardOnce prevents the same walking mission from paying twice.
       const result = await awardOnce(
         'walking_mission',
         `walking_mission_${todayKey}`,
@@ -208,14 +252,24 @@ export default function WalkingScreen() {
         `walking_mission_${todayKey}`
       );
 
+      /*
+       * awardOnce returns the current central balance
+       * whether this reward was newly granted or already
+       * claimed.
+       */
+      setPoints(result.balance);
+
       if (!result.awarded) {
         setWalkMissionComplete(true);
+
+        await AsyncStorage.setItem(
+          `chalega_walk_mission_${todayKey}`,
+          'true'
+        );
+
         return;
       }
 
-      const newPoints = result.balance;
-
-      setPoints(newPoints);
       setWalkMissionComplete(true);
 
       await AsyncStorage.setItem(
@@ -225,7 +279,6 @@ export default function WalkingScreen() {
 
       await saveWalkingData(
         steps,
-        newPoints,
         week,
         goal,
         streak
@@ -255,22 +308,21 @@ export default function WalkingScreen() {
     }
   };
 
+  /*
+   * -------------------------------------------------------
+   * OPTIONAL TEST / DEMO STEP ADDER
+   * -------------------------------------------------------
+   *
+   * This changes walking progress only.
+   *
+   * It no longer awards arbitrary points per 100 steps.
+   * Points are awarded through the central points engine.
+   */
   const addSteps = (amount: number) => {
     const nextSteps = Math.min(
       steps + amount,
       20000
     );
-
-    const pointsForSteps =
-      Math.floor(
-        nextSteps / 100
-      ) -
-      Math.floor(
-        steps / 100
-      );
-
-    const nextPoints =
-      points + Math.max(pointsForSteps, 0);
 
     const nextWeek = [...week];
 
@@ -281,24 +333,32 @@ export default function WalkingScreen() {
     };
 
     setSteps(nextSteps);
-    setPoints(nextPoints);
     setWeek(nextWeek);
 
     saveWalkingData(
       nextSteps,
-      nextPoints,
-      nextWeek
+      nextWeek,
+      goal,
+      streak
     );
   };
 
+  /*
+   * -------------------------------------------------------
+   * START / STOP PHONE TRACKING
+   * -------------------------------------------------------
+   */
   const startTracking = async () => {
     if (tracking) {
       setTracking(false);
+      setSensorBaseSteps(null);
       return;
     }
 
     try {
-      const available = await Pedometer.isAvailableAsync();
+      const available =
+        await Pedometer.isAvailableAsync();
+
       setPedometerAvailable(available);
 
       if (!available) {
@@ -314,17 +374,23 @@ export default function WalkingScreen() {
 
       if (!permission.granted) {
         setPedometerPermission(false);
+
         Alert.alert(
           'Permission Needed',
           'Please allow physical activity access so Chalega India can count your steps.'
         );
+
         return;
       }
 
       setPedometerPermission(true);
 
-      // Android in Expo SDK 54 does not support getStepCountAsync().
-      // Start the live sensor and preserve the steps already shown on screen.
+      /*
+       * Expo Android live step listener reports steps
+       * since the subscription began.
+       *
+       * We preserve the steps already shown on screen.
+       */
       const baseSteps = steps;
 
       setSensorBaseSteps(baseSteps);
@@ -332,7 +398,6 @@ export default function WalkingScreen() {
 
       await saveWalkingData(
         baseSteps,
-        points,
         week,
         goal,
         streak
@@ -345,7 +410,11 @@ export default function WalkingScreen() {
         )} steps. Keep walking!`
       );
     } catch (error) {
-      console.log('Pedometer error:', error);
+      console.log(
+        'Pedometer error:',
+        error
+      );
+
       Alert.alert(
         'Step Tracking Error',
         'Chalega could not access your step data right now. Please try again.'
@@ -353,6 +422,11 @@ export default function WalkingScreen() {
     }
   };
 
+  /*
+   * -------------------------------------------------------
+   * CHANGE GOAL
+   * -------------------------------------------------------
+   */
   const changeGoal = () => {
     Alert.alert(
       'Daily Walking Goal',
@@ -382,7 +456,12 @@ export default function WalkingScreen() {
     );
   };
 
-  const completeMission = () => {
+  /*
+   * -------------------------------------------------------
+   * COMPLETE BUTTON
+   * -------------------------------------------------------
+   */
+  const completeMission = async () => {
     if (!todayComplete) {
       Alert.alert(
         'Keep going! 🚶',
@@ -403,44 +482,61 @@ export default function WalkingScreen() {
       return;
     }
 
-    completeWalkMissionIfNeeded();
+    await completeWalkMissionIfNeeded();
   };
 
+  /*
+   * -------------------------------------------------------
+   * LIVE PEDOMETER
+   * -------------------------------------------------------
+   */
   useEffect(() => {
     if (!tracking) {
       return;
     }
 
-    let subscription: { remove: () => void } | null = null;
+    let subscription: {
+      remove: () => void;
+    } | null = null;
+
     let cancelled = false;
 
     const startLiveTracking = async () => {
       try {
-        const available = await Pedometer.isAvailableAsync();
+        const available =
+          await Pedometer.isAvailableAsync();
 
         if (!available || cancelled) {
           return;
         }
 
-        subscription = Pedometer.watchStepCount(result => {
-          if (cancelled) {
-            return;
-          }
+        subscription =
+          Pedometer.watchStepCount(
+            result => {
+              if (cancelled) {
+                return;
+              }
 
-          const nextSteps = Math.max(
-            steps,
-            result.steps + (sensorBaseSteps ?? 0)
-          );
+              const nextSteps = Math.max(
+                steps,
+                result.steps +
+                  (sensorBaseSteps ?? 0)
+              );
 
-          setSteps(nextSteps);
-          saveWalkingData(
-            nextSteps,
-            points,
-            week,
-            goal,
-            streak
+              setSteps(nextSteps);
+
+              /*
+               * Only save walking data.
+               * Never touch the central points wallet here.
+               */
+              saveWalkingData(
+                nextSteps,
+                week,
+                goal,
+                streak
+              );
+            }
           );
-        });
       } catch (error) {
         console.log(
           'Could not start live pedometer:',
@@ -455,15 +551,19 @@ export default function WalkingScreen() {
       cancelled = true;
       subscription?.remove();
     };
-  }, [tracking, sensorBaseSteps]);
+  }, [
+    tracking,
+    sensorBaseSteps,
+  ]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-
         {/* HEADER */}
 
         <View style={styles.header}>
@@ -495,11 +595,15 @@ export default function WalkingScreen() {
               )
             }
           >
-            <Text style={styles.pointsSmallEmoji}>
-              🏆
+            <Text
+              style={styles.pointsSmallEmoji}
+            >
+              🪙
             </Text>
 
-            <Text style={styles.pointsSmallNumber}>
+            <Text
+              style={styles.pointsSmallNumber}
+            >
               {points}
             </Text>
           </TouchableOpacity>
@@ -524,7 +628,9 @@ export default function WalkingScreen() {
             </View>
 
             <View style={styles.goalCircle}>
-              <Text style={styles.goalCircleNumber}>
+              <Text
+                style={styles.goalCircleNumber}
+              >
                 {Math.round(progress * 100)}%
               </Text>
 
@@ -534,7 +640,11 @@ export default function WalkingScreen() {
             </View>
           </View>
 
-          <View style={styles.heroProgressBackground}>
+          <View
+            style={
+              styles.heroProgressBackground
+            }
+          >
             <View
               style={[
                 styles.heroProgressFill,
@@ -563,7 +673,9 @@ export default function WalkingScreen() {
             style={styles.trackButton}
             onPress={startTracking}
           >
-            <Text style={styles.trackButtonIcon}>
+            <Text
+              style={styles.trackButtonIcon}
+            >
               {tracking ? '⏹' : '▶'}
             </Text>
 
@@ -585,27 +697,39 @@ export default function WalkingScreen() {
 
         {/* WALKING MISSION STATUS */}
 
-        <View
+        <TouchableOpacity
           style={[
             styles.missionStatusCard,
             walkMissionComplete &&
               styles.missionStatusComplete,
           ]}
+          activeOpacity={0.85}
+          onPress={() =>
+            router.push('/missions')
+          }
         >
           <View style={styles.missionStatusIcon}>
-            <Text style={styles.missionStatusEmoji}>
+            <Text
+              style={styles.missionStatusEmoji}
+            >
               {walkMissionComplete
-                ? '🏆'
-                : '🎯'}
+                ? '🎉'
+                : '🚶'}
             </Text>
           </View>
 
-          <View style={styles.missionStatusContent}>
-            <Text style={styles.missionStatusLabel}>
+          <View
+            style={styles.missionStatusContent}
+          >
+            <Text
+              style={styles.missionStatusLabel}
+            >
               TODAY'S WALKING MISSION
             </Text>
 
-            <Text style={styles.missionStatusTitle}>
+            <Text
+              style={styles.missionStatusTitle}
+            >
               {walkMissionComplete
                 ? 'Mission complete!'
                 : `Reach ${goal.toLocaleString(
@@ -613,14 +737,18 @@ export default function WalkingScreen() {
                   )} steps`}
             </Text>
 
-            <Text style={styles.missionStatusText}>
+            <Text
+              style={styles.missionStatusText}
+            >
               {walkMissionComplete
                 ? `+${WALK_MISSION_POINTS} points earned today`
                 : `Earn +${WALK_MISSION_POINTS} Chalega Points`}
             </Text>
           </View>
 
-          <Text style={styles.missionStatusCheck}>
+          <Text
+            style={styles.missionStatusCheck}
+          >
             {walkMissionComplete
               ? '✓'
               : `${Math.max(
@@ -628,7 +756,7 @@ export default function WalkingScreen() {
                   0
                 ).toLocaleString('en-IN')}`}
           </Text>
-        </View>
+        </TouchableOpacity>
 
         {/* DAILY STATS */}
 
@@ -638,7 +766,18 @@ export default function WalkingScreen() {
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, styles.statIconBlue]}><Text style={styles.statIconEmoji}>📍</Text></View>
+            <View
+              style={[
+                styles.statIcon,
+                styles.statIconBlue,
+              ]}
+            >
+              <Text
+                style={styles.statIconEmoji}
+              >
+                📍
+              </Text>
+            </View>
 
             <Text style={styles.statNumber}>
               {distanceKm}
@@ -650,7 +789,18 @@ export default function WalkingScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, styles.statIconOrange]}><Text style={styles.statIconEmoji}>🔥</Text></View>
+            <View
+              style={[
+                styles.statIcon,
+                styles.statIconOrange,
+              ]}
+            >
+              <Text
+                style={styles.statIconEmoji}
+              >
+                🔥
+              </Text>
+            </View>
 
             <Text style={styles.statNumber}>
               {calories}
@@ -662,7 +812,18 @@ export default function WalkingScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, styles.statIconGreen]}><Text style={styles.statIconEmoji}>⏱️</Text></View>
+            <View
+              style={[
+                styles.statIcon,
+                styles.statIconGreen,
+              ]}
+            >
+              <Text
+                style={styles.statIconEmoji}
+              >
+                ⏱️
+              </Text>
+            </View>
 
             <Text style={styles.statNumber}>
               {Math.round(steps / 100)}
@@ -675,7 +836,8 @@ export default function WalkingScreen() {
         </View>
 
         <Text style={styles.disclaimer}>
-          *Estimated values. Actual results vary by person.
+          *Estimated values. Actual results vary by
+          person.
         </Text>
 
         {/* WEEKLY ACTIVITY */}
@@ -716,7 +878,9 @@ export default function WalkingScreen() {
                   style={styles.dayColumn}
                 >
                   <View
-                    style={styles.dayBarBackground}
+                    style={
+                      styles.dayBarBackground
+                    }
                   >
                     <View
                       style={[
@@ -756,8 +920,11 @@ export default function WalkingScreen() {
           </View>
 
           <View style={styles.weekBottom}>
-            <Text style={styles.weekBottomText}>
-              Goal: {goal.toLocaleString('en-IN')} steps/day
+            <Text
+              style={styles.weekBottomText}
+            >
+              Goal: {goal.toLocaleString('en-IN')}{' '}
+              steps/day
             </Text>
 
             <TouchableOpacity
@@ -780,7 +947,9 @@ export default function WalkingScreen() {
           </View>
 
           <View style={styles.streakContent}>
-            <Text style={styles.streakEyebrow}>
+            <Text
+              style={styles.streakEyebrow}
+            >
               WALKING STREAK
             </Text>
 
@@ -788,9 +957,11 @@ export default function WalkingScreen() {
               {streak} DAYS
             </Text>
 
-            <Text style={styles.streakDescription}>
-              You're building a healthy habit. Keep
-              today's walk going!
+            <Text
+              style={styles.streakDescription}
+            >
+              You're building a healthy habit.
+              Keep today's walk going!
             </Text>
           </View>
 
@@ -820,7 +991,11 @@ export default function WalkingScreen() {
             </View>
           </View>
 
-          <View style={styles.levelProgressBackground}>
+          <View
+            style={
+              styles.levelProgressBackground
+            }
+          >
             <View
               style={[
                 styles.levelProgressFill,
@@ -851,11 +1026,13 @@ export default function WalkingScreen() {
         <View style={styles.challengeCard}>
           <View style={styles.challengeIcon}>
             <Text style={styles.challengeEmoji}>
-              🏆
+              🪙
             </Text>
           </View>
 
-          <Text style={styles.challengeTitle}>
+          <Text
+            style={styles.challengeTitle}
+          >
             25,000 Step Challenge
           </Text>
 
@@ -865,14 +1042,20 @@ export default function WalkingScreen() {
           </Text>
 
           <View
-            style={styles.challengeProgressBackground}
+            style={
+              styles.challengeProgressBackground
+            }
           >
             <View
-              style={styles.challengeProgressFill}
+              style={
+                styles.challengeProgressFill
+              }
             />
           </View>
 
-          <View style={styles.challengeNumbers}>
+          <View
+            style={styles.challengeNumbers}
+          >
             <Text style={styles.challengeNumber}>
               15,850 steps
             </Text>
@@ -891,7 +1074,9 @@ export default function WalkingScreen() {
               )
             }
           >
-            <Text style={styles.challengeButtonText}>
+            <Text
+              style={styles.challengeButtonText}
+            >
               KEEP WALKING
             </Text>
           </TouchableOpacity>
@@ -901,15 +1086,21 @@ export default function WalkingScreen() {
 
         <View style={styles.communityCard}>
           <Text style={styles.communityEmoji}>
-            🌆
+            🌍
           </Text>
 
-          <View style={styles.communityContent}>
-            <Text style={styles.communityEyebrow}>
+          <View
+            style={styles.communityContent}
+          >
+            <Text
+              style={styles.communityEyebrow}
+            >
               CHALEGA COMMUNITY
             </Text>
 
-            <Text style={styles.communityTitle}>
+            <Text
+              style={styles.communityTitle}
+            >
               You're not walking alone.
             </Text>
 
@@ -932,7 +1123,9 @@ export default function WalkingScreen() {
           ]}
           onPress={completeMission}
         >
-          <Text style={styles.completeButtonText}>
+          <Text
+            style={styles.completeButtonText}
+          >
             {walkMissionComplete
               ? '✓ WALKING MISSION COMPLETE'
               : todayComplete
@@ -952,7 +1145,6 @@ export default function WalkingScreen() {
             Walk more • Live better • Stay healthy
           </Text>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -1213,51 +1405,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  testCard: {
-    backgroundColor: '#FFFBEA',
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#F0E5B8',
-  },
-
-  testLabel: {
-    color: '#806800',
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-  },
-
-  testText: {
-    color: '#777777',
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 5,
-  },
-
-  testButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-
-  testButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingVertical: 9,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E8DDAE',
-  },
-
-  testButtonText: {
-    color: '#806800',
-    fontSize: 10,
-    fontWeight: '900',
-  },
-
   sectionTitle: {
     color: '#111111',
     fontSize: 18,
@@ -1279,8 +1426,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  statIcon: { width: 46, height: 46, borderRadius: 15, alignItems: `center`, justifyContent: `center`, marginBottom: 2, shadowColor: `#071522`, shadowOpacity: 0.16, shadowRadius: 7, shadowOffset: { width: 0, height: 4 }, elevation: 4 }, statIconBlue: { backgroundColor: `#1D6FF2` }, statIconOrange: { backgroundColor: `#F47B20` }, statIconGreen: { backgroundColor: `#2FA84F` }, statIconEmoji: { fontSize: 24 },  statEmoji: {
-    fontSize: 22,
+  statIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+    shadowColor: '#071522',
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 4,
+  },
+
+  statIconBlue: {
+    backgroundColor: '#1D6FF2',
+  },
+
+  statIconOrange: {
+    backgroundColor: '#F47B20',
+  },
+
+  statIconGreen: {
+    backgroundColor: '#2FA84F',
+  },
+
+  statIconEmoji: {
+    fontSize: 24,
   },
 
   statNumber: {

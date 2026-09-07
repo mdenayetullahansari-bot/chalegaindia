@@ -513,6 +513,20 @@ export default function RootLayout() {
       />
 
       {/* =================================================
+       * HIDDEN — ENTALLY
+       *
+       * Accessible as /entally
+       * but never shown in bottom navigation.
+       * ================================================= */}
+
+      <Tabs.Screen
+        name="entally"
+        options={{
+          href: null,
+        }}
+      />
+
+      {/* =================================================
        * HIDDEN — AUTH
        * ================================================= */}
 
