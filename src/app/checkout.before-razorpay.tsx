@@ -16,35 +16,11 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
-
 import { products } from '@/data/products';
-import { supabase } from '@/lib/supabase';
-import { clearCart } from '@/lib/cart';
 
 type Cart = Record<string, number>;
 
 type DeliveryType = 'Chalega 24-Hour';
-
-type PaymentMethod = 'cod' | 'online';
-
-type RazorpayPaymentResult = {
-  razorpay_order_id?: string;
-  razorpay_payment_id?: string;
-  razorpay_signature?: string;
-};
-
-type RazorpayOrderResponse = {
-  id?: string;
-  entity?: string;
-  amount?: number;
-  amount_paid?: number;
-  amount_due?: number;
-  currency?: string;
-  receipt?: string;
-  status?: string;
-  key_id?: string;
-  keyId?: string;
-};
 
 const FREE_DELIVERY_THRESHOLD = 499;
 
@@ -64,7 +40,6 @@ const getDeliveryDeadline = (
   createdAt: string
 ) => {
   const created = new Date(createdAt);
-
   const deadline = new Date(
     created.getTime() + 24 * 60 * 60 * 1000
   );
@@ -179,379 +154,8 @@ export default function CheckoutScreen() {
     'Chalega 24-Hour'
   );
 
-  const [
-    paymentMethod,
-    setPaymentMethod,
-  ] = useState<PaymentMethod>('cod');
-
   const [saving, setSaving] =
     useState(false);
-
-  const getExistingOrders =
-    async (): Promise<any[]> => {
-      const existingOrdersText =
-        await AsyncStorage.getItem(
-          'chalega_orders'
-        );
-
-      if (!existingOrdersText) {
-        return [];
-      }
-
-      try {
-        const parsed =
-          JSON.parse(existingOrdersText);
-
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-
-        return [];
-      } catch {
-        return [];
-      }
-    };
-
-  const saveLocalOrder = async ({
-    orderId,
-    createdAt,
-    deliveryDeadline,
-    paymentStatus,
-    razorpayOrderId,
-    razorpayPaymentId,
-  }: {
-    orderId: string;
-    createdAt: string;
-    deliveryDeadline: string;
-    paymentStatus: string;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-  }) => {
-    const existingOrders =
-      await getExistingOrders();
-
-    const newOrder = {
-      id: orderId,
-      orderId,
-
-      customer: {
-        name: name.trim(),
-        phone: phone.trim(),
-      },
-
-      address: {
-        address: address.trim(),
-        area: area.trim(),
-        pin: pin.trim(),
-      },
-
-      products: selectedProducts.map(
-        product => ({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          unit: product.unit,
-          category: product.category,
-          emoji: product.emoji,
-          quantity:
-            product.quantity || 1,
-        })
-      ),
-
-      items: itemCount,
-
-      subtotal,
-
-      deliveryFee,
-
-      total: orderTotal,
-
-      delivery,
-
-      deliveryPromise:
-        'Within 24 hours',
-
-      createdAt,
-
-      deliveryDeadline,
-
-      deliveryWindow:
-        'Within 24 hours of order placement',
-
-      status: 'Order Received',
-
-      paymentMethod,
-
-      paymentStatus,
-
-      ...(razorpayOrderId
-        ? {
-            razorpayOrderId,
-          }
-        : {}),
-
-      ...(razorpayPaymentId
-        ? {
-            razorpayPaymentId,
-          }
-        : {}),
-    };
-
-    const updatedOrders = [
-      ...existingOrders,
-      newOrder,
-    ];
-
-    await AsyncStorage.setItem(
-      'chalega_orders',
-      JSON.stringify(updatedOrders)
-    );
-
-    return newOrder;
-  };
-
-  const finishOrder = async ({
-    orderId,
-    createdAt,
-    deliveryDeadline,
-    paymentStatus,
-    razorpayOrderId,
-    razorpayPaymentId,
-  }: {
-    orderId: string;
-    createdAt: string;
-    deliveryDeadline: string;
-    paymentStatus: string;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-  }) => {
-    await saveLocalOrder({
-      orderId,
-      createdAt,
-      deliveryDeadline,
-      paymentStatus,
-      razorpayOrderId,
-      razorpayPaymentId,
-    });
-
-    await clearCart();
-
-    router.replace({
-      pathname:
-        '/order-confirmed',
-      params: {
-        orderId,
-        name: name.trim(),
-        total:
-          orderTotal.toString(),
-        deliveryDeadline,
-      },
-    });
-  };
-
-  const startOnlinePayment = async ({
-    orderId,
-  }: {
-    orderId: string;
-  }) => {
-    const {
-      data: {
-        session,
-      },
-    } =
-      await supabase.auth.getSession();
-
-    if (!session) {
-      throw new Error(
-        'Your session has expired. Please sign in again.'
-      );
-    }
-
-    const amountInPaise =
-      Math.round(orderTotal * 100);
-
-    const {
-      data: razorpayOrder,
-      error: createOrderError,
-    } =
-      await supabase.functions.invoke(
-        'create-razorpay-order',
-        {
-          body: {
-            amount: amountInPaise,
-            receipt: orderId,
-          },
-        }
-      );
-
-    if (createOrderError) {
-      console.error(
-        'Razorpay order creation error:',
-        createOrderError
-      );
-
-      throw new Error(
-        'We could not start the online payment. Please try again.'
-      );
-    }
-
-    const order =
-      razorpayOrder as RazorpayOrderResponse;
-
-    if (!order?.id) {
-      console.error(
-        'Invalid Razorpay order response:',
-        order
-      );
-
-      throw new Error(
-        'Payment order could not be created.'
-      );
-    }
-
-    const razorpayKey =
-      order.key_id ||
-      order.keyId;
-
-    if (!razorpayKey) {
-      console.error(
-        'Razorpay key ID missing from Edge Function response.'
-      );
-
-      throw new Error(
-        'Payment configuration is incomplete. Please try again later.'
-      );
-    }
-
-    let RazorpayCheckout: any;
-
-    try {
-      const RazorpayModule =
-        require(
-          'react-native-razorpay'
-        );
-
-      RazorpayCheckout =
-        RazorpayModule?.default ||
-        RazorpayModule;
-    } catch (error) {
-      console.error(
-        'Razorpay native module unavailable:',
-        error
-      );
-
-      throw new Error(
-        'Online payment is available only in the Chalega India development build, not Expo Go.'
-      );
-    }
-
-    if (
-      !RazorpayCheckout ||
-      typeof RazorpayCheckout.open !==
-        'function'
-    ) {
-      throw new Error(
-        'Razorpay payment module is not available in this app build.'
-      );
-    }
-
-    const payment =
-      (await RazorpayCheckout.open({
-        key: razorpayKey,
-
-        amount:
-          order.amount ||
-          amountInPaise,
-
-        currency:
-          order.currency ||
-          'INR',
-
-        order_id: order.id,
-
-        name: 'Chalega India',
-
-        description:
-          'Chalega Fresh order',
-
-        prefill: {
-          name: name.trim(),
-          contact: phone.trim(),
-        },
-
-        notes: {
-          chalega_order_id:
-            orderId,
-        },
-
-        theme: {
-          color: '#1976F3',
-        },
-      })) as RazorpayPaymentResult;
-
-    if (
-      !payment?.razorpay_order_id ||
-      !payment?.razorpay_payment_id ||
-      !payment?.razorpay_signature
-    ) {
-      throw new Error(
-        'Razorpay returned an incomplete payment response.'
-      );
-    }
-
-    const {
-      data: verification,
-      error: verificationError,
-    } =
-      await supabase.functions.invoke(
-        'verify-razorpay-payment',
-        {
-          body: {
-            razorpay_order_id:
-              payment.razorpay_order_id,
-
-            razorpay_payment_id:
-              payment.razorpay_payment_id,
-
-            razorpay_signature:
-              payment.razorpay_signature,
-          },
-        }
-      );
-
-    if (verificationError) {
-      console.error(
-        'Payment verification error:',
-        verificationError
-      );
-
-      throw new Error(
-        'Payment was received but could not be verified. Please do not place another order until we confirm the payment.'
-      );
-    }
-
-    if (
-      !verification ||
-      verification.verified !== true
-    ) {
-      console.error(
-        'Payment verification failed:',
-        verification
-      );
-
-      throw new Error(
-        'Payment verification failed. Please contact Chalega India support before trying again.'
-      );
-    }
-
-    return {
-      razorpayOrderId:
-        payment.razorpay_order_id,
-
-      razorpayPaymentId:
-        payment.razorpay_payment_id,
-    };
-  };
 
   const placeOrder = async () => {
     if (selectedProducts.length === 0) {
@@ -559,7 +163,6 @@ export default function CheckoutScreen() {
         'Your cart is empty',
         'Please return to Shop to Feed and add a product.'
       );
-
       return;
     }
 
@@ -568,7 +171,6 @@ export default function CheckoutScreen() {
         'Missing information',
         'Please enter your name.'
       );
-
       return;
     }
 
@@ -577,7 +179,6 @@ export default function CheckoutScreen() {
         'Invalid mobile number',
         'Please enter a valid 10-digit mobile number.'
       );
-
       return;
     }
 
@@ -586,7 +187,6 @@ export default function CheckoutScreen() {
         'Missing address',
         'Please enter your delivery address.'
       );
-
       return;
     }
 
@@ -595,7 +195,6 @@ export default function CheckoutScreen() {
         'Missing area',
         'Please enter your area or locality.'
       );
-
       return;
     }
 
@@ -604,15 +203,31 @@ export default function CheckoutScreen() {
         'Invalid PIN code',
         'Please enter your 6-digit PIN code.'
       );
-
       return;
     }
 
     try {
       setSaving(true);
 
-      const existingOrders =
-        await getExistingOrders();
+      const existingOrdersText =
+        await AsyncStorage.getItem(
+          'chalega_orders'
+        );
+
+      let existingOrders: any[] = [];
+
+      if (existingOrdersText) {
+        try {
+          const parsed =
+            JSON.parse(existingOrdersText);
+
+          if (Array.isArray(parsed)) {
+            existingOrders = parsed;
+          }
+        } catch {
+          existingOrders = [];
+        }
+      }
 
       const orderNumber =
         existingOrders.length + 1;
@@ -621,70 +236,95 @@ export default function CheckoutScreen() {
         new Date().toISOString();
 
       const deliveryDeadline =
-        getDeliveryDeadline(
-          createdAt
-        );
+        getDeliveryDeadline(createdAt);
 
       const orderId =
         `CI-${new Date().getFullYear()}-${String(
           orderNumber
         ).padStart(4, '0')}`;
 
-      if (
-        paymentMethod === 'online'
-      ) {
-        const payment =
-          await startOnlinePayment({
-            orderId,
-          });
-
-        await finishOrder({
-          orderId,
-          createdAt,
-          deliveryDeadline,
-          paymentStatus:
-            'paid',
-          razorpayOrderId:
-            payment.razorpayOrderId,
-          razorpayPaymentId:
-            payment.razorpayPaymentId,
-        });
-
-        return;
-      }
-
-      await finishOrder({
+      const newOrder = {
+        id: orderId,
         orderId,
+
+        customer: {
+          name: name.trim(),
+          phone: phone.trim(),
+        },
+
+        address: {
+          address: address.trim(),
+          area: area.trim(),
+          pin: pin.trim(),
+        },
+
+        products: selectedProducts.map(
+          product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            unit: product.unit,
+            category: product.category,
+            emoji: product.emoji,
+            quantity:
+              product.quantity || 1,
+          })
+        ),
+
+        items: itemCount,
+
+        subtotal,
+
+        deliveryFee,
+
+        total: orderTotal,
+
+        delivery,
+
+        deliveryPromise:
+          'Within 24 hours',
+
         createdAt,
+
         deliveryDeadline,
-        paymentStatus:
-          'pending',
+
+        deliveryWindow:
+          'Within 24 hours of order placement',
+
+        status: 'Order Received',
+      };
+
+      const updatedOrders = [
+        ...existingOrders,
+        newOrder,
+      ];
+
+      await AsyncStorage.setItem(
+        'chalega_orders',
+        JSON.stringify(updatedOrders)
+      );
+
+      router.replace({
+        pathname:
+          '/order-confirmed',
+        params: {
+          orderId,
+          name: name.trim(),
+          total:
+            orderTotal.toString(),
+          deliveryDeadline,
+        },
       });
-    } catch (error: any) {
-      console.error(
-        'Order/payment error:',
+    } catch (error) {
+      console.log(
+        'Order save error:',
         error
       );
 
-      const message =
-        error?.message ||
-        'We could not complete your order. Please try again.';
-
-      if (
-        message.toLowerCase().includes(
-          'cancel'
-        )
-      ) {
-        Alert.alert(
-          'Payment Cancelled',
-          'Your order was not placed. You can choose another payment method and try again.'
-        );
-      } else {
-        Alert.alert(
-          'Order / Payment Error',
-          message
-        );
-      }
+      Alert.alert(
+        'Order error',
+        'We could not save your order. Please try again.'
+      );
     } finally {
       setSaving(false);
     }
@@ -710,9 +350,7 @@ export default function CheckoutScreen() {
             styles.content
           }
         >
-          <View
-            style={styles.header}
-          >
+          <View style={styles.header}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() =>
@@ -1013,7 +651,9 @@ export default function CheckoutScreen() {
                 styles.deliveryOptionIcon
               }
             >
-              <Text>🚚</Text>
+              <Text>
+                🚚
+              </Text>
             </View>
 
             <View
@@ -1110,9 +750,7 @@ export default function CheckoutScreen() {
             </View>
 
             <Text
-              style={
-                styles.freeDeliveryNote
-              }
+              style={styles.freeDeliveryNote}
             >
               {subtotal >=
               FREE_DELIVERY_THRESHOLD
@@ -1135,17 +773,13 @@ export default function CheckoutScreen() {
               style={styles.summaryRow}
             >
               <Text
-                style={
-                  styles.totalLabel
-                }
+                style={styles.totalLabel}
               >
                 Total
               </Text>
 
               <Text
-                style={
-                  styles.totalValue
-                }
+                style={styles.totalValue}
               >
                 ₹
                 {orderTotal.toLocaleString(
@@ -1164,104 +798,27 @@ export default function CheckoutScreen() {
               Payment
             </Text>
 
-            <TouchableOpacity
-              style={[
-                styles.paymentOption,
-                paymentMethod === 'online' &&
-                  styles.paymentOptionSelected,
-              ]}
-              activeOpacity={0.85}
-              onPress={() =>
-                setPaymentMethod(
-                  'online'
-                )
+            <View
+              style={
+                styles.codOption
               }
             >
               <View
                 style={
-                  styles.onlineIcon
+                  styles.codIcon
                 }
-              >
-                <Text
-                  style={
-                    styles.onlineIconText
-                  }
-                >
-                  ₹
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.paymentBody
-                }
-              >
-                <Text
-                  style={
-                    styles.paymentOptionTitle
-                  }
-                >
-                  Pay Online
-                </Text>
-
-                <Text
-                  style={
-                    styles.paymentOptionText
-                  }
-                >
-                  UPI, cards, net banking
-                  and supported payment
-                  methods.
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.radioOuter,
-                  paymentMethod ===
-                    'online' &&
-                    styles.radioOuterSelected,
-                ]}
-              >
-                {paymentMethod ===
-                  'online' && (
-                  <View
-                    style={
-                      styles.radioInner
-                    }
-                  />
-                )}
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.paymentOption,
-                styles.paymentOptionLast,
-                paymentMethod === 'cod' &&
-                  styles.paymentOptionSelected,
-              ]}
-              activeOpacity={0.85}
-              onPress={() =>
-                setPaymentMethod(
-                  'cod'
-                )
-              }
-            >
-              <View
-                style={styles.codIcon}
               >
                 <Text>₹</Text>
               </View>
 
               <View
                 style={
-                  styles.paymentBody
+                  styles.codBody
                 }
               >
                 <Text
                   style={
-                    styles.paymentOptionTitle
+                    styles.codTitle
                   }
                 >
                   Cash on Delivery
@@ -1269,7 +826,7 @@ export default function CheckoutScreen() {
 
                 <Text
                   style={
-                    styles.paymentOptionText
+                    styles.codText
                   }
                 >
                   Pay when your order
@@ -1278,52 +835,17 @@ export default function CheckoutScreen() {
               </View>
 
               <View
-                style={[
-                  styles.radioOuter,
-                  paymentMethod ===
-                    'cod' &&
-                    styles.radioOuterSelected,
-                ]}
-              >
-                {paymentMethod ===
-                  'cod' && (
-                  <View
-                    style={
-                      styles.radioInner
-                    }
-                  />
-                )}
-              </View>
-            </TouchableOpacity>
-
-            {paymentMethod ===
-              'online' && (
-              <View
                 style={
-                  styles.onlineNote
+                  styles.selectedRadio
                 }
               >
-                <Text
+                <View
                   style={
-                    styles.onlineNoteTitle
+                    styles.selectedRadioDot
                   }
-                >
-                  🔒 Secure online payment
-                </Text>
-
-                <Text
-                  style={
-                    styles.onlineNoteText
-                  }
-                >
-                  Your payment is processed
-                  securely through Razorpay.
-                  Chalega India verifies
-                  the payment before
-                  confirming your order.
-                </Text>
+                />
               </View>
-            )}
+            </View>
           </View>
 
           <TouchableOpacity
@@ -1345,13 +867,7 @@ export default function CheckoutScreen() {
                 }
               >
                 {saving
-                  ? paymentMethod ===
-                    'online'
-                    ? 'PROCESSING PAYMENT...'
-                    : 'SAVING ORDER...'
-                  : paymentMethod ===
-                    'online'
-                  ? 'PAY & PLACE ORDER'
+                  ? 'SAVING ORDER...'
                   : 'PLACE ORDER'}
               </Text>
 
@@ -1742,7 +1258,7 @@ const styles = StyleSheet.create({
     marginBottom: 11,
   },
 
-  paymentOption: {
+  codOption: {
     padding: 12,
     borderRadius: 15,
     backgroundColor: '#F8FAFB',
@@ -1750,32 +1266,6 @@ const styles = StyleSheet.create({
     borderColor: '#E4E8EC',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 9,
-  },
-
-  paymentOptionLast: {
-    marginBottom: 0,
-  },
-
-  paymentOptionSelected: {
-    borderColor: '#2FA84F',
-    backgroundColor: '#F4FAF5',
-  },
-
-  onlineIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#EAF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-
-  onlineIconText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#1976F3',
   },
 
   codIcon: {
@@ -1788,65 +1278,20 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  paymentBody: {
+  codBody: {
     flex: 1,
   },
 
-  paymentOptionTitle: {
+  codTitle: {
     fontSize: 12,
     fontWeight: '900',
     color: '#263540',
   },
 
-  paymentOptionText: {
+  codText: {
     marginTop: 2,
     fontSize: 10,
-    lineHeight: 15,
     color: '#77838D',
-  },
-
-  radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#B8C2C9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  radioOuterSelected: {
-    borderColor: '#2FA84F',
-  },
-
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#2FA84F',
-  },
-
-  onlineNote: {
-    marginTop: 11,
-    padding: 12,
-    borderRadius: 13,
-    backgroundColor: '#F1F6FF',
-    borderWidth: 1,
-    borderColor: '#D6E4FA',
-  },
-
-  onlineNoteTitle: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#245B9B',
-  },
-
-  onlineNoteText: {
-    marginTop: 4,
-    fontSize: 10,
-    lineHeight: 15,
-    color: '#5A708A',
-    fontWeight: '600',
   },
 
   placeOrderButton: {
