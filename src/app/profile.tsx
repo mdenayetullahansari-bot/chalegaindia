@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,8 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { getPoints } from '@/lib/points';
 
 type Profile = {
   full_name: string | null;
@@ -35,30 +37,59 @@ const WALKING_DATA_KEY = 'chalega_walking_data';
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [walking, setWalking] = useState<WalkingData>({});
-  const [loading, setLoading] = useState(true);
-  const [signedIn, setSignedIn] = useState(false);
+  const [profile, setProfile] =
+    useState<Profile | null>(null);
 
-  useEffect(() => {
-    loadProfile();
+  const [walking, setWalking] =
+    useState<WalkingData>({});
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      loadProfile();
-    });
+  const [loading, setLoading] =
+    useState(true);
 
-    return () => subscription.unsubscribe();
-  }, []);
+  const [signedIn, setSignedIn] =
+    useState(false);
 
-  const loadProfile = async () => {
+  const [points, setPoints] =
+    useState(0);
+
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
 
+      /*
+       * CENTRAL CHALEGA POINTS
+       *
+       * Profile always reads the central wallet.
+       * It does not use profiles.points or walking.points
+       * for the displayed Points balance.
+       */
+      const currentPoints =
+        await getPoints();
+
+      console.log(
+        '[PROFILE] CENTRAL POINTS =',
+        currentPoints
+      );
+
+      setPoints(
+        Number.isFinite(currentPoints)
+          ? Math.max(
+              0,
+              Math.round(currentPoints)
+            )
+          : 0
+      );
+
+      /*
+       * SUPABASE SESSION
+       */
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } =
+        await supabase.auth.getSession();
+
+      const user =
+        session?.user ?? null;
 
       if (!user) {
         setSignedIn(false);
@@ -68,7 +99,13 @@ export default function ProfileScreen() {
 
       setSignedIn(true);
 
-      const { data, error } = await supabase
+      /*
+       * SUPABASE PROFILE
+       */
+      const {
+        data,
+        error,
+      } = await supabase
         .from('profiles')
         .select(
           'full_name, username, avatar_url, area, daily_step_goal, points, ward_id'
@@ -77,42 +114,92 @@ export default function ProfileScreen() {
         .maybeSingle();
 
       if (error) {
-        console.warn('Profile load error:', error.message);
+        console.warn(
+          '[PROFILE] Supabase profile error:',
+          error.message
+        );
       }
 
       if (data) {
         setProfile(data);
       } else {
         setProfile({
-          full_name: user.user_metadata?.full_name ?? null,
+          full_name:
+            user.user_metadata?.full_name ??
+            null,
+
           username: null,
-          avatar_url: user.user_metadata?.avatar_url ?? null,
+
+          avatar_url:
+            user.user_metadata?.avatar_url ??
+            null,
+
           area: null,
+
           daily_step_goal: 8000,
+
           points: 0,
+
           ward_id: null,
         });
       }
 
+      /*
+       * WALKING DATA
+       */
       try {
         const AsyncStorage = (
-          await import('@react-native-async-storage/async-storage')
+          await import(
+            '@react-native-async-storage/async-storage'
+          )
         ).default;
 
-        const savedWalking = await AsyncStorage.getItem(WALKING_DATA_KEY);
+        const savedWalking =
+          await AsyncStorage.getItem(
+            WALKING_DATA_KEY
+          );
 
         if (savedWalking) {
-          setWalking(JSON.parse(savedWalking));
+          const parsedWalking =
+            JSON.parse(savedWalking);
+
+          if (
+            parsedWalking &&
+            typeof parsedWalking === 'object'
+          ) {
+            setWalking(parsedWalking);
+          } else {
+            setWalking({});
+          }
+        } else {
+          setWalking({});
         }
       } catch (walkingError) {
-        console.warn('Walking data load error:', walkingError);
+        console.warn(
+          '[PROFILE] Walking data error:',
+          walkingError
+        );
+
+        setWalking({});
       }
     } catch (error) {
-      console.warn('Profile error:', error);
+      console.warn(
+        '[PROFILE] Profile load error:',
+        error
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  /*
+   * Reload whenever Profile becomes active.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile])
+  );
 
   const displayName =
     profile?.full_name?.trim() ||
@@ -120,7 +207,10 @@ export default function ProfileScreen() {
     'Chalega Member';
 
   const username = profile?.username
-    ? `@${profile.username.replace(/^@/, '')}`
+    ? `@${profile.username.replace(
+        /^@/,
+        ''
+      )}`
     : '@chalega_member';
 
   const wardLabel = profile?.ward_id
@@ -128,40 +218,86 @@ export default function ProfileScreen() {
     : 'Ward not assigned';
 
   const steps = walking.steps ?? 0;
+
   const streak = walking.streak ?? 0;
-  const points = Math.max(profile?.points ?? 0, walking.points ?? 0);
-  const goal = walking.goal ?? profile?.daily_step_goal ?? 8000;
+
+  /*
+   * Keep existing walking goal priority:
+   * walking data -> Supabase profile -> 8000.
+   */
+  const goal =
+    walking.goal ??
+    profile?.daily_step_goal ??
+    8000;
+
+  const progressPercent =
+    Math.min(
+      100,
+      Math.round(
+        (steps /
+          Math.max(goal, 1)) *
+          100
+      )
+    );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color="#1D6FF2" />
-        <Text style={styles.loadingText}>Loading your profile...</Text>
+      <SafeAreaView
+        style={styles.loadingScreen}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#1D6FF2"
+        />
+
+        <Text style={styles.loadingText}>
+          Loading your profile...
+        </Text>
       </SafeAreaView>
     );
   }
 
+  /*
+   * SIGNED-OUT PROFILE
+   */
   if (!signedIn) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView
+        style={styles.container}
+      >
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Text style={styles.emptyEmoji}>👤</Text>
+            <Ionicons
+              name="person-outline"
+              size={38}
+              color="#1D6FF2"
+            />
           </View>
 
-          <Text style={styles.emptyTitle}>Create your Chalega profile</Text>
+          <Text style={styles.emptyTitle}>
+            Create your Chalega profile
+          </Text>
 
           <Text style={styles.emptyText}>
-            Join Chalega India to save your progress, choose your KMC ward and
-            build your healthy journey.
+            Join Chalega India to save your
+            progress, choose your KMC ward
+            and build your healthy journey.
           </Text>
 
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => router.replace('/auth')}
+            onPress={() =>
+              router.replace('/auth')
+            }
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryButtonText}>CREATE FREE ACCOUNT</Text>
+            <Text
+              style={
+                styles.primaryButtonText
+              }
+            >
+              CREATE FREE ACCOUNT
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -169,91 +305,191 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
       >
         {/* TOP BAR */}
+
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() =>
+              router.back()
+            }
             activeOpacity={0.8}
           >
-            <Text style={styles.backText}>‹</Text>
+            <Ionicons
+              name="arrow-back"
+              size={21}
+              color="#0B1F33"
+            />
           </TouchableOpacity>
 
-          <Text style={styles.topTitle}>MY PROFILE</Text>
+          <Text
+            style={styles.topTitle}
+          >
+            MY PROFILE
+          </Text>
 
           <TouchableOpacity
             style={styles.settingsButton}
             onPress={() =>
-              Alert.alert(
-                'Profile Settings',
-                'Profile editing and ward verification are coming next.'
+              router.push(
+                '/profile-settings'
               )
             }
             activeOpacity={0.8}
           >
-            <Text style={styles.settingsText}>•••</Text>
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={21}
+              color="#6B7785"
+            />
           </TouchableOpacity>
         </View>
 
         {/* PROFILE HEADER */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarRing}>
+
+        <View
+          style={styles.profileHeader}
+        >
+          <View
+            style={styles.avatarRing}
+          >
             {profile?.avatar_url ? (
               <Image
-                source={{ uri: profile.avatar_url }}
-                style={styles.avatarImage}
+                source={{
+                  uri: profile.avatar_url,
+                }}
+                style={
+                  styles.avatarImage
+                }
               />
             ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarLetter}>
-                  {displayName.charAt(0).toUpperCase()}
+              <View
+                style={
+                  styles.avatarFallback
+                }
+              >
+                <Text
+                  style={
+                    styles.avatarLetter
+                  }
+                >
+                  {displayName
+                    .charAt(0)
+                    .toUpperCase()}
                 </Text>
               </View>
             )}
           </View>
 
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.username}>{username}</Text>
+          <Text style={styles.name}>
+            {displayName}
+          </Text>
 
-          <View style={styles.wardBadge}>
-            <Text style={styles.wardPin}>📍</Text>
-            <Text style={styles.wardText}>{wardLabel}</Text>
+          <Text
+            style={styles.username}
+          >
+            {username}
+          </Text>
+
+          <View
+            style={styles.wardBadge}
+          >
+            <Ionicons
+              name="location-outline"
+              size={14}
+              color="#247A3A"
+              style={
+                styles.wardPin
+              }
+            />
+
+            <Text
+              style={styles.wardText}
+            >
+              {wardLabel}
+            </Text>
           </View>
 
           <Text style={styles.bio}>
-            Walking towards a healthier India.
+            Walking towards a healthier
+            India.
           </Text>
         </View>
 
         {/* STATS */}
+
         <View style={styles.statsCard}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{points.toLocaleString('en-IN')}</Text>
-            <Text style={styles.statLabel}>POINTS</Text>
+            <Text
+              style={styles.statValue}
+            >
+              {points.toLocaleString(
+                'en-IN'
+              )}
+            </Text>
+
+            <Text
+              style={styles.statLabel}
+            >
+              POINTS
+            </Text>
           </View>
 
-          <View style={styles.statDivider} />
+          <View
+            style={styles.statDivider}
+          />
 
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{streak}</Text>
-            <Text style={styles.statLabel}>DAY STREAK</Text>
+            <Text
+              style={styles.statValue}
+            >
+              {streak}
+            </Text>
+
+            <Text
+              style={styles.statLabel}
+            >
+              DAY STREAK
+            </Text>
           </View>
 
-          <View style={styles.statDivider} />
+          <View
+            style={styles.statDivider}
+          />
 
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{steps.toLocaleString('en-IN')}</Text>
-            <Text style={styles.statLabel}>STEPS</Text>
+            <Text
+              style={styles.statValue}
+            >
+              {steps.toLocaleString(
+                'en-IN'
+              )}
+            </Text>
+
+            <Text
+              style={styles.statLabel}
+            >
+              STEPS
+            </Text>
           </View>
         </View>
 
-        {/* WARD */}
-        <Text style={styles.sectionTitle}>YOUR COMMUNITY</Text>
+        {/* COMMUNITY */}
+
+        <Text
+          style={styles.sectionTitle}
+        >
+          YOUR COMMUNITY
+        </Text>
 
         <TouchableOpacity
           style={styles.wardCard}
@@ -267,140 +503,341 @@ export default function ProfileScreen() {
           }
           activeOpacity={0.85}
         >
-          <View style={styles.wardIcon}>
-            <Text style={styles.wardIconText}>🏙️</Text>
+          <View
+            style={styles.wardIcon}
+          >
+            <Ionicons
+              name="business-outline"
+              size={28}
+              color="#7EB1FF"
+            />
           </View>
 
-          <View style={styles.wardContent}>
-            <Text style={styles.wardCardEyebrow}>KOLKATA MUNICIPAL CORPORATION</Text>
+          <View
+            style={styles.wardContent}
+          >
+            <Text
+              style={
+                styles.wardCardEyebrow
+              }
+            >
+              KOLKATA MUNICIPAL CORPORATION
+            </Text>
 
-            <Text style={styles.wardCardTitle}>{wardLabel}</Text>
+            <Text
+              style={
+                styles.wardCardTitle
+              }
+            >
+              {wardLabel}
+            </Text>
 
-            <Text style={styles.wardCardText}>
-              Your ward will connect you with local Chalega India community
-              activity and impact.
+            <Text
+              style={
+                styles.wardCardText
+              }
+            >
+              Your ward will connect you
+              with local Chalega India
+              community activity and
+              impact.
             </Text>
           </View>
 
-          <Text style={styles.chevron}>›</Text>
+          <Ionicons
+            name="chevron-forward"
+            size={21}
+            color="#FFFFFF"
+            style={styles.chevron}
+          />
         </TouchableOpacity>
 
         {/* JOURNEY */}
-        <Text style={styles.sectionTitle}>MY JOURNEY</Text>
 
-        <View style={styles.journeyGrid}>
+        <Text
+          style={styles.sectionTitle}
+        >
+          MY JOURNEY
+        </Text>
+
+        <View
+          style={styles.journeyGrid}
+        >
+          {/* WALKING */}
+
           <TouchableOpacity
             style={styles.journeyTile}
-            onPress={() => router.push('/walking')}
+            onPress={() =>
+              router.push('/walking')
+            }
             activeOpacity={0.85}
           >
-            <View style={[styles.tileIcon, styles.blueTile]}>
-              <Text style={styles.tileEmoji}>🚶</Text>
+            <View
+              style={[
+                styles.tileIcon,
+                styles.blueTile,
+              ]}
+            >
+              <Ionicons
+                name="footsteps-outline"
+                size={24}
+                color="#1D6FF2"
+              />
             </View>
-            <Text style={styles.tileTitle}>Walking</Text>
-            <Text style={styles.tileText}>
-              {steps.toLocaleString('en-IN')} steps
+
+            <Text
+              style={styles.tileTitle}
+            >
+              Walking
+            </Text>
+
+            <Text
+              style={styles.tileText}
+            >
+              {steps.toLocaleString(
+                'en-IN'
+              )}{' '}
+              steps
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.journeyTile}
-            onPress={() => router.push('/explore')}
-            activeOpacity={0.85}
-          >
-            <View style={[styles.tileIcon, styles.greenTile]}>
-              <Text style={styles.tileEmoji}>❤️</Text>
-            </View>
-            <Text style={styles.tileTitle}>Health</Text>
-            <Text style={styles.tileText}>Your daily wellness</Text>
-          </TouchableOpacity>
+          {/* HEALTH */}
 
           <TouchableOpacity
             style={styles.journeyTile}
-            onPress={() => router.push('/missions')}
+            onPress={() =>
+              router.push('/explore')
+            }
             activeOpacity={0.85}
           >
-            <View style={[styles.tileIcon, styles.orangeTile]}>
-              <Text style={styles.tileEmoji}>🎯</Text>
+            <View
+              style={[
+                styles.tileIcon,
+                styles.greenTile,
+              ]}
+            >
+              <Ionicons
+                name="heart-outline"
+                size={24}
+                color="#247A3A"
+              />
             </View>
-            <Text style={styles.tileTitle}>Missions</Text>
-            <Text style={styles.tileText}>Build better habits</Text>
+
+            <Text
+              style={styles.tileTitle}
+            >
+              Health
+            </Text>
+
+            <Text
+              style={styles.tileText}
+            >
+              Your daily wellness
+            </Text>
           </TouchableOpacity>
+
+          {/* MISSIONS */}
 
           <TouchableOpacity
             style={styles.journeyTile}
-            onPress={() => router.push('/rewards')}
+            onPress={() =>
+              router.push('/missions')
+            }
             activeOpacity={0.85}
           >
-            <View style={[styles.tileIcon, styles.goldTile]}>
-              <Text style={styles.tileEmoji}>🏆</Text>
+            <View
+              style={[
+                styles.tileIcon,
+                styles.orangeTile,
+              ]}
+            >
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={24}
+                color="#C05C0C"
+              />
             </View>
-            <Text style={styles.tileTitle}>Rewards</Text>
-            <Text style={styles.tileText}>Use your points</Text>
+
+            <Text
+              style={styles.tileTitle}
+            >
+              Missions
+            </Text>
+
+            <Text
+              style={styles.tileText}
+            >
+              Build better habits
+            </Text>
+          </TouchableOpacity>
+
+          {/* REWARDS */}
+
+          <TouchableOpacity
+            style={styles.journeyTile}
+            onPress={() =>
+              router.push('/rewards')
+            }
+            activeOpacity={0.85}
+          >
+            <View
+              style={[
+                styles.tileIcon,
+                styles.goldTile,
+              ]}
+            >
+              <Ionicons
+                name="gift-outline"
+                size={24}
+                color="#B37A00"
+              />
+            </View>
+
+            <Text
+              style={styles.tileTitle}
+            >
+              Rewards
+            </Text>
+
+            <Text
+              style={styles.tileText}
+            >
+              Use your points
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* DAILY GOAL */}
+
         <View style={styles.goalCard}>
-          <View style={styles.goalHeader}>
+          <View
+            style={styles.goalHeader}
+          >
             <View>
-              <Text style={styles.goalEyebrow}>TODAY'S WALKING GOAL</Text>
-              <Text style={styles.goalTitle}>
-                {steps.toLocaleString('en-IN')} / {goal.toLocaleString('en-IN')}
+              <Text
+                style={
+                  styles.goalEyebrow
+                }
+              >
+                TODAY'S WALKING GOAL
+              </Text>
+
+              <Text
+                style={styles.goalTitle}
+              >
+                {steps.toLocaleString(
+                  'en-IN'
+                )}{' '}
+                /{' '}
+                {goal.toLocaleString(
+                  'en-IN'
+                )}
               </Text>
             </View>
 
-            <Text style={styles.goalPercent}>
-              {Math.min(100, Math.round((steps / Math.max(goal, 1)) * 100))}%
+            <Text
+              style={styles.goalPercent}
+            >
+              {progressPercent}%
             </Text>
           </View>
 
-          <View style={styles.progressTrack}>
+          <View
+            style={styles.progressTrack}
+          >
             <View
               style={[
                 styles.progressFill,
                 {
-                  width: `${Math.min(
-                    100,
-                    Math.round((steps / Math.max(goal, 1)) * 100)
-                  )}%`,
+                  width: `${progressPercent}%`,
                 },
               ]}
             />
           </View>
         </View>
 
-        {/* COMING NEXT */}
+        {/* CHALEGA CIRCLE */}
+
         <View style={styles.nextCard}>
-          <Text style={styles.nextEyebrow}>COMING NEXT</Text>
+          <Text
+            style={styles.nextEyebrow}
+          >
+            COMING NEXT
+          </Text>
 
-          <Text style={styles.nextTitle}>CHALEGA CIRCLE</Text>
+          <Text
+            style={styles.nextTitle}
+          >
+            CHALEGA CIRCLE
+          </Text>
 
-          <Text style={styles.nextText}>
-            Invite friends, grow your community and earn Shop Credit from
-            eligible purchases made by people you directly refer.
+          <Text
+            style={styles.nextText}
+          >
+            Invite friends, grow your
+            community and earn Shop Credit
+            from eligible purchases made by
+            people you directly refer.
           </Text>
 
           <View style={styles.nextRow}>
-            <Text style={styles.nextDot}>✓</Text>
-            <Text style={styles.nextRowText}>Direct referrals</Text>
+            <Ionicons
+              name="checkmark-circle"
+              size={15}
+              color="#F47B20"
+              style={styles.nextDot}
+            />
+
+            <Text
+              style={styles.nextRowText}
+            >
+              Direct referrals
+            </Text>
           </View>
 
           <View style={styles.nextRow}>
-            <Text style={styles.nextDot}>✓</Text>
-            <Text style={styles.nextRowText}>2% eligible Shop Credit</Text>
+            <Ionicons
+              name="checkmark-circle"
+              size={15}
+              color="#F47B20"
+              style={styles.nextDot}
+            />
+
+            <Text
+              style={styles.nextRowText}
+            >
+              2% eligible Shop Credit
+            </Text>
           </View>
 
           <View style={styles.nextRow}>
-            <Text style={styles.nextDot}>✓</Text>
-            <Text style={styles.nextRowText}>Use credit in Chalega Shop</Text>
+            <Ionicons
+              name="checkmark-circle"
+              size={15}
+              color="#F47B20"
+              style={styles.nextDot}
+            />
+
+            <Text
+              style={styles.nextRowText}
+            >
+              Use credit in Chalega Shop
+            </Text>
           </View>
         </View>
 
         {/* FOOTER */}
+
         <View style={styles.footer}>
-          <Text style={styles.footerBrand}>CHALEGA INDIA™</Text>
-          <Text style={styles.footerTagline}>
+          <Text
+            style={styles.footerBrand}
+          >
+            CHALEGA INDIA™
+          </Text>
+
+          <Text
+            style={styles.footerTagline}
+          >
             WALK • EARN • IMPROVE • REPEAT
           </Text>
         </View>
@@ -544,7 +981,6 @@ const styles = StyleSheet.create({
   },
 
   wardPin: {
-    fontSize: 12,
     marginRight: 5,
   },
 
@@ -653,9 +1089,6 @@ const styles = StyleSheet.create({
   },
 
   chevron: {
-    color: '#FFFFFF',
-    fontSize: 29,
-    fontWeight: '300',
     marginLeft: 5,
   },
 
@@ -799,9 +1232,6 @@ const styles = StyleSheet.create({
   },
 
   nextDot: {
-    color: '#F47B20',
-    fontSize: 13,
-    fontWeight: '900',
     width: 20,
   },
 

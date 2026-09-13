@@ -67,12 +67,7 @@ export default function HomeScreen() {
 
         if (typeof walking.streak === 'number') {
           setStreak(walking.streak);
-        }
-
-        if (typeof walking.points === 'number') {
-          setPoints(walking.points);
-        }
-      }
+        }      }
 
       if (healthText) {
         const health: HealthData =

@@ -32,29 +32,22 @@ import {
 
 export default function RootLayout() {
   const insets = useSafeAreaInsets();
-
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
 
   const [
     session,
     setSession,
-  ] =
-    useState<Session | null>(
-      null
-    );
+  ] = useState<Session | null>(null);
 
   const [
     loading,
     setLoading,
-  ] =
-    useState(true);
+  ] = useState(true);
 
   const [
     guestMode,
     setGuestMode,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   /*
    * ----------------------------------------------------
@@ -65,41 +58,31 @@ export default function RootLayout() {
   useEffect(() => {
     let mounted = true;
 
-    const loadSession =
-      async () => {
-        const [
-          {
-            data,
-            error,
-          },
-          isGuest,
-        ] =
-          await Promise.all([
-            supabase.auth.getSession(),
-            hydrateGuestMode(),
-          ]);
+    const loadSession = async () => {
+      const [
+        {
+          data,
+          error,
+        },
+        isGuest,
+      ] = await Promise.all([
+        supabase.auth.getSession(),
+        hydrateGuestMode(),
+      ]);
 
-        if (error) {
-          console.log(
-            'Supabase session error:',
-            error.message
-          );
-        }
+      if (error) {
+        console.log(
+          'Supabase session error:',
+          error.message
+        );
+      }
 
-        if (mounted) {
-          setSession(
-            data.session
-          );
-
-          setGuestMode(
-            isGuest
-          );
-
-          setLoading(
-            false
-          );
-        }
-      };
+      if (mounted) {
+        setSession(data.session);
+        setGuestMode(isGuest);
+        setLoading(false);
+      }
+    };
 
     loadSession();
 
@@ -114,9 +97,7 @@ export default function RootLayout() {
           newSession
         ) => {
           if (mounted) {
-            setSession(
-              newSession
-            );
+            setSession(newSession);
           }
         }
       );
@@ -130,7 +111,6 @@ export default function RootLayout() {
       mounted = false;
 
       subscription.unsubscribe();
-
       unsubscribeGuest();
     };
   }, []);
@@ -210,7 +190,7 @@ export default function RootLayout() {
    * MAIN CHALEGA INDIA NAVIGATION
    * ----------------------------------------------------
    *
-   * ONLY THESE FIVE APPEAR:
+   * ONLY THESE FIVE ARE MAIN TABS:
    *
    * Home
    * Walk
@@ -218,8 +198,16 @@ export default function RootLayout() {
    * Shop
    * More
    *
-   * All other routes are hidden.
+   * Every other screen automatically hides
+   * the bottom tab bar.
    */
+
+  const isMainTab =
+    pathname === '/' ||
+    pathname === '/walking' ||
+    pathname === '/explore' ||
+    pathname === '/shop' ||
+    pathname === '/more';
 
   return (
     <Tabs
@@ -232,19 +220,23 @@ export default function RootLayout() {
         tabBarInactiveTintColor:
           '#888888',
 
-        tabBarStyle: {
-          height:
-            56 +
-            insets.bottom,
+        tabBarStyle: isMainTab
+          ? {
+              height:
+                56 +
+                insets.bottom,
 
-          paddingTop: 8,
+              paddingTop: 8,
 
-          paddingBottom:
-            Math.max(
-              8,
-              insets.bottom
-            ),
-        },
+              paddingBottom:
+                Math.max(
+                  8,
+                  insets.bottom
+                ),
+            }
+          : {
+              display: 'none',
+            },
 
         tabBarLabelStyle: {
           fontSize: 12,
@@ -373,15 +365,23 @@ export default function RootLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          tabBarButton: () => null,
+        }}
+      />
+
+      {/* =================================================
+       * HIDDEN — PROFILE SETTINGS
+       * ================================================= */}
+
+      <Tabs.Screen
+        name="profile-settings"
+        options={{
           href: null,
         }}
       />
 
       {/* =================================================
        * HIDDEN — BACKUP MORE SCREEN
-       *
-       * This file exists only as a backup.
-       * It must never appear as a navigation tab.
        * ================================================= */}
 
       <Tabs.Screen
@@ -441,6 +441,17 @@ export default function RootLayout() {
 
       <Tabs.Screen
         name="checkout"
+        options={{
+          href: null,
+        }}
+      />
+
+      {/* =================================================
+       * HIDDEN — CHECKOUT BACKUP
+       * ================================================= */}
+
+      <Tabs.Screen
+        name="checkout.before-razorpay"
         options={{
           href: null,
         }}
@@ -514,9 +525,6 @@ export default function RootLayout() {
 
       {/* =================================================
        * HIDDEN — ENTALLY
-       *
-       * Accessible as /entally
-       * but never shown in bottom navigation.
        * ================================================= */}
 
       <Tabs.Screen
@@ -532,6 +540,17 @@ export default function RootLayout() {
 
       <Tabs.Screen
         name="auth"
+        options={{
+          href: null,
+        }}
+      />
+
+      {/* =================================================
+       * HIDDEN — KMC WARD FINDER
+       * ================================================= */}
+
+      <Tabs.Screen
+        name="kmc-ward"
         options={{
           href: null,
         }}

@@ -22,7 +22,7 @@ type OrderProduct = {
   price: number;
   emoji: string;
   quantity: number;
-  total: number;
+  total?: number;
 };
 
 type Order = {
@@ -210,7 +210,6 @@ export default function TrackOrderScreen() {
         }
         contentContainerStyle={styles.content}
       >
-
         {/* HEADER */}
 
         <View style={styles.header}>
@@ -239,7 +238,6 @@ export default function TrackOrderScreen() {
         {/* CURRENT STATUS */}
 
         <View style={styles.heroCard}>
-
           <View style={styles.heroCircle}>
             <Text style={styles.heroIcon}>
               {statusNumber >= 5
@@ -277,13 +275,11 @@ export default function TrackOrderScreen() {
               ? 'Your order is being prepared.'
               : 'We have received your order.'}
           </Text>
-
         </View>
 
         {/* ORDER NUMBER */}
 
         <View style={styles.orderCard}>
-
           <Text style={styles.orderLabel}>
             ORDER NUMBER
           </Text>
@@ -301,7 +297,6 @@ export default function TrackOrderScreen() {
               Placed {formatDate(order.createdAt)}
             </Text>
           ) : null}
-
         </View>
 
         {/* STATUS TIMELINE */}
@@ -311,11 +306,9 @@ export default function TrackOrderScreen() {
         </Text>
 
         <View style={styles.timeline}>
-
           {/* ORDER RECEIVED */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 1
@@ -337,7 +330,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 1
@@ -351,9 +343,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order has been received.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -367,7 +357,6 @@ export default function TrackOrderScreen() {
           {/* PREPARING */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 2
@@ -389,7 +378,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 2
@@ -403,9 +391,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your products are being prepared.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -419,7 +405,6 @@ export default function TrackOrderScreen() {
           {/* OUT FOR DELIVERY */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 3
@@ -441,7 +426,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 3
@@ -455,9 +439,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order is on the way.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -471,7 +453,6 @@ export default function TrackOrderScreen() {
           {/* DELIVERED */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 4
@@ -493,7 +474,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 4
@@ -507,9 +487,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order has been delivered.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -523,7 +501,6 @@ export default function TrackOrderScreen() {
           {/* COMPLETED */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 5
@@ -545,7 +522,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 5
@@ -559,11 +535,8 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order is complete.
               </Text>
-
             </View>
-
           </View>
-
         </View>
 
         {/* ORDER SUMMARY */}
@@ -573,60 +546,56 @@ export default function TrackOrderScreen() {
         </Text>
 
         <View style={styles.summaryCard}>
-
           {order.products &&
           order.products.length > 0 ? (
-
             order.products.map(
-              (product) => (
-                <View
-                  key={product.id}
-                  style={styles.productRow}
-                >
+              (product) => {
+                const productTotal =
+                  Number(product.price || 0) *
+                  Number(product.quantity || 0);
 
+                return (
                   <View
-                    style={styles.productEmojiBox}
+                    key={product.id}
+                    style={styles.productRow}
                   >
-                    <Text style={styles.productEmoji}>
-                      {product.emoji}
+                    <View
+                      style={styles.productEmojiBox}
+                    >
+                      <Text style={styles.productEmoji}>
+                        {product.emoji}
+                      </Text>
+                    </View>
+
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>
+                        {product.name}
+                      </Text>
+
+                      <Text style={styles.productQuantity}>
+                        Quantity: {product.quantity}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.productTotal}>
+                      ₹
+                      {productTotal.toLocaleString(
+                        'en-IN'
+                      )}
                     </Text>
                   </View>
-
-                  <View style={styles.productInfo}>
-
-                    <Text style={styles.productName}>
-                      {product.name}
-                    </Text>
-
-                    <Text style={styles.productQuantity}>
-                      Quantity: {product.quantity}
-                    </Text>
-
-                  </View>
-
-                  <Text style={styles.productTotal}>
-                    ₹
-                    {Number(
-                      product.total || 0
-                    ).toLocaleString('en-IN')}
-                  </Text>
-
-                </View>
-              )
+                );
+              }
             )
-
           ) : (
-
             <Text style={styles.noProducts}>
               Product details unavailable.
             </Text>
-
           )}
 
           <View style={styles.summaryDivider} />
 
           <View style={styles.totalRow}>
-
             <Text style={styles.totalLabel}>
               TOTAL
             </Text>
@@ -637,21 +606,17 @@ export default function TrackOrderScreen() {
                 order.total || 0
               ).toLocaleString('en-IN')}
             </Text>
-
           </View>
-
         </View>
 
         {/* DELIVERY */}
 
         <View style={styles.deliveryCard}>
-
           <Text style={styles.deliveryEmoji}>
             🛵
           </Text>
 
           <View style={styles.deliveryInfo}>
-
             <Text style={styles.deliveryTitle}>
               {order.delivery || 'Standard'} Delivery
             </Text>
@@ -659,9 +624,7 @@ export default function TrackOrderScreen() {
             <Text style={styles.deliveryText}>
               Chalega India delivery
             </Text>
-
           </View>
-
         </View>
 
         {/* REFRESH */}
@@ -695,7 +658,6 @@ export default function TrackOrderScreen() {
         <Text style={styles.footerSmall}>
           Chalo Health Banaye
         </Text>
-
       </ScrollView>
     </SafeAreaView>
   );

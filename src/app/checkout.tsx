@@ -34,6 +34,7 @@ type RazorpayPaymentResult = {
 };
 
 type RazorpayOrderResponse = {
+  success?: boolean;
   id?: string;
   entity?: string;
   amount?: number;
@@ -44,6 +45,12 @@ type RazorpayOrderResponse = {
   status?: string;
   key_id?: string;
   keyId?: string;
+  chalega_order_id?: string;
+};
+
+type SupabaseOrder = {
+  id: string;
+  order_id: string;
 };
 
 const FREE_DELIVERY_THRESHOLD = 499;
@@ -60,30 +67,24 @@ const getDeliveryFee = (subtotal: number) => {
   return 49;
 };
 
-const getDeliveryDeadline = (
-  createdAt: string
-) => {
+const getDeliveryDeadline = (createdAt: string) => {
   const created = new Date(createdAt);
 
   const deadline = new Date(
-    created.getTime() + 24 * 60 * 60 * 1000
+    created.getTime() + 24 * 60 * 60 * 1000,
   );
 
   return deadline.toISOString();
 };
 
-const formatDeliveryDate = (
-  value: string
-) => {
-  const date = new Date(value);
+const generatePublicOrderId = () => {
+  const year = new Date().getFullYear();
+  const timestamp = String(Date.now()).slice(-8);
+  const random = Math.floor(Math.random() * 100)
+    .toString()
+    .padStart(2, '0');
 
-  return date.toLocaleString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return `CI-${year}-${timestamp}${random}`;
 };
 
 export default function CheckoutScreen() {
@@ -115,16 +116,13 @@ export default function CheckoutScreen() {
 
       const safeCart: Cart = {};
 
-      for (const [productId, quantity] of Object.entries(
-        parsed
-      )) {
+      for (const [productId, quantity] of Object.entries(parsed)) {
         if (
           typeof quantity === 'number' &&
           Number.isFinite(quantity) &&
           quantity > 0
         ) {
-          safeCart[productId] =
-            Math.floor(quantity);
+          safeCart[productId] = Math.floor(quantity);
         }
       }
 
@@ -136,81 +134,61 @@ export default function CheckoutScreen() {
 
   const selectedProducts = useMemo(() => {
     return products
-      .filter(
-        product => (cart[product.id] || 0) > 0
-      )
-      .map(product => ({
+      .filter((product) => (cart[product.id] || 0) > 0)
+      .map((product) => ({
         ...product,
         quantity: cart[product.id],
       }));
   }, [cart]);
 
   const itemCount = selectedProducts.reduce(
-    (sum, product) =>
-      sum + (product.quantity || 0),
-    0
+    (sum, product) => sum + (product.quantity || 0),
+    0,
   );
 
   const subtotal = selectedProducts.reduce(
     (sum, product) =>
-      sum +
-      product.price *
-        (product.quantity || 0),
-    0
+      sum + product.price * (product.quantity || 0),
+    0,
   );
 
-  const deliveryFee =
-    getDeliveryFee(subtotal);
-
-  const orderTotal =
-    subtotal + deliveryFee;
+  const deliveryFee = getDeliveryFee(subtotal);
+  const orderTotal = subtotal + deliveryFee;
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] =
-    useState('');
+  const [address, setAddress] = useState('');
   const [area, setArea] = useState('');
   const [pin, setPin] = useState('');
 
-  const [
-    delivery,
-    setDelivery,
-  ] = useState<DeliveryType>(
-    'Chalega 24-Hour'
-  );
+  const [delivery, setDelivery] =
+    useState<DeliveryType>('Chalega 24-Hour');
 
-  const [
-    paymentMethod,
-    setPaymentMethod,
-  ] = useState<PaymentMethod>('cod');
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>('cod');
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const getExistingOrders =
-    async (): Promise<any[]> => {
-      const existingOrdersText =
-        await AsyncStorage.getItem(
-          'chalega_orders'
-        );
+  const getExistingOrders = async (): Promise<any[]> => {
+    const existingOrdersText =
+      await AsyncStorage.getItem('chalega_orders');
 
-      if (!existingOrdersText) {
-        return [];
+    if (!existingOrdersText) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(existingOrdersText);
+
+      if (Array.isArray(parsed)) {
+        return parsed;
       }
 
-      try {
-        const parsed =
-          JSON.parse(existingOrdersText);
-
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-
-        return [];
-      } catch {
-        return [];
-      }
-    };
+      return [];
+    } catch {
+      return [];
+    }
+  };
 
   const saveLocalOrder = async ({
     orderId,
@@ -227,8 +205,7 @@ export default function CheckoutScreen() {
     razorpayOrderId?: string;
     razorpayPaymentId?: string;
   }) => {
-    const existingOrders =
-      await getExistingOrders();
+    const existingOrders = await getExistingOrders();
 
     const newOrder = {
       id: orderId,
@@ -245,43 +222,27 @@ export default function CheckoutScreen() {
         pin: pin.trim(),
       },
 
-      products: selectedProducts.map(
-        product => ({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          unit: product.unit,
-          category: product.category,
-          emoji: product.emoji,
-          quantity:
-            product.quantity || 1,
-        })
-      ),
+      products: selectedProducts.map((product) => ({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        unit: product.unit,
+        category: product.category,
+        emoji: product.emoji,
+        quantity: product.quantity || 1,
+      })),
 
       items: itemCount,
-
       subtotal,
-
       deliveryFee,
-
       total: orderTotal,
-
       delivery,
-
-      deliveryPromise:
-        'Within 24 hours',
-
+      deliveryPromise: 'Within 24 hours',
       createdAt,
-
       deliveryDeadline,
-
-      deliveryWindow:
-        'Within 24 hours of order placement',
-
+      deliveryWindow: 'Within 24 hours of order placement',
       status: 'Order Received',
-
       paymentMethod,
-
       paymentStatus,
 
       ...(razorpayOrderId
@@ -297,14 +258,11 @@ export default function CheckoutScreen() {
         : {}),
     };
 
-    const updatedOrders = [
-      ...existingOrders,
-      newOrder,
-    ];
+    const updatedOrders = [...existingOrders, newOrder];
 
     await AsyncStorage.setItem(
       'chalega_orders',
-      JSON.stringify(updatedOrders)
+      JSON.stringify(updatedOrders),
     );
 
     return newOrder;
@@ -337,61 +295,141 @@ export default function CheckoutScreen() {
     await clearCart();
 
     router.replace({
-      pathname:
-        '/order-confirmed',
+      pathname: '/order-confirmed',
       params: {
         orderId,
         name: name.trim(),
-        total:
-          orderTotal.toString(),
+        total: orderTotal.toString(),
         deliveryDeadline,
       },
     });
   };
 
-  const startOnlinePayment = async ({
-    orderId,
+  const createSupabaseOrder = async ({
+    publicOrderId,
+    createdAt,
+    deliveryDeadline,
   }: {
-    orderId: string;
-  }) => {
+    publicOrderId: string;
+    createdAt: string;
+    deliveryDeadline: string;
+  }): Promise<SupabaseOrder> => {
     const {
-      data: {
-        session,
-      },
-    } =
-      await supabase.auth.getSession();
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+    }
 
     if (!session) {
       throw new Error(
-        'Your session has expired. Please sign in again.'
+        'Your session has expired. Please sign in again.',
       );
     }
 
-    const amountInPaise =
-      Math.round(orderTotal * 100);
+    const dbProducts = selectedProducts.map((product) => ({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      unit: product.unit,
+      category: product.category,
+      emoji: product.emoji,
+      quantity: product.quantity || 1,
+    }));
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from('orders')
+      .insert({
+        user_id: session.user.id,
+        order_id: publicOrderId,
+        customer_name: name.trim(),
+        customer_phone: phone.trim(),
+        address: address.trim(),
+        area: area.trim(),
+        pin: pin.trim(),
+        products: dbProducts,
+        subtotal,
+        delivery_fee: deliveryFee,
+        total: orderTotal,
+        delivery,
+        delivery_promise: 'Within 24 hours',
+        delivery_deadline: deliveryDeadline,
+        status: 'Order Received',
+        payment_method:
+          paymentMethod === 'online' ? 'Razorpay' : 'COD',
+        payment_status: 'pending',
+      })
+      .select('id, order_id')
+      .single();
+
+    if (error) {
+      console.error(
+        'Supabase order creation error:',
+        error,
+      );
+
+      if (error.code === '23505') {
+        throw new Error(
+          'We could not create a unique order number. Please try again.',
+        );
+      }
+
+      throw new Error(
+        'We could not save your order. Please try again.',
+      );
+    }
+
+    if (!data?.id || !data?.order_id) {
+      throw new Error(
+        'The order was created but its database ID was missing.',
+      );
+    }
+
+    return data as SupabaseOrder;
+  };
+
+  const startOnlinePayment = async ({
+    chalegaOrderId,
+    publicOrderId,
+  }: {
+    chalegaOrderId: string;
+    publicOrderId: string;
+  }) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      throw new Error(
+        'Your session has expired. Please sign in again.',
+      );
+    }
 
     const {
       data: razorpayOrder,
       error: createOrderError,
-    } =
-      await supabase.functions.invoke(
-        'create-razorpay-order',
-        {
-          body: {
-            amount: amountInPaise,
-            receipt: orderId,
-          },
-        }
-      );
+    } = await supabase.functions.invoke(
+      'create-razorpay-order',
+      {
+        body: {
+          order_id: chalegaOrderId,
+        },
+      },
+    );
 
     if (createOrderError) {
       console.error(
         'Razorpay order creation error:',
-        createOrderError
+        createOrderError,
       );
 
       throw new Error(
-        'We could not start the online payment. Please try again.'
+        'We could not start the online payment. Please try again.',
       );
     }
 
@@ -401,25 +439,40 @@ export default function CheckoutScreen() {
     if (!order?.id) {
       console.error(
         'Invalid Razorpay order response:',
-        order
+        order,
       );
 
       throw new Error(
-        'Payment order could not be created.'
+        'Payment order could not be created.',
       );
     }
 
     const razorpayKey =
-      order.key_id ||
-      order.keyId;
+      order.key_id || order.keyId;
 
     if (!razorpayKey) {
       console.error(
-        'Razorpay key ID missing from Edge Function response.'
+        'Razorpay key ID missing from Edge Function response.',
       );
 
       throw new Error(
-        'Payment configuration is incomplete. Please try again later.'
+        'Payment configuration is incomplete. Please try again later.',
+      );
+    }
+
+    const serverAmount = Number(order.amount);
+
+    if (
+      !Number.isFinite(serverAmount) ||
+      serverAmount <= 0
+    ) {
+      console.error(
+        'Invalid server-side Razorpay amount:',
+        order.amount,
+      );
+
+      throw new Error(
+        'Payment amount could not be confirmed.',
       );
     }
 
@@ -427,9 +480,7 @@ export default function CheckoutScreen() {
 
     try {
       const RazorpayModule =
-        require(
-          'react-native-razorpay'
-        );
+        require('react-native-razorpay');
 
       RazorpayCheckout =
         RazorpayModule?.default ||
@@ -437,53 +488,39 @@ export default function CheckoutScreen() {
     } catch (error) {
       console.error(
         'Razorpay native module unavailable:',
-        error
+        error,
       );
 
       throw new Error(
-        'Online payment is available only in the Chalega India development build, not Expo Go.'
+        'Online payment is available only in the Chalega India development build, not Expo Go.',
       );
     }
 
     if (
       !RazorpayCheckout ||
-      typeof RazorpayCheckout.open !==
-        'function'
+      typeof RazorpayCheckout.open !== 'function'
     ) {
       throw new Error(
-        'Razorpay payment module is not available in this app build.'
+        'Razorpay payment module is not available in this app build.',
       );
     }
 
     const payment =
       (await RazorpayCheckout.open({
         key: razorpayKey,
-
-        amount:
-          order.amount ||
-          amountInPaise,
-
-        currency:
-          order.currency ||
-          'INR',
-
+        amount: serverAmount,
+        currency: order.currency || 'INR',
         order_id: order.id,
-
         name: 'Chalega India',
-
-        description:
-          'Chalega Fresh order',
-
+        description: 'Chalega Fresh order',
         prefill: {
           name: name.trim(),
           contact: phone.trim(),
         },
-
         notes: {
-          chalega_order_id:
-            orderId,
+          chalega_order_id: publicOrderId,
+          chalega_order_uuid: chalegaOrderId,
         },
-
         theme: {
           color: '#1976F3',
         },
@@ -495,38 +532,36 @@ export default function CheckoutScreen() {
       !payment?.razorpay_signature
     ) {
       throw new Error(
-        'Razorpay returned an incomplete payment response.'
+        'Razorpay returned an incomplete payment response.',
       );
     }
 
     const {
       data: verification,
       error: verificationError,
-    } =
-      await supabase.functions.invoke(
-        'verify-razorpay-payment',
-        {
-          body: {
-            razorpay_order_id:
-              payment.razorpay_order_id,
-
-            razorpay_payment_id:
-              payment.razorpay_payment_id,
-
-            razorpay_signature:
-              payment.razorpay_signature,
-          },
-        }
-      );
+    } = await supabase.functions.invoke(
+      'verify-razorpay-payment',
+      {
+        body: {
+          chalega_order_id: chalegaOrderId,
+          razorpay_order_id:
+            payment.razorpay_order_id,
+          razorpay_payment_id:
+            payment.razorpay_payment_id,
+          razorpay_signature:
+            payment.razorpay_signature,
+        },
+      },
+    );
 
     if (verificationError) {
       console.error(
         'Payment verification error:',
-        verificationError
+        verificationError,
       );
 
       throw new Error(
-        'Payment was received but could not be verified. Please do not place another order until we confirm the payment.'
+        'Payment was received but could not be verified. Please do not place another order until we confirm the payment.',
       );
     }
 
@@ -536,18 +571,18 @@ export default function CheckoutScreen() {
     ) {
       console.error(
         'Payment verification failed:',
-        verification
+        verification,
       );
 
       throw new Error(
-        'Payment verification failed. Please contact Chalega India support before trying again.'
+        verification?.error ||
+          'Payment verification failed. Please contact Chalega India support before trying again.',
       );
     }
 
     return {
       razorpayOrderId:
         payment.razorpay_order_id,
-
       razorpayPaymentId:
         payment.razorpay_payment_id,
     };
@@ -557,93 +592,82 @@ export default function CheckoutScreen() {
     if (selectedProducts.length === 0) {
       Alert.alert(
         'Your cart is empty',
-        'Please return to Shop to Feed and add a product.'
+        'Please return to Shop to Feed and add a product.',
       );
-
       return;
     }
 
     if (!name.trim()) {
       Alert.alert(
         'Missing information',
-        'Please enter your name.'
+        'Please enter your name.',
       );
-
       return;
     }
 
     if (phone.trim().length !== 10) {
       Alert.alert(
         'Invalid mobile number',
-        'Please enter a valid 10-digit mobile number.'
+        'Please enter a valid 10-digit mobile number.',
       );
-
       return;
     }
 
     if (!address.trim()) {
       Alert.alert(
         'Missing address',
-        'Please enter your delivery address.'
+        'Please enter your delivery address.',
       );
-
       return;
     }
 
     if (!area.trim()) {
       Alert.alert(
         'Missing area',
-        'Please enter your area or locality.'
+        'Please enter your area or locality.',
       );
-
       return;
     }
 
     if (pin.trim().length !== 6) {
       Alert.alert(
         'Invalid PIN code',
-        'Please enter your 6-digit PIN code.'
+        'Please enter your 6-digit PIN code.',
       );
-
       return;
     }
 
     try {
       setSaving(true);
 
-      const existingOrders =
-        await getExistingOrders();
-
-      const orderNumber =
-        existingOrders.length + 1;
-
       const createdAt =
         new Date().toISOString();
 
       const deliveryDeadline =
-        getDeliveryDeadline(
-          createdAt
-        );
+        getDeliveryDeadline(createdAt);
 
       const orderId =
-        `CI-${new Date().getFullYear()}-${String(
-          orderNumber
-        ).padStart(4, '0')}`;
+        generatePublicOrderId();
 
-      if (
-        paymentMethod === 'online'
-      ) {
+      const dbOrder =
+        await createSupabaseOrder({
+          publicOrderId: orderId,
+          createdAt,
+          deliveryDeadline,
+        });
+
+      if (paymentMethod === 'online') {
         const payment =
           await startOnlinePayment({
-            orderId,
+            chalegaOrderId: dbOrder.id,
+            publicOrderId: dbOrder.order_id,
           });
 
         await finishOrder({
-          orderId,
+          orderId: dbOrder.order_id,
           createdAt,
           deliveryDeadline,
-          paymentStatus:
-            'paid',
+          paymentStatus: 'paid',
           razorpayOrderId:
             payment.razorpayOrderId,
           razorpayPaymentId:
@@ -654,16 +678,15 @@ export default function CheckoutScreen() {
       }
 
       await finishOrder({
-        orderId,
+        orderId: dbOrder.order_id,
         createdAt,
         deliveryDeadline,
-        paymentStatus:
-          'pending',
+        paymentStatus: 'pending',
       });
     } catch (error: any) {
       console.error(
         'Order/payment error:',
-        error
+        error,
       );
 
       const message =
@@ -671,18 +694,18 @@ export default function CheckoutScreen() {
         'We could not complete your order. Please try again.';
 
       if (
-        message.toLowerCase().includes(
-          'cancel'
-        )
+        message
+          .toLowerCase()
+          .includes('cancel')
       ) {
         Alert.alert(
           'Payment Cancelled',
-          'Your order was not placed. You can choose another payment method and try again.'
+          'Your order was not placed. You can choose another payment method and try again.',
         );
       } else {
         Alert.alert(
           'Order / Payment Error',
-          message
+          message,
         );
       }
     } finally {
@@ -703,9 +726,7 @@ export default function CheckoutScreen() {
         }
       >
         <ScrollView
-          showsVerticalScrollIndicator={
-            false
-          }
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={
             styles.content
           }
@@ -720,23 +741,17 @@ export default function CheckoutScreen() {
               }
             >
               <Text
-                style={
-                  styles.backText
-                }
+                style={styles.backText}
               >
-                ‹
+                Î“Ã‡â•£
               </Text>
             </TouchableOpacity>
 
             <View
-              style={
-                styles.headerCenter
-              }
+              style={styles.headerCenter}
             >
               <Text
-                style={
-                  styles.headerTitle
-                }
+                style={styles.headerTitle}
               >
                 Checkout
               </Text>
@@ -751,9 +766,7 @@ export default function CheckoutScreen() {
             </View>
 
             <View
-              style={
-                styles.headerSpacer
-              }
+              style={styles.headerSpacer}
             />
           </View>
 
@@ -761,36 +774,28 @@ export default function CheckoutScreen() {
             style={styles.promiseHero}
           >
             <View
-              style={
-                styles.promiseIcon
-              }
+              style={styles.promiseIcon}
             >
               <Text
                 style={
                   styles.promiseIconText
                 }
               >
-                🚚
+                â‰¡Æ’ÃœÃœ
               </Text>
             </View>
 
             <View
-              style={
-                styles.promiseBody
-              }
+              style={styles.promiseBody}
             >
               <Text
-                style={
-                  styles.promiseTitle
-                }
+                style={styles.promiseTitle}
               >
                 CHALEGA 24-HOUR DELIVERY
               </Text>
 
               <Text
-                style={
-                  styles.promiseText
-                }
+                style={styles.promiseText}
               >
                 Your fresh order will be
                 delivered within 24 hours
@@ -831,12 +836,9 @@ export default function CheckoutScreen() {
 
             <TextInput
               value={phone}
-              onChangeText={text =>
+              onChangeText={(text) =>
                 setPhone(
-                  text.replace(
-                    /\D/g,
-                    ''
-                  )
+                  text.replace(/\D/g, ''),
                 )
               }
               placeholder="10-digit mobile number"
@@ -887,12 +889,9 @@ export default function CheckoutScreen() {
 
             <TextInput
               value={pin}
-              onChangeText={text =>
+              onChangeText={(text) =>
                 setPin(
-                  text.replace(
-                    /\D/g,
-                    ''
-                  )
+                  text.replace(/\D/g, ''),
                 )
               }
               placeholder="6-digit PIN code"
@@ -924,7 +923,7 @@ export default function CheckoutScreen() {
               </Text>
             ) : (
               selectedProducts.map(
-                product => (
+                (product) => (
                   <View
                     key={product.id}
                     style={
@@ -962,9 +961,9 @@ export default function CheckoutScreen() {
                         }
                       >
                         {product.quantity}{' '}
-                        × ₹
+                        â”œÃ¹ Î“Ã©â•£
                         {product.price.toLocaleString(
-                          'en-IN'
+                          'en-IN',
                         )}{' '}
                         / {product.unit}
                       </Text>
@@ -975,17 +974,17 @@ export default function CheckoutScreen() {
                         styles.productTotal
                       }
                     >
-                      ₹
+                      Î“Ã©â•£
                       {(
                         product.price *
                         (product.quantity ||
                           0)
                       ).toLocaleString(
-                        'en-IN'
+                        'en-IN',
                       )}
                     </Text>
                   </View>
-                )
+                ),
               )
             )}
           </View>
@@ -1004,7 +1003,7 @@ export default function CheckoutScreen() {
             activeOpacity={0.85}
             onPress={() =>
               setDelivery(
-                'Chalega 24-Hour'
+                'Chalega 24-Hour',
               )
             }
           >
@@ -1013,7 +1012,9 @@ export default function CheckoutScreen() {
                 styles.deliveryOptionIcon
               }
             >
-              <Text>🚚</Text>
+              <Text>
+                â‰¡Æ’ÃœÃœ
+              </Text>
             </View>
 
             <View
@@ -1078,9 +1079,9 @@ export default function CheckoutScreen() {
                   styles.summaryValue
                 }
               >
-                ₹
+                Î“Ã©â•£
                 {subtotal.toLocaleString(
-                  'en-IN'
+                  'en-IN',
                 )}
               </Text>
             </View>
@@ -1105,7 +1106,7 @@ export default function CheckoutScreen() {
               >
                 {deliveryFee === 0
                   ? 'FREE'
-                  : `₹${deliveryFee}`}
+                  : `Î“Ã©â•£${deliveryFee}`}
               </Text>
             </View>
 
@@ -1116,13 +1117,11 @@ export default function CheckoutScreen() {
             >
               {subtotal >=
               FREE_DELIVERY_THRESHOLD
-                ? '✓ You unlocked free delivery.'
-                : `Add ₹${(
+                ? 'Î“Â£Ã´ You unlocked free delivery.'
+                : `Add Î“Ã©â•£${
                     FREE_DELIVERY_THRESHOLD -
                     subtotal
-                  ).toLocaleString(
-                    'en-IN'
-                  )} more for free delivery.`}
+                  } more for free delivery.`}
             </Text>
 
             <View
@@ -1147,9 +1146,9 @@ export default function CheckoutScreen() {
                   styles.totalValue
                 }
               >
-                ₹
+                Î“Ã©â•£
                 {orderTotal.toLocaleString(
-                  'en-IN'
+                  'en-IN',
                 )}
               </Text>
             </View>
@@ -1167,13 +1166,14 @@ export default function CheckoutScreen() {
             <TouchableOpacity
               style={[
                 styles.paymentOption,
-                paymentMethod === 'online' &&
+                paymentMethod ===
+                  'online' &&
                   styles.paymentOptionSelected,
               ]}
               activeOpacity={0.85}
               onPress={() =>
                 setPaymentMethod(
-                  'online'
+                  'online',
                 )
               }
             >
@@ -1187,7 +1187,7 @@ export default function CheckoutScreen() {
                     styles.onlineIconText
                   }
                 >
-                  ₹
+                  Î“Ã©â•£
                 </Text>
               </View>
 
@@ -1243,15 +1243,13 @@ export default function CheckoutScreen() {
               ]}
               activeOpacity={0.85}
               onPress={() =>
-                setPaymentMethod(
-                  'cod'
-                )
+                setPaymentMethod('cod')
               }
             >
               <View
                 style={styles.codIcon}
               >
-                <Text>₹</Text>
+                <Text>Î“Ã©â•£</Text>
               </View>
 
               <View
@@ -1285,8 +1283,7 @@ export default function CheckoutScreen() {
                     styles.radioOuterSelected,
                 ]}
               >
-                {paymentMethod ===
-                  'cod' && (
+                {paymentMethod === 'cod' && (
                   <View
                     style={
                       styles.radioInner
@@ -1308,7 +1305,7 @@ export default function CheckoutScreen() {
                     styles.onlineNoteTitle
                   }
                 >
-                  🔒 Secure online payment
+                  â‰¡Æ’Ã¶Ã† Secure online payment
                 </Text>
 
                 <Text
@@ -1332,9 +1329,7 @@ export default function CheckoutScreen() {
               saving &&
                 styles.placeOrderDisabled,
             ]}
-            onPress={
-              placeOrder
-            }
+            onPress={placeOrder}
             disabled={saving}
             activeOpacity={0.85}
           >
@@ -1372,9 +1367,9 @@ export default function CheckoutScreen() {
                   styles.placeOrderTotal
                 }
               >
-                ₹
+                Î“Ã©â•£
                 {orderTotal.toLocaleString(
-                  'en-IN'
+                  'en-IN',
                 )}
               </Text>
             )}
@@ -1383,19 +1378,18 @@ export default function CheckoutScreen() {
           <Text
             style={styles.orderNote}
           >
-            {itemsParam ||
-              itemCount}{' '}
+            {itemsParam || itemCount}{' '}
             item
-            {itemCount === 1
-              ? ''
-              : 's'} · Fresh order ·
-            Chalega 24-hour delivery
+            {itemCount === 1 ? '' : 's'} â”¬â•–
+            Fresh order â”¬â•– Chalega 24-hour
+            delivery
           </Text>
 
           <Text
             style={styles.footer}
           >
-            C H A L E G A  I N D I A 🇮🇳
+            C H A L E G A  I N D I A
+            â‰¡Æ’Ã§Â«â‰¡Æ’Ã§â”‚
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

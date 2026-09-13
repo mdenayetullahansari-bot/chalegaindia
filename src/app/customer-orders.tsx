@@ -411,9 +411,7 @@ export default function CustomerOrdersScreen() {
 
                             <Text style={styles.productPrice}>
                               ₹
-                              {Number(
-                                product.total || 0
-                              ).toLocaleString('en-IN')}
+                              {(Number(product.price || 0) * Number(product.quantity || 0)).toLocaleString('en-IN')}
                             </Text>
 
                           </View>

@@ -483,13 +483,13 @@ export default function OrdersScreen() {
                             </Text>
 
                             <Text style={styles.productPrice}>
-                              ₹{product.price.toLocaleString('en-IN')} each
+                              ₹{Number(product.price || 0).toLocaleString('en-IN')} each
                             </Text>
 
                           </View>
 
                           <Text style={styles.productTotal}>
-                            ₹{product.total.toLocaleString('en-IN')}
+                            ₹{(Number(product.price || 0) * Number(product.quantity || 0)).toLocaleString('en-IN')}
                           </Text>
 
                         </View>

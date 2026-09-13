@@ -15,6 +15,7 @@ import {
   awardOnce,
   getPoints,
 } from '../lib/points';
+import { completeStreakDay } from '../lib/streak';
 
 type DayData = {
   day: string;
@@ -108,6 +109,8 @@ export default function WalkingScreen() {
    */
   const loadWalkingData = async () => {
     try {
+      const todayKey = getTodayKey();
+
       const saved = await AsyncStorage.getItem(
         'chalega_walking_data'
       );
@@ -115,7 +118,19 @@ export default function WalkingScreen() {
       if (saved) {
         const data = JSON.parse(saved);
 
-        if (typeof data.steps === 'number') {
+        const savedDate =
+          typeof data.date === 'string'
+            ? data.date
+            : null;
+
+        const isNewDay =
+          savedDate !== null &&
+          savedDate !== todayKey;
+
+        if (
+          !isNewDay &&
+          typeof data.steps === 'number'
+        ) {
           setSteps(data.steps);
         }
 
@@ -130,13 +145,61 @@ export default function WalkingScreen() {
         if (Array.isArray(data.week)) {
           setWeek(data.week);
         }
+
+        if (isNewDay) {
+          setSteps(0);
+          setWalkMissionComplete(false);
+
+          await AsyncStorage.setItem(
+            'chalega_walking_data',
+            JSON.stringify({
+              steps: 0,
+              goal:
+                typeof data.goal === 'number'
+                  ? data.goal
+                  : DAILY_GOAL,
+              streak:
+                typeof data.streak === 'number'
+                  ? data.streak
+                  : 0,
+              week:
+                Array.isArray(data.week)
+                  ? data.week
+                  : initialWeek,
+              date: todayKey,
+            })
+          );
+        } else if (savedDate === null) {
+          await AsyncStorage.setItem(
+            'chalega_walking_data',
+            JSON.stringify({
+              steps:
+                typeof data.steps === 'number'
+                  ? data.steps
+                  : 0,
+              goal:
+                typeof data.goal === 'number'
+                  ? data.goal
+                  : DAILY_GOAL,
+              streak:
+                typeof data.streak === 'number'
+                  ? data.streak
+                  : 0,
+              week:
+                Array.isArray(data.week)
+                  ? data.week
+                  : initialWeek,
+              date: todayKey,
+            })
+          );
+        }
       }
 
       const currentPoints = await getPoints();
       setPoints(currentPoints);
 
       const missionKey =
-        `chalega_walk_mission_${getTodayKey()}`;
+        `chalega_walk_mission_${todayKey}`;
 
       const missionComplete =
         await AsyncStorage.getItem(missionKey);
@@ -221,6 +284,7 @@ export default function WalkingScreen() {
           goal: nextGoal,
           streak: nextStreak,
           week: nextWeek,
+          date: getTodayKey(),
         })
       );
     } catch (error) {
@@ -244,7 +308,13 @@ export default function WalkingScreen() {
 
       const todayKey = getTodayKey();
 
-      const result = await awardOnce(
+      /*
+       * Walking mission reward.
+       *
+       * awardOnce makes the +40 reward idempotent, so
+       * refreshing the screen cannot award it twice.
+       */
+      const missionResult = await awardOnce(
         'walking_mission',
         `walking_mission_${todayKey}`,
         WALK_MISSION_POINTS,
@@ -252,24 +322,7 @@ export default function WalkingScreen() {
         `walking_mission_${todayKey}`
       );
 
-      /*
-       * awardOnce returns the current central balance
-       * whether this reward was newly granted or already
-       * claimed.
-       */
-      setPoints(result.balance);
-
-      if (!result.awarded) {
-        setWalkMissionComplete(true);
-
-        await AsyncStorage.setItem(
-          `chalega_walk_mission_${todayKey}`,
-          'true'
-        );
-
-        return;
-      }
-
+      setPoints(missionResult.balance);
       setWalkMissionComplete(true);
 
       await AsyncStorage.setItem(
@@ -277,29 +330,71 @@ export default function WalkingScreen() {
         'true'
       );
 
+      /*
+       * Daily streak engine.
+       *
+       * The existing local streak is passed in so the first
+       * migration preserves the user's current 6-day streak.
+       * completeStreakDay itself prevents duplicate completion
+       * for the same date.
+       */
+      const nextStreak = await completeStreakDay(
+        todayKey,
+        streak
+      );
+
+      setStreak(nextStreak);
+
+      /*
+       * The streak reward is also idempotent.
+       * It can therefore safely run every time the goal-completion
+       * check fires without awarding +25 twice.
+       */
+      const streakResult = await awardOnce(
+        'walking_streak',
+        `walking_streak_${todayKey}`,
+        25,
+        'Keep your streak alive',
+        `walking_streak_${todayKey}`
+      );
+
+      setPoints(streakResult.balance);
+
       await saveWalkingData(
         steps,
         week,
         goal,
-        streak
+        nextStreak
       );
 
-      Alert.alert(
-        '🎉 Walking Mission Complete!',
-        `You reached ${goal.toLocaleString(
-          'en-IN'
-        )} steps today.\n\n+${WALK_MISSION_POINTS} Chalega Points\n\nYour points have been added to your account.`,
-        [
-          {
-            text: 'VIEW MISSIONS',
-            onPress: () => router.push('/missions'),
-          },
-          {
-            text: 'KEEP WALKING',
-            style: 'cancel',
-          },
-        ]
-      );
+      /*
+       * Only show the mission-complete alert when the +40 mission
+       * reward was actually newly awarded. The streak engine and
+       * streak reward remain silent on repeat checks.
+       */
+      if (missionResult.awarded) {
+        Alert.alert(
+          '🎉 Walking Mission Complete!',
+          `You reached ${goal.toLocaleString(
+            'en-IN'
+          )} steps today.
+
++${WALK_MISSION_POINTS} Chalega Points
++25 Streak Points
+
+Your rewards have been added to your account.`,
+          [
+            {
+              text: 'VIEW MISSIONS',
+              onPress: () => router.push('/missions'),
+            },
+            {
+              text: 'KEEP WALKING',
+              style: 'cancel',
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.log(
         'Could not complete walking mission:',
