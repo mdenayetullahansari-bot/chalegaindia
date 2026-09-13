@@ -450,12 +450,7 @@ export default function RootLayout() {
        * HIDDEN — CHECKOUT BACKUP
        * ================================================= */}
 
-      <Tabs.Screen
-        name="checkout.before-razorpay"
-        options={{
-          href: null,
-        }}
-      />
+
 
       {/* =================================================
        * HIDDEN — ORDER CONFIRMED

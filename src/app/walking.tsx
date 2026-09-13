@@ -115,7 +115,18 @@ export default function WalkingScreen() {
         'chalega_walking_data'
       );
 
-      if (saved) {
+      if (!saved) {
+        await AsyncStorage.setItem(
+          'chalega_walking_data',
+          JSON.stringify({
+            steps: 2450,
+            goal: DAILY_GOAL,
+            streak: 6,
+            week: initialWeek,
+            date: todayKey,
+          })
+        );
+      } else {
         const data = JSON.parse(saved);
 
         const savedDate =
