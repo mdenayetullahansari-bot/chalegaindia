@@ -12,6 +12,7 @@ import {
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { supabase } from '../lib/supabase';
 
 const BRAND = {
   blue: '#1D6FF2',
@@ -28,12 +29,22 @@ type Coordinates = {
   longitude: number;
 };
 
+type WardAssignment = {
+  success: boolean;
+  ward_id: number;
+  ward_number: number;
+  boundary_version: string | null;
+  assignment_method: string;
+};
+
 export default function KmcWardScreen() {
   const router = useRouter();
 
   const [locating, setLocating] = useState(false);
   const [coordinates, setCoordinates] =
     useState<Coordinates | null>(null);
+  const [wardAssignment, setWardAssignment] =
+    useState<WardAssignment | null>(null);
 
   const goBackToProfileSettings = () => {
     router.replace('/profile-settings');
@@ -46,6 +57,8 @@ export default function KmcWardScreen() {
 
     try {
       setLocating(true);
+      setWardAssignment(null);
+      setCoordinates(null);
 
       const servicesEnabled =
         await Location.hasServicesEnabledAsync();
@@ -53,7 +66,7 @@ export default function KmcWardScreen() {
       if (!servicesEnabled) {
         Alert.alert(
           'Location is turned off',
-          'Please turn on Location Services on your iPhone and try again.'
+          'Please turn on Location Services on your device and try again.',
         );
         return;
       }
@@ -64,7 +77,7 @@ export default function KmcWardScreen() {
       if (permission.status !== 'granted') {
         Alert.alert(
           'Location permission needed',
-          'Chalega India needs your location permission to find your KMC ward.'
+          'Chalega India needs your location permission to find your KMC ward.',
         );
         return;
       }
@@ -74,26 +87,72 @@ export default function KmcWardScreen() {
           accuracy: Location.Accuracy.Balanced,
         });
 
-      const nextCoordinates = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      };
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
 
-      setCoordinates(nextCoordinates);
+      /*
+       * Keep the coordinates only in local React state for this
+       * screen/session. They are not saved to the profile.
+       *
+       * The server-side RPC receives the coordinates and performs
+       * the official KMC boundary match itself.
+       */
+      setCoordinates({
+        latitude,
+        longitude,
+      });
+
+      const { data, error } = await supabase.rpc(
+        'assign_my_kmc_ward',
+        {
+          p_lat: latitude,
+          p_lng: longitude,
+        },
+      );
+
+      if (error) {
+        console.warn(
+          '[KMC WARD] Ward assignment RPC error:',
+          error,
+        );
+
+        Alert.alert(
+          'Could not determine your ward',
+          error.message ||
+            'Your location could not be matched to an active KMC ward.',
+        );
+        return;
+      }
+
+      const assignment = data as WardAssignment;
+
+      if (
+        !assignment ||
+        assignment.success !== true ||
+        typeof assignment.ward_number !== 'number'
+      ) {
+        Alert.alert(
+          'Ward not found',
+          'Your current location could not be matched to an active KMC ward.',
+        );
+        return;
+      }
+
+      setWardAssignment(assignment);
 
       Alert.alert(
-        'Location captured',
-        'Your location was captured successfully. The next step is to match it against the official KMC ward boundaries.'
+        'KMC ward found',
+        `You have been assigned to KMC Ward ${assignment.ward_number}.`,
       );
     } catch (error) {
       console.warn(
-        '[KMC WARD] Location error:',
-        error
+        '[KMC WARD] Location or assignment error:',
+        error,
       );
 
       Alert.alert(
-        'Could not get your location',
-        'Please make sure Location Services are enabled and try again.'
+        'Could not get your ward',
+        'Please make sure Location Services are enabled and try again.',
       );
     } finally {
       setLocating(false);
@@ -167,10 +226,10 @@ export default function KmcWardScreen() {
             </Text>
 
             <Text style={styles.privacyText}>
-              Chalega India will use your location
-              for ward verification. We do not need
-              to permanently store your precise GPS
-              coordinates as your ward information.
+              Chalega India uses your current location
+              only to determine your KMC ward. Your
+              precise GPS coordinates are not permanently
+              stored in your profile.
             </Text>
           </View>
         </View>
@@ -193,7 +252,7 @@ export default function KmcWardScreen() {
               />
 
               <Text style={styles.findButtonText}>
-                FINDING LOCATION...
+                FINDING YOUR WARD...
               </Text>
             </>
           ) : (
@@ -205,14 +264,14 @@ export default function KmcWardScreen() {
               />
 
               <Text style={styles.findButtonText}>
-                FIND MY LOCATION
+                FIND MY WARD
               </Text>
             </>
           )}
         </TouchableOpacity>
 
-        {/* LOCATION RESULT */}
-        {coordinates ? (
+        {/* LOCATION / WARD RESULT */}
+        {coordinates && wardAssignment ? (
           <View style={styles.resultCard}>
             <View style={styles.resultHeader}>
               <View style={styles.resultIcon}>
@@ -225,87 +284,134 @@ export default function KmcWardScreen() {
 
               <View style={styles.resultHeaderText}>
                 <Text style={styles.resultTitle}>
-                  Location captured
+                  KMC ward identified
                 </Text>
 
                 <Text style={styles.resultSubtitle}>
-                  Ready for KMC ward matching
+                  Your location matched an official KMC ward boundary
                 </Text>
               </View>
             </View>
 
             <View style={styles.resultDivider} />
 
-            <View style={styles.coordinateRow}>
-              <Text style={styles.coordinateLabel}>
-                LATITUDE
-              </Text>
+            <View style={styles.wardResultRow}>
+              <View>
+                <Text style={styles.coordinateLabel}>
+                  YOUR KMC WARD
+                </Text>
 
-              <Text style={styles.coordinateValue}>
-                {coordinates.latitude.toFixed(6)}
-              </Text>
+                <Text style={styles.wardNumber}>
+                  Ward {wardAssignment.ward_number}
+                </Text>
+              </View>
+
+              <View style={styles.assignedBadge}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={BRAND.green}
+                />
+
+                <Text style={styles.assignedBadgeText}>
+                  ASSIGNED
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.coordinateRow}>
-              <Text style={styles.coordinateLabel}>
-                LONGITUDE
-              </Text>
-
-              <Text style={styles.coordinateValue}>
-                {coordinates.longitude.toFixed(6)}
-              </Text>
-            </View>
-
-            <View style={styles.localOnlyBadge}>
+            <View style={styles.assignmentInfo}>
               <Ionicons
-                name="lock-closed-outline"
-                size={13}
-                color={BRAND.muted}
+                name="shield-checkmark-outline"
+                size={15}
+                color={BRAND.green}
               />
 
-              <Text style={styles.localOnlyText}>
-                Displayed locally for this test
+              <Text style={styles.assignmentInfoText}>
+                Assigned using GPS and official KMC boundary data
               </Text>
             </View>
           </View>
+        ) : coordinates ? (
+          <View style={styles.resultCard}>
+            <View style={styles.resultHeader}>
+              <View style={styles.resultIcon}>
+                <ActivityIndicator
+                  size="small"
+                  color={BRAND.green}
+                />
+              </View>
+
+              <View style={styles.resultHeaderText}>
+                <Text style={styles.resultTitle}>
+                  Location captured
+                </Text>
+
+                <Text style={styles.resultSubtitle}>
+                  Checking the official KMC ward boundary
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.resultDivider} />
+
+            <Text style={styles.waitingText}>
+              Your coordinates are being matched against
+              the official KMC ward boundary data.
+            </Text>
+          </View>
         ) : null}
 
-        {/* IMPORTANT NEXT STEP */}
+        {/* MATCHING STATUS */}
         <View style={styles.nextCard}>
           <View style={styles.nextBadge}>
             <Text style={styles.nextBadgeText}>
-              NEXT
+              {wardAssignment ? 'COMPLETE' : 'HOW IT WORKS'}
             </Text>
           </View>
 
           <Text style={styles.nextTitle}>
-            Official KMC boundary matching
+            {wardAssignment
+              ? `You are assigned to Ward ${wardAssignment.ward_number}`
+              : 'Official KMC boundary matching'}
           </Text>
 
           <Text style={styles.nextText}>
-            Location alone does not tell us your
-            municipal ward. Chalega India must
-            match your coordinates against the
-            official KMC ward boundary data before
-            assigning a ward.
+            {wardAssignment
+              ? 'Your KMC ward has been saved to your Chalega India profile. Your precise GPS coordinates are not stored as part of the ward assignment.'
+              : 'Your location is matched against the official KMC ward boundary data. The server determines the matching ward before assigning it to your profile.'}
           </Text>
 
           <View style={styles.nextRow}>
             <Ionicons
-              name="map-outline"
+              name={
+                wardAssignment
+                  ? 'checkmark-circle-outline'
+                  : 'map-outline'
+              }
               size={18}
-              color={BRAND.blue}
+              color={
+                wardAssignment
+                  ? BRAND.green
+                  : BRAND.blue
+              }
             />
 
-            <Text style={styles.nextRowText}>
-              GPS → KMC boundary → Ward number
+            <Text
+              style={[
+                styles.nextRowText,
+                wardAssignment && styles.nextRowTextSuccess,
+              ]}
+            >
+              {wardAssignment
+                ? `GPS -> KMC boundary -> Ward ${wardAssignment.ward_number}`
+                : 'GPS -> KMC boundary -> Ward number'}
             </Text>
           </View>
         </View>
 
         {/* HOW IT WILL WORK */}
         <Text style={styles.sectionTitle}>
-          HOW IT WILL WORK
+          HOW IT WORKS
         </Text>
 
         <View style={styles.stepsCard}>
@@ -320,14 +426,14 @@ export default function KmcWardScreen() {
             number="2"
             icon="map-outline"
             title="Match the boundary"
-            text="Your coordinates will be checked against the official KMC ward boundaries."
+            text="Your coordinates are checked against the official KMC ward boundaries on the server."
           />
 
           <Step
             number="3"
             icon="business-outline"
             title="Assign your ward"
-            text="Your profile will receive the appropriate KMC ward number."
+            text="Your profile receives the appropriate KMC ward number."
           />
 
           <Step
@@ -341,7 +447,7 @@ export default function KmcWardScreen() {
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA INDIA™
+            CHALEGA INDIA
           </Text>
 
           <Text style={styles.footerTagline}>
@@ -578,13 +684,6 @@ const styles = StyleSheet.create({
     marginVertical: 17,
   },
 
-  coordinateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-
   coordinateLabel: {
     color: '#8A95A0',
     fontSize: 9,
@@ -592,24 +691,56 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  coordinateValue: {
-    color: BRAND.navy,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  localOnlyBadge: {
+  wardResultRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
+    justifyContent: 'space-between',
+  },
+
+  wardNumber: {
+    color: BRAND.navy,
+    fontSize: 25,
+    fontWeight: '900',
+    marginTop: 5,
+  },
+
+  assignedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EAF7EE',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     gap: 5,
   },
 
-  localOnlyText: {
+  assignedBadgeText: {
+    color: BRAND.green,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+
+  assignmentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 7,
+  },
+
+  assignmentInfoText: {
+    flex: 1,
     color: BRAND.muted,
     fontSize: 9,
+    lineHeight: 14,
     fontWeight: '700',
+  },
+
+  waitingText: {
+    color: BRAND.muted,
+    fontSize: 11,
+    lineHeight: 17,
+    fontWeight: '600',
   },
 
   nextCard: {
@@ -660,6 +791,10 @@ const styles = StyleSheet.create({
     color: BRAND.blue,
     fontSize: 10,
     fontWeight: '900',
+  },
+
+  nextRowTextSuccess: {
+    color: BRAND.green,
   },
 
   sectionTitle: {

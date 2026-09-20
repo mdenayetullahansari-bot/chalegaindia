@@ -19,6 +19,7 @@
   ],
   "exclude": [
     "backups",
+    "recovery-safe",
     "supabase/functions"
   ]
 }

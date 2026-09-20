@@ -249,7 +249,7 @@ export default function RootLayout() {
     >
 
       {/* =================================================
-       * MAIN TAB — HOME
+       * MAIN TAB ΓÇö HOME
        * ================================================= */}
 
       <Tabs.Screen
@@ -271,7 +271,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * MAIN TAB — WALK
+       * MAIN TAB ΓÇö WALK
        * ================================================= */}
 
       <Tabs.Screen
@@ -293,7 +293,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * MAIN TAB — HEALTH
+       * MAIN TAB ΓÇö HEALTH
        * ================================================= */}
 
       <Tabs.Screen
@@ -315,7 +315,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * MAIN TAB — SHOP
+       * MAIN TAB ΓÇö SHOP
        * ================================================= */}
 
       <Tabs.Screen
@@ -337,7 +337,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * MAIN TAB — MORE
+       * MAIN TAB ΓÇö MORE
        * ================================================= */}
 
       <Tabs.Screen
@@ -359,7 +359,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — PROFILE
+       * HIDDEN ΓÇö PROFILE
        * ================================================= */}
 
       <Tabs.Screen
@@ -370,7 +370,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — PROFILE SETTINGS
+       * HIDDEN ΓÇö PROFILE SETTINGS
        * ================================================= */}
 
       <Tabs.Screen
@@ -380,19 +380,10 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN — BACKUP MORE SCREEN
-       * ================================================= */}
 
-      <Tabs.Screen
-        name="more_before_profile"
-        options={{
-          href: null,
-        }}
-      />
 
       {/* =================================================
-       * HIDDEN — REWARDS
+       * HIDDEN ΓÇö REWARDS
        * ================================================= */}
 
       <Tabs.Screen
@@ -403,7 +394,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — POINTS ACTIVITY
+       * HIDDEN ΓÇö POINTS ACTIVITY
        * ================================================= */}
 
       <Tabs.Screen
@@ -414,7 +405,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — MISSIONS
+       * HIDDEN ΓÇö MISSIONS
        * ================================================= */}
 
       <Tabs.Screen
@@ -425,7 +416,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — PRODUCT
+       * HIDDEN ΓÇö PRODUCT
        * ================================================= */}
 
       <Tabs.Screen
@@ -436,7 +427,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — CHECKOUT
+       * HIDDEN ΓÇö CHECKOUT
        * ================================================= */}
 
       <Tabs.Screen
@@ -447,13 +438,13 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — CHECKOUT BACKUP
+       * HIDDEN ΓÇö CHECKOUT BACKUP
        * ================================================= */}
 
 
 
       {/* =================================================
-       * HIDDEN — ORDER CONFIRMED
+       * HIDDEN ΓÇö ORDER CONFIRMED
        * ================================================= */}
 
       <Tabs.Screen
@@ -464,7 +455,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — TRACK ORDER
+       * HIDDEN ΓÇö TRACK ORDER
        * ================================================= */}
 
       <Tabs.Screen
@@ -475,7 +466,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — ORDERS
+       * HIDDEN ΓÇö ORDERS
        * ================================================= */}
 
       <Tabs.Screen
@@ -486,7 +477,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — CUSTOMER ORDERS
+       * HIDDEN ΓÇö CUSTOMER ORDERS
        * ================================================= */}
 
       <Tabs.Screen
@@ -497,7 +488,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — HEALTH TOPIC
+       * HIDDEN ΓÇö HEALTH TOPIC
        * ================================================= */}
 
       <Tabs.Screen
@@ -508,7 +499,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — DAILY HEALTH CHECK-IN
+       * HIDDEN ΓÇö DAILY HEALTH CHECK-IN
        * ================================================= */}
 
       <Tabs.Screen
@@ -519,7 +510,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — ENTALLY
+       * HIDDEN ΓÇö ENTALLY
        * ================================================= */}
 
       <Tabs.Screen
@@ -530,7 +521,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — AUTH
+       * HIDDEN ΓÇö AUTH
        * ================================================= */}
 
       <Tabs.Screen
@@ -541,7 +532,7 @@ export default function RootLayout() {
       />
 
       {/* =================================================
-       * HIDDEN — KMC WARD FINDER
+       * HIDDEN ΓÇö KMC WARD FINDER
        * ================================================= */}
 
       <Tabs.Screen

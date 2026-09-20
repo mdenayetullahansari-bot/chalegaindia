@@ -8,29 +8,48 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { getPoints } from '@/lib/points';
 import { BRAND } from '@/lib/brand';
 
-const WALKING_DATA_KEY = 'chalega_walking_data';
-const HEALTH_DATA_KEY = 'chalega_health_home';
-const POINTS_KEY = 'chalega_points';
+const getLocalDateKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
 
-type WalkingData = {
-  steps?: number;
-  goal?: number;
-  streak?: number;
-  points?: number;
+  return `${year}-${month}-${day}`;
 };
 
-type HealthData = {
-  water?: number;
-  mood?: string;
-};
+const getStreakFromSteps = (
+  rows: Array<{ step_date: string; steps: number | null }>,
+  today: string,
+) => {
+  const stepsByDate = new Map<string, number>();
 
-type MissionData = {
-  completed?: boolean;
+  for (const row of rows) {
+    stepsByDate.set(row.step_date, Math.max(0, Number(row.steps) || 0));
+  }
+
+  let streak = 0;
+  const cursor = new Date(`${today}T00:00:00`);
+
+  while (true) {
+    const year = cursor.getFullYear();
+    const month = String(cursor.getMonth() + 1).padStart(2, '0');
+    const day = String(cursor.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
+
+    if ((stepsByDate.get(dateKey) ?? 0) <= 0) {
+      break;
+    }
+
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
 };
 
 export default function HomeScreen() {
@@ -42,78 +61,148 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [points, setPoints] = useState(0);
   const [mood, setMood] = useState('');
-  const [missionCompleted, setMissionCompleted] =
-    useState(false);
+  const [activity, setActivity] = useState('');
+  const [sleep, setSleep] = useState('');
+  const [lastCheckInDate, setLastCheckInDate] = useState('');
+  const [missionCompleted, setMissionCompleted] = useState(false);
 
   const loadData = async () => {
     try {
-      const walkingText =
-        await AsyncStorage.getItem(WALKING_DATA_KEY);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const healthText =
-        await AsyncStorage.getItem(HEALTH_DATA_KEY);
+      if (userError) {
+        throw userError;
+      }
 
-      if (walkingText) {
-        const walking: WalkingData =
-          JSON.parse(walkingText);
+      if (!user) {
+        setSteps(0);
+        setGoal(4000);
+        setWater(0);
+        setStreak(0);
+        setPoints(0);
+        setMood('');
+        setActivity('');
+        setSleep('');
+        setLastCheckInDate('');
+        setMissionCompleted(false);
+        return;
+      }
 
-        if (typeof walking.steps === 'number') {
-          setSteps(walking.steps);
-        }
+      const todayKey = getLocalDateKey();
 
-        if (typeof walking.goal === 'number') {
-          setGoal(walking.goal);
-        }
+      const startDate = new Date(`${todayKey}T00:00:00`);
+      startDate.setDate(startDate.getDate() - 30);
+      const startYear = startDate.getFullYear();
+      const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
+      const startDay = String(startDate.getDate()).padStart(2, '0');
+      const startDateKey = `${startYear}-${startMonth}-${startDay}`;
 
-        if (typeof walking.streak === 'number') {
-          setStreak(walking.streak);
-        }      }
+      const [
+        { data: stepRows, error: stepsError },
+        { data: profile, error: profileError },
+        { data: healthCheckIn, error: healthError },
+      ] = await Promise.all([
+        supabase
+          .from('daily_steps')
+          .select('step_date, steps')
+          .eq('user_id', user.id)
+          .gte('step_date', startDateKey)
+          .lte('step_date', todayKey)
+          .order('step_date', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('daily_step_goal')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('daily_health_checkins')
+          .select('checkin_date, mood, water, activity, sleep')
+          .eq('user_id', user.id)
+          .eq('checkin_date', todayKey)
+          .maybeSingle(),
+      ]);
 
-      if (healthText) {
-        const health: HealthData =
-          JSON.parse(healthText);
+      if (stepsError) {
+        throw stepsError;
+      }
 
-        if (typeof health.water === 'number') {
-          setWater(health.water);
-        }
+      if (profileError) {
+        throw profileError;
+      }
 
-        if (typeof health.mood === 'string') {
-          setMood(health.mood);
-        }
+      if (healthError) {
+        throw healthError;
+      }
+
+      const todaySteps =
+        (stepRows ?? []).find(row => row.step_date === todayKey)?.steps ?? 0;
+
+      const dailyGoal =
+        typeof profile?.daily_step_goal === 'number' &&
+        profile.daily_step_goal > 0
+          ? profile.daily_step_goal
+          : 4000;
+
+      setSteps(Math.max(0, Number(todaySteps) || 0));
+      setGoal(dailyGoal);
+      setStreak(
+        getStreakFromSteps(
+          (stepRows ?? []).map(row => ({
+            step_date: row.step_date,
+            steps: row.steps,
+          })),
+          todayKey,
+        ),
+      );
+
+      if (healthCheckIn) {
+        setWater(Math.max(0, Number(healthCheckIn.water) || 0));
+        setMood(
+          typeof healthCheckIn.mood === 'string'
+            ? healthCheckIn.mood
+            : '',
+        );
+        setActivity(
+          typeof healthCheckIn.activity === 'string'
+            ? healthCheckIn.activity
+            : '',
+        );
+        setSleep(
+          typeof healthCheckIn.sleep === 'string'
+            ? healthCheckIn.sleep
+            : '',
+        );
+        setLastCheckInDate(healthCheckIn.checkin_date);
+      } else {
+        setWater(0);
+        setMood('');
+        setActivity('');
+        setSleep('');
+        setLastCheckInDate('');
       }
 
       const storedPoints = await getPoints();
       setPoints(storedPoints);
 
-      const today = new Date();
+      const { data: missionRows, error: missionError } = await supabase
+        .from('daily_steps')
+        .select('steps')
+        .eq('user_id', user.id)
+        .eq('step_date', todayKey)
+        .maybeSingle();
 
-      const todayKey =
-        today.getFullYear() +
-        '-' +
-        String(today.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(today.getDate()).padStart(2, '0');
-
-      const missionText =
-        await AsyncStorage.getItem(
-          `chalega_daily_missions_${todayKey}`
-        );
-
-      if (missionText) {
-        const missions: Record<
-          string,
-          MissionData
-        > = JSON.parse(missionText);
-
-        setMissionCompleted(
-          Boolean(missions.walk?.completed)
-        );
+      if (missionError) {
+        throw missionError;
       }
-    } catch (error) {
-      console.log(
-        'Could not load Chalega home data:',
-        error
+
+      setMissionCompleted(
+        Math.max(0, Number(missionRows?.steps) || 0) >= dailyGoal,
       );
+    } catch (error) {
+      console.log('Could not load Chalega home data:', error);
     }
   };
 
@@ -132,27 +221,96 @@ export default function HomeScreen() {
 
   const stepProgress = Math.min(
     steps / safeGoal,
-    1
+    1,
   );
 
   const remainingSteps = Math.max(
     safeGoal - steps,
-    0
+    0,
   );
 
-  const waterProgress = Math.min(
-    water / 8,
-    1
+  /*
+   * ----------------------------------------------------
+   * CANONICAL HEALTH SCORE
+   * ----------------------------------------------------
+   *
+   * This uses the same scoring model as the Health tab.
+   *
+   * Walking       30 points
+   * Hydration     20 points
+   * Mood          15 points
+   * Activity      15 points
+   * Sleep         10 points
+   * Streak         5 points
+   * Check-in       5 points
+   *
+   * Total = 100
+   */
+
+  const waterProgress =
+    Math.min(water / 8, 1);
+
+  const walkingScore = Math.round(
+    stepProgress * 30,
   );
+
+  const hydrationScore = Math.round(
+    waterProgress * 20,
+  );
+
+  const moodScore =
+    mood === 'great'
+      ? 15
+      : mood === 'good'
+      ? 13
+      : mood === 'okay'
+      ? 9
+      : mood === 'care'
+      ? 6
+      : 0;
+
+  const activityScore =
+    activity === 'walked'
+      ? 15
+      : activity === 'movement'
+      ? 11
+      : activity === 'not-yet'
+      ? 3
+      : 0;
+
+  const sleepScore =
+    sleep === 'good'
+      ? 10
+      : sleep === 'okay'
+      ? 7
+      : sleep === 'not-enough'
+      ? 4
+      : 0;
+
+  const streakScore = Math.min(
+    streak,
+    5,
+  );
+
+  const todayKey = getLocalDateKey();
+
+  const checkInCompletedToday =
+    lastCheckInDate === todayKey;
+
+  const checkInScore =
+    checkInCompletedToday
+      ? 5
+      : 0;
 
   const healthScore = Math.min(
     100,
-    Math.round(
-      stepProgress * 45 +
-        waterProgress * 25 +
-        Math.min(streak * 3, 15) +
-        (mood ? 15 : 8)
-    )
+    walkingScore +
+      hydrationScore +
+      moodScore +
+      activityScore +
+      sleepScore +
+      streakScore +
+      checkInScore,
   );
 
   const missionProgress = missionCompleted
@@ -171,6 +329,10 @@ export default function HomeScreen() {
 
   const openWalking = () => {
     router.push('/walking');
+  };
+
+  const openCompetitions = () => {
+    router.push('/competitions');
   };
 
   const openRewards = () => {
@@ -253,10 +415,14 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.scoreMessage}>
-              {healthScore >= 80
-                ? 'Excellent! Keep going. 🔥'
-                : healthScore >= 60
-                ? 'Good progress. Keep moving!'
+              {healthScore >= 90
+                ? 'Outstanding! You are building a great healthy routine.'
+                : healthScore >= 80
+                ? 'Excellent work. Keep your healthy routine going!'
+                : healthScore >= 65
+                ? 'Good progress. A few small habits can make it even better.'
+                : healthScore >= 45
+                ? 'You are moving in the right direction. Keep building your habits.'
                 : 'Every healthy choice counts.'}
             </Text>
           </View>
@@ -271,6 +437,42 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        {/* COMPETITION HQ */}
+
+        <TouchableOpacity
+          style={styles.competitionCard}
+          onPress={openCompetitions}
+          activeOpacity={0.9}
+        >
+          <View style={styles.competitionIconBox}>
+            <Text style={styles.competitionEmoji}>🏆</Text>
+          </View>
+
+          <View style={styles.competitionText}>
+            <Text style={styles.competitionEyebrow}>
+              CHALEGA COMPETITION
+            </Text>
+
+            <Text style={styles.competitionTitle}>
+              Walk. Compete. Win.
+            </Text>
+
+            <Text style={styles.competitionSubtitle}>
+              Your verified steps can put you on today's podium.
+            </Text>
+
+            <View style={styles.competitionMetaRow}>
+              <Text style={styles.competitionMeta}>
+                1st • 2nd • 3rd
+              </Text>
+
+              <Text style={styles.competitionOpen}>
+                OPEN →
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* TODAY'S MISSION */}
 
@@ -400,7 +602,10 @@ export default function HomeScreen() {
         <View style={styles.quickGrid}>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickWalking]}
+            style={[
+              styles.quickCard,
+              styles.quickWalking,
+            ]}
             onPress={openWalking}
           >
             <Image
@@ -419,7 +624,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickMissions]}
+            style={[
+              styles.quickCard,
+              styles.quickMissions,
+            ]}
             onPress={openMissions}
           >
             <Image
@@ -440,7 +648,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickHealth]}
+            style={[
+              styles.quickCard,
+              styles.quickHealth,
+            ]}
             onPress={openHealth}
           >
             <Image
@@ -459,7 +670,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickCard, styles.quickRewards]}
+            style={[
+              styles.quickCard,
+              styles.quickRewards,
+            ]}
             onPress={openRewards}
           >
             <Image
@@ -575,7 +789,7 @@ export default function HomeScreen() {
 
           <View style={styles.communityIcon}>
             <Text style={styles.communityEmoji}>
-              🌆
+              🏙️
             </Text>
           </View>
 
@@ -862,11 +1076,38 @@ const styles = StyleSheet.create({
     maxWidth: 190,
   },
 
-  scoreCircle: { width: 108, height: 108, borderRadius: 54, backgroundColor: BRAND.white, borderWidth: 7, borderColor: BRAND.green, alignItems: 'center', justifyContent: 'center', shadowColor: BRAND.shadow, shadowOpacity: 0.10, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  scoreCircle: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: BRAND.white,
+    borderWidth: 7,
+    borderColor: BRAND.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 4,
+  },
 
-  scoreCircleText: { color: BRAND.blue, fontSize: 28, fontWeight: '900' },
+  scoreCircleText: {
+    color: BRAND.blue,
+    fontSize: 28,
+    fontWeight: '900',
+  },
 
-  scoreCircleLabel: { color: BRAND.muted, fontSize: 8, fontWeight: '900', letterSpacing: 1.2, marginTop: 1 },
+  scoreCircleLabel: {
+    color: BRAND.muted,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    marginTop: 1,
+  },
 
   sectionHeader: {
     flexDirection: 'row',
@@ -887,6 +1128,82 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     marginBottom: 2,
+  },
+
+  competitionCard: {
+    backgroundColor: '#102A43',
+    borderRadius: 23,
+    padding: 18,
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
+  },
+
+  competitionIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: BRAND.orangeLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  competitionEmoji: {
+    fontSize: 29,
+  },
+
+  competitionText: {
+    flex: 1,
+    paddingLeft: 14,
+  },
+
+  competitionEyebrow: {
+    color: '#FFB347',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+
+  competitionTitle: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  competitionSubtitle: {
+    color: '#DCEAFF',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 3,
+  },
+
+  competitionMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 9,
+  },
+
+  competitionMeta: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+
+  competitionOpen: {
+    color: '#7FE3A5',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
 
   missionCard: {
@@ -1080,13 +1397,21 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  quickWalking: { backgroundColor: BRAND.blue },
+  quickWalking: {
+    backgroundColor: BRAND.blue,
+  },
 
-  quickMissions: { backgroundColor: BRAND.orange },
+  quickMissions: {
+    backgroundColor: BRAND.orange,
+  },
 
-  quickHealth: { backgroundColor: BRAND.green },
+  quickHealth: {
+    backgroundColor: BRAND.green,
+  },
 
-  quickRewards: { backgroundColor: BRAND.gold },
+  quickRewards: {
+    backgroundColor: BRAND.gold,
+  },
 
   quickImage: {
     width: 64,

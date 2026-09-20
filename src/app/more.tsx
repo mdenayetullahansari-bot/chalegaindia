@@ -227,7 +227,7 @@ export default function MoreScreen() {
           icon="receipt-outline"
           title="My Orders"
           subtitle="View and track your Chalega India orders."
-          onPress={() => goTo('/orders')}
+          onPress={() => goTo('/customer-orders')}
           tone="grey"
         />
 

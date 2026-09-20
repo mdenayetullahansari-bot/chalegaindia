@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pedometer } from 'expo-sensors';
 import {
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -11,11 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import {
-  awardOnce,
-  getPoints,
-} from '../lib/points';
-import { completeStreakDay } from '../lib/streak';
+import { getPoints } from '../lib/points';
 
 type DayData = {
   day: string;
@@ -25,6 +22,7 @@ type DayData = {
 
 const DAILY_GOAL = 4000;
 const WALK_MISSION_POINTS = 40;
+const WALK_MISSION_GOAL = 4000;
 
 const initialWeek: DayData[] = [
   { day: 'M', steps: 4200, active: true },
@@ -208,16 +206,6 @@ export default function WalkingScreen() {
 
       const currentPoints = await getPoints();
       setPoints(currentPoints);
-
-      const missionKey =
-        `chalega_walk_mission_${todayKey}`;
-
-      const missionComplete =
-        await AsyncStorage.getItem(missionKey);
-
-      if (missionComplete === 'true') {
-        setWalkMissionComplete(true);
-      }
     } catch (error) {
       console.log(
         'Could not load walking data:',
@@ -263,7 +251,7 @@ export default function WalkingScreen() {
    * is reached.
    */
   useEffect(() => {
-    if (steps >= goal && !walkMissionComplete) {
+    if (steps >= WALK_MISSION_GOAL && !walkMissionComplete) {
       completeWalkMissionIfNeeded();
     }
   }, [steps, goal, walkMissionComplete]);
@@ -313,27 +301,96 @@ export default function WalkingScreen() {
    */
   const completeWalkMissionIfNeeded = async () => {
     try {
-      if (steps < goal) {
+      if (steps < WALK_MISSION_GOAL) {
         return;
       }
 
       const todayKey = getTodayKey();
 
       /*
-       * Walking mission reward.
-       *
-       * awardOnce makes the +40 reward idempotent, so
-       * refreshing the screen cannot award it twice.
+       * Persist the completed Walking mission first.
+       * The secure reward RPC requires this backend record.
        */
-      const missionResult = await awardOnce(
-        'walking_mission',
-        `walking_mission_${todayKey}`,
-        WALK_MISSION_POINTS,
-        'Walking Mission',
-        `walking_mission_${todayKey}`
+      const {
+        data: {
+          user,
+        },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('No authenticated user');
+      }
+
+      const { error: dailyStepsError } = await supabase
+        .from('daily_steps')
+        .upsert(
+          {
+            user_id: user.id,
+            step_date: todayKey,
+            steps: Math.floor(steps),
+            distance_km: Number(
+              (steps * 0.00072).toFixed(3)
+            ),
+            calories: Math.round(steps * 0.04),
+          },
+          {
+            onConflict: 'user_id,step_date',
+          }
+        );
+
+      if (dailyStepsError) {
+        throw dailyStepsError;
+      }
+
+      const { error: missionSaveError } = await supabase
+        .from('user_missions')
+        .upsert(
+          {
+            user_id: user.id,
+            mission_id: 4,
+            mission_date: todayKey,
+            progress: 1,
+            completed: true,
+            completed_at: new Date().toISOString(),
+          },
+          {
+            onConflict:
+              'user_id,mission_id,mission_date',
+          }
+        );
+
+      if (missionSaveError) {
+        throw missionSaveError;
+      }
+
+
+      const {
+        data: missionRewardResult,
+        error: missionRewardError,
+      } = await supabase.rpc(
+        'award_daily_mission_reward',
+        {
+          p_mission_id: 4,
+          p_mission_date: todayKey,
+        }
       );
 
-      setPoints(missionResult.balance);
+      if (missionRewardError) {
+        throw missionRewardError;
+      }
+
+      const missionResult = {
+        awarded:
+          missionRewardResult?.already_awarded !== true,
+        balance:
+          Number(
+            missionRewardResult?.balance ?? 0
+          ),
+      };
+
+      setPoints(
+        missionResult.balance
+      );
       setWalkMissionComplete(true);
 
       await AsyncStorage.setItem(
@@ -361,15 +418,14 @@ export default function WalkingScreen() {
        * It can therefore safely run every time the goal-completion
        * check fires without awarding +25 twice.
        */
-      const streakResult = await awardOnce(
-        'walking_streak',
-        `walking_streak_${todayKey}`,
-        25,
-        'Keep your streak alive',
-        `walking_streak_${todayKey}`
-      );
-
-      setPoints(streakResult.balance);
+      /* Persist the completed Streak mission first. The secure reward RPC requires this backend record. */
+      const { data: { streakUser } } = await supabase.auth.getUser();
+      if (!streakUser) throw new Error('No authenticated streakUser');
+      const { error: streakMissionSaveError } = await supabase.from('user_missions').upsert({ user_id:streakUser.id, mission_id:7, mission_date:todayKey, progress:1, completed:true, completed_at:new Date().toISOString() }, { onConflict:'user_id,mission_id,mission_date' });
+      if (streakMissionSaveError) throw streakMissionSaveError;
+      const { data: streakRewardResult, error: streakRewardError } = await supabase.rpc('award_daily_mission_reward',{ p_mission_id:7, p_mission_date:todayKey });
+      if (streakRewardError) throw streakRewardError;
+      setPoints(Number(streakRewardResult?.balance ?? 0));
 
       await saveWalkingData(
         steps,
@@ -385,8 +441,8 @@ export default function WalkingScreen() {
        */
       if (missionResult.awarded) {
         Alert.alert(
-          '🎉 Walking Mission Complete!',
-          `You reached ${goal.toLocaleString(
+          'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â° Walking Mission Complete!',
+          `You reached ${WALK_MISSION_GOAL.toLocaleString(
             'en-IN'
           )} steps today.
 
@@ -454,6 +510,8 @@ Your rewards have been added to your account.`,
    * START / STOP PHONE TRACKING
    * -------------------------------------------------------
    */
+  const WEB_TEST_CONTROLS = Platform.OS === 'web';
+
   const startTracking = async () => {
     if (tracking) {
       setTracking(false);
@@ -510,7 +568,7 @@ Your rewards have been added to your account.`,
       );
 
       Alert.alert(
-        'Walking Tracking Started 🚶',
+        'Walking Tracking Started ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶',
         `Live phone step tracking is now on. You currently have ${baseSteps.toLocaleString(
           'en-IN'
         )} steps. Keep walking!`
@@ -568,12 +626,12 @@ Your rewards have been added to your account.`,
    * -------------------------------------------------------
    */
   const completeMission = async () => {
-    if (!todayComplete) {
+    if (steps < WALK_MISSION_GOAL) {
       Alert.alert(
-        'Keep going! 🚶',
-        `You still have ${remainingSteps.toLocaleString(
+        'Keep going! ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶',
+        `You still need ${(WALK_MISSION_GOAL - steps).toLocaleString(
           'en-IN'
-        )} steps to reach today's goal.`
+        )} more steps to complete today's walking mission.`
       );
 
       return;
@@ -581,7 +639,7 @@ Your rewards have been added to your account.`,
 
     if (walkMissionComplete) {
       Alert.alert(
-        'Already Complete 🎉',
+        'Already Complete ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°',
         `You've already earned today's ${WALK_MISSION_POINTS} walking mission points. Keep walking for your health!`
       );
 
@@ -678,7 +736,7 @@ Your rewards have been added to your account.`,
             onPress={() => router.back()}
           >
             <Text style={styles.backText}>
-              ‹
+              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹
             </Text>
           </TouchableOpacity>
 
@@ -704,7 +762,7 @@ Your rewards have been added to your account.`,
             <Text
               style={styles.pointsSmallEmoji}
             >
-              🪙
+              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂªÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
             </Text>
 
             <Text
@@ -764,7 +822,7 @@ Your rewards have been added to your account.`,
           <View style={styles.heroProgressRow}>
             <Text style={styles.heroProgressText}>
               {todayComplete
-                ? 'Goal completed! 🎉'
+                ? 'Goal completed! ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°'
                 : `${remainingSteps.toLocaleString(
                     'en-IN'
                   )} steps to go`}
@@ -782,7 +840,7 @@ Your rewards have been added to your account.`,
             <Text
               style={styles.trackButtonIcon}
             >
-              {tracking ? '⏹' : '▶'}
+              {tracking ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹' : 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶'}
             </Text>
 
             <Text style={styles.trackButtonText}>
@@ -796,10 +854,93 @@ Your rewards have been added to your account.`,
             {pedometerAvailable === false
               ? 'Step sensor unavailable on this device'
               : pedometerPermission
-              ? '● LIVE PHONE STEP TRACKING'
+              ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â LIVE PHONE STEP TRACKING'
               : 'Phone steps connect when you start walking'}
           </Text>
         </View>
+
+        {WEB_TEST_CONTROLS && (
+          <View
+            style={{
+              marginTop: 16,
+              padding: 16,
+              borderRadius: 16,
+              backgroundColor: '#EAF2FF',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '900',
+                marginBottom: 10,
+              }}
+            >
+              WEB TEST - SIMULATE STEPS
+            </Text>
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => addSteps(1000)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: '#1976F3',
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#FFFFFF',
+                    fontWeight: '900',
+                    textAlign: 'center',
+                  }}
+                >
+                  +1,000
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => addSteps(4000)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: '#1976F3',
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#FFFFFF',
+                    fontWeight: '900',
+                    textAlign: 'center',
+                  }}
+                >
+                  +4,000
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => addSteps(8000)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: '#1976F3',
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#FFFFFF',
+                    fontWeight: '900',
+                    textAlign: 'center',
+                  }}
+                >
+                  +8,000
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* WALKING MISSION STATUS */}
 
@@ -819,8 +960,8 @@ Your rewards have been added to your account.`,
               style={styles.missionStatusEmoji}
             >
               {walkMissionComplete
-                ? '🎉'
-                : '🚶'}
+                ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°'
+                : 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶'}
             </Text>
           </View>
 
@@ -838,7 +979,7 @@ Your rewards have been added to your account.`,
             >
               {walkMissionComplete
                 ? 'Mission complete!'
-                : `Reach ${goal.toLocaleString(
+                : `Reach ${WALK_MISSION_GOAL.toLocaleString(
                     'en-IN'
                   )} steps`}
             </Text>
@@ -856,7 +997,7 @@ Your rewards have been added to your account.`,
             style={styles.missionStatusCheck}
           >
             {walkMissionComplete
-              ? '✓'
+              ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“'
               : `${Math.max(
                   remainingSteps,
                   0
@@ -881,7 +1022,7 @@ Your rewards have been added to your account.`,
               <Text
                 style={styles.statIconEmoji}
               >
-                📍
+                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
               </Text>
             </View>
 
@@ -904,7 +1045,7 @@ Your rewards have been added to your account.`,
               <Text
                 style={styles.statIconEmoji}
               >
-                🔥
+                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥
               </Text>
             </View>
 
@@ -927,7 +1068,7 @@ Your rewards have been added to your account.`,
               <Text
                 style={styles.statIconEmoji}
               >
-                ⏱️
+                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
               </Text>
             </View>
 
@@ -965,7 +1106,7 @@ Your rewards have been added to your account.`,
             </View>
 
             <Text style={styles.weekStreak}>
-              🔥 {streak}
+              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥ {streak}
             </Text>
           </View>
 
@@ -1048,7 +1189,7 @@ Your rewards have been added to your account.`,
         <View style={styles.streakCard}>
           <View style={styles.streakFire}>
             <Text style={styles.streakFireText}>
-              🔥
+              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥
             </Text>
           </View>
 
@@ -1072,7 +1213,7 @@ Your rewards have been added to your account.`,
           </View>
 
           <Text style={styles.streakArrow}>
-            ›
+            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âº
           </Text>
         </View>
 
@@ -1132,7 +1273,7 @@ Your rewards have been added to your account.`,
         <View style={styles.challengeCard}>
           <View style={styles.challengeIcon}>
             <Text style={styles.challengeEmoji}>
-              🪙
+              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂªÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
             </Text>
           </View>
 
@@ -1192,7 +1333,7 @@ Your rewards have been added to your account.`,
 
         <View style={styles.communityCard}>
           <Text style={styles.communityEmoji}>
-            🌍
+            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
           </Text>
 
           <View
@@ -1233,10 +1374,10 @@ Your rewards have been added to your account.`,
             style={styles.completeButtonText}
           >
             {walkMissionComplete
-              ? '✓ WALKING MISSION COMPLETE'
-              : todayComplete
+              ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ WALKING MISSION COMPLETE'
+              : steps >= WALK_MISSION_GOAL
               ? 'CLAIM +40 POINTS'
-              : 'KEEP WALKING →'}
+              : 'KEEP WALKING ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢'}
           </Text>
         </TouchableOpacity>
 
@@ -1248,7 +1389,7 @@ Your rewards have been added to your account.`,
           </Text>
 
           <Text style={styles.footerTagline}>
-            Walk more • Live better • Stay healthy
+            Walk more ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Live better ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Stay healthy
           </Text>
         </View>
       </ScrollView>

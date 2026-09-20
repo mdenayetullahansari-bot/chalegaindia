@@ -8,13 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { awardOnce } from '@/lib/points';
-
-const HEALTH_HOME_KEY = 'chalega_health_home';
-const WALKING_DATA_KEY = 'chalega_walking_data';
-const CHECKIN_PREFIX = 'chalega_health_checkin_';
+import { supabase } from '@/lib/supabase';
 
 const getLocalDateKey = () => {
   const now = new Date();
@@ -29,12 +24,6 @@ type Option<T extends string | number> = {
   value: T;
   label: string;
   emoji?: string;
-};
-
-type WalkingData = {
-  steps?: number;
-  goal?: number;
-  streak?: number;
 };
 
 type CheckInData = {
@@ -178,102 +167,168 @@ export default function DailyHealthCheckIn() {
 
   const loadTodayCheckIn = async () => {
     try {
-      const [savedCheckIn, savedWalking] =
-        await Promise.all([
-          AsyncStorage.getItem(
-            `${CHECKIN_PREFIX}${todayKey}`
-          ),
-          AsyncStorage.getItem(
-            WALKING_DATA_KEY
-          ),
-        ]);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      let currentSteps = 0;
-      let currentGoal = 4000;
-      let currentStreak = 0;
-
-      if (savedWalking) {
-        try {
-          const walkingData: WalkingData =
-            JSON.parse(savedWalking);
-
-          currentSteps =
-            typeof walkingData.steps === 'number'
-              ? Math.max(0, walkingData.steps)
-              : 0;
-
-          currentGoal =
-            typeof walkingData.goal === 'number' &&
-            walkingData.goal > 0
-              ? walkingData.goal
-              : 4000;
-
-          currentStreak =
-            typeof walkingData.streak === 'number'
-              ? Math.max(0, walkingData.streak)
-              : 0;
-
-          setSteps(currentSteps);
-          setGoal(currentGoal);
-          setStreak(currentStreak);
-        } catch {
-          setSteps(0);
-          setGoal(4000);
-          setStreak(0);
-        }
+      if (userError) {
+        throw userError;
       }
 
-      if (!savedCheckIn) {
+      if (!user) {
+        Alert.alert(
+          'Sign in required',
+          'Please sign in to save your daily health check-in.'
+        );
         return;
       }
 
-      const data = JSON.parse(
-        savedCheckIn
-      ) as CheckInData;
+      const [checkInResult, stepsResult, profileResult] =
+        await Promise.all([
+          supabase
+            .from('daily_health_checkins')
+            .select(
+              'mood, water, activity, sleep, health_score, steps, goal, streak, completed_at'
+            )
+            .eq('user_id', user.id)
+            .eq('checkin_date', todayKey)
+            .maybeSingle(),
+
+          supabase
+            .from('daily_steps')
+            .select('step_date, steps')
+            .eq('user_id', user.id)
+            .lte('step_date', todayKey)
+            .gte(
+              'step_date',
+              (() => {
+                const date = new Date(`${todayKey}T00:00:00`);
+                date.setDate(date.getDate() - 30);
+                return `${date.getFullYear()}-${String(
+                  date.getMonth() + 1
+                ).padStart(2, '0')}-${String(date.getDate()).padStart(
+                  2,
+                  '0'
+                )}`;
+              })()
+            )
+            .order('step_date', { ascending: false }),
+
+          supabase
+            .from('profiles')
+            .select('daily_step_goal')
+            .eq('id', user.id)
+            .maybeSingle(),
+        ]);
+
+      if (checkInResult.error) {
+        throw checkInResult.error;
+      }
+
+      if (stepsResult.error) {
+        throw stepsResult.error;
+      }
+
+      if (profileResult.error) {
+        throw profileResult.error;
+      }
+
+      const stepRows = stepsResult.data ?? [];
+
+      const todayStepsRow = stepRows.find(
+        row => row.step_date === todayKey
+      );
+
+      const currentSteps =
+        typeof todayStepsRow?.steps === 'number'
+          ? Math.max(0, todayStepsRow.steps)
+          : 0;
+
+      const profileGoal =
+        typeof profileResult.data?.daily_step_goal === 'number' &&
+        profileResult.data.daily_step_goal > 0
+          ? profileResult.data.daily_step_goal
+          : 4000;
+
+      let currentStreak = 0;
+      let expectedDate = todayKey;
+
+      for (const row of stepRows) {
+        if (row.step_date !== expectedDate) {
+          break;
+        }
+
+        if (
+          typeof row.steps !== 'number' ||
+          row.steps <= 0
+        ) {
+          break;
+        }
+
+        currentStreak += 1;
+
+        const date = new Date(`${expectedDate}T00:00:00`);
+        date.setDate(date.getDate() - 1);
+        expectedDate = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${String(date.getDate()).padStart(
+          2,
+          '0'
+        )}`;
+      }
+
+      setSteps(currentSteps);
+      setGoal(profileGoal);
+      setStreak(currentStreak);
+
+      const saved = checkInResult.data;
+
+      if (!saved) {
+        return;
+      }
+
+      setMood(saved.mood);
+      setWater(saved.water);
+      setActivity(saved.activity);
+      setSleep(saved.sleep);
 
       const savedSteps =
-        typeof data.steps === 'number'
-          ? Math.max(0, data.steps)
+        typeof saved.steps === 'number'
+          ? Math.max(0, saved.steps)
           : currentSteps;
 
       const savedGoal =
-        typeof data.goal === 'number' &&
-        data.goal > 0
-          ? data.goal
-          : currentGoal;
+        typeof saved.goal === 'number' && saved.goal > 0
+          ? saved.goal
+          : profileGoal;
 
       const savedStreak =
-        typeof data.streak === 'number'
-          ? Math.max(0, data.streak)
+        typeof saved.streak === 'number'
+          ? Math.max(0, saved.streak)
           : currentStreak;
-
-      setMood(data.mood);
-      setWater(data.water);
-      setActivity(data.activity);
-      setSleep(data.sleep);
 
       setSteps(savedSteps);
       setGoal(savedGoal);
       setStreak(savedStreak);
       setCompleted(true);
 
-      if (typeof data.healthScore === 'number') {
-        setSavedScore(data.healthScore);
+      if (typeof saved.health_score === 'number') {
+        setSavedScore(saved.health_score);
       } else {
-        const calculatedScore =
+        setSavedScore(
           calculateHealthScore(
             savedSteps,
             savedGoal,
             savedStreak,
-            data.mood,
-            typeof data.water === 'number'
-              ? Math.max(0, data.water)
+            saved.mood,
+            typeof saved.water === 'number'
+              ? Math.max(0, saved.water)
               : 0,
-            data.activity,
-            data.sleep
-          );
-
-        setSavedScore(calculatedScore);
+            saved.activity,
+            saved.sleep
+          )
+        );
       }
     } catch (error) {
       console.log(
@@ -281,38 +336,6 @@ export default function DailyHealthCheckIn() {
         error
       );
     }
-  };
-
-  const updateHealthHome = async () => {
-    const existing =
-      await AsyncStorage.getItem(
-        HEALTH_HOME_KEY
-      );
-
-    let healthData: Record<
-      string,
-      unknown
-    > = {};
-
-    if (existing) {
-      try {
-        healthData = JSON.parse(existing);
-      } catch {
-        healthData = {};
-      }
-    }
-
-    await AsyncStorage.setItem(
-      HEALTH_HOME_KEY,
-      JSON.stringify({
-        ...healthData,
-        water,
-        mood,
-        activity,
-        sleep,
-        lastCheckInDate: todayKey,
-      })
-    );
   };
 
   const completeCheckIn = async () => {
@@ -336,47 +359,87 @@ export default function DailyHealthCheckIn() {
     setSaving(true);
 
     try {
-      let currentSteps = steps;
-      let currentGoal = goal;
-      let currentStreak = streak;
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const savedWalking =
-        await AsyncStorage.getItem(
-          WALKING_DATA_KEY
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
+        Alert.alert(
+          'Sign in required',
+          'Please sign in to save your daily health check-in.'
         );
+        return;
+      }
 
-      if (savedWalking) {
-        try {
-          const walkingData: WalkingData =
-            JSON.parse(savedWalking);
+      const { data: stepsRows, error: stepsError } =
+        await supabase
+          .from('daily_steps')
+          .select('step_date, steps')
+          .eq('user_id', user.id)
+          .lte('step_date', todayKey)
+          .order('step_date', { ascending: false })
+          .limit(31);
 
-          if (
-            typeof walkingData.steps === 'number'
-          ) {
-            currentSteps = Math.max(
-              0,
-              walkingData.steps
-            );
-          }
+      if (stepsError) {
+        throw stepsError;
+      }
 
-          if (
-            typeof walkingData.goal === 'number' &&
-            walkingData.goal > 0
-          ) {
-            currentGoal = walkingData.goal;
-          }
+      const { data: profile, error: profileError } =
+        await supabase
+          .from('profiles')
+          .select('daily_step_goal')
+          .eq('id', user.id)
+          .maybeSingle();
 
-          if (
-            typeof walkingData.streak === 'number'
-          ) {
-            currentStreak = Math.max(
-              0,
-              walkingData.streak
-            );
-          }
-        } catch {
-          // Keep the values already held in state.
+      if (profileError) {
+        throw profileError;
+      }
+
+      const currentStepsRow = (stepsRows ?? []).find(
+        row => row.step_date === todayKey
+      );
+
+      const currentSteps =
+        typeof currentStepsRow?.steps === 'number'
+          ? Math.max(0, currentStepsRow.steps)
+          : steps;
+
+      const currentGoal =
+        typeof profile?.daily_step_goal === 'number' &&
+        profile.daily_step_goal > 0
+          ? profile.daily_step_goal
+          : goal;
+
+      let currentStreak = 0;
+      let expectedDate = todayKey;
+
+      for (const row of stepsRows ?? []) {
+        if (row.step_date !== expectedDate) {
+          break;
         }
+
+        if (
+          typeof row.steps !== 'number' ||
+          row.steps <= 0
+        ) {
+          break;
+        }
+
+        currentStreak += 1;
+
+        const date = new Date(`${expectedDate}T00:00:00`);
+        date.setDate(date.getDate() - 1);
+        expectedDate = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${String(date.getDate()).padStart(
+          2,
+          '0'
+        )}`;
       }
 
       const healthScore =
@@ -390,33 +453,47 @@ export default function DailyHealthCheckIn() {
           sleep
         );
 
-      const checkIn: CheckInData = {
-        mood,
-        water,
-        activity,
-        sleep,
-        completedAt:
-          new Date().toISOString(),
-        healthScore,
-        steps: currentSteps,
-        goal: currentGoal,
-        streak: currentStreak,
+      const { error: saveError } = await supabase
+        .from('daily_health_checkins')
+        .upsert(
+          {
+            user_id: user.id,
+            checkin_date: todayKey,
+            mood,
+            water,
+            activity,
+            sleep,
+            health_score: healthScore,
+            steps: currentSteps,
+            goal: currentGoal,
+            streak: currentStreak,
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id,checkin_date',
+          }
+        );
+
+      if (saveError) {
+        throw saveError;
+      }
+
+      const { data: rewardResult, error: rewardError } = await supabase.rpc(
+        'award_health_checkin_reward',
+        {
+          p_checkin_date: todayKey,
+        }
+      );
+
+      if (rewardError) {
+        throw rewardError;
+      }
+
+      const result = {
+        awarded: rewardResult?.already_awarded !== true,
+        balance: Number(rewardResult?.balance ?? 0),
       };
-
-      await AsyncStorage.setItem(
-        `${CHECKIN_PREFIX}${todayKey}`,
-        JSON.stringify(checkIn)
-      );
-
-      await updateHealthHome();
-
-      const result = await awardOnce(
-        'health_checkin',
-        `health_checkin_${todayKey}`,
-        10,
-        'Health Check-in',
-        `health_checkin_${todayKey}`
-      );
 
       setSteps(currentSteps);
       setGoal(currentGoal);

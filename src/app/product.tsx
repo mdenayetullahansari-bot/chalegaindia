@@ -74,21 +74,9 @@ export default function ProductScreen() {
         quantity
       );
 
-      Alert.alert(
-        'Added to Cart',
-        `${quantity} × ${product.name} added to your cart.`,
-        [
-          {
-            text: 'Continue Shopping',
-            onPress: () => router.back(),
-          },
-          {
-            text: 'View Shop',
-            onPress: () =>
-              router.replace('/shop'),
-          },
-        ]
-      );
+      // The shared cart is updated first. Returning to Shop gives
+      // an immediate, reliable confirmation on web and native.
+      router.replace('/shop');
     } catch (error) {
       console.log(
         'Product cart error:',

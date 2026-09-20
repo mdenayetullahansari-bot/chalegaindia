@@ -9,12 +9,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useFocusEffect,
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 type OrderProduct = {
   id: string;
@@ -65,30 +65,69 @@ export default function TrackOrderScreen() {
 
   const loadOrder = async () => {
     try {
-      const stored =
-        await AsyncStorage.getItem('chalega_orders');
-
-      if (!stored) {
+      if (!orderId) {
         setOrder(null);
         return;
       }
 
-      const orders = JSON.parse(stored);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!Array.isArray(orders)) {
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
         setOrder(null);
         return;
       }
 
-      const found = orders.find(
-        (item: Order) =>
-          (item.orderId || item.id) === orderId
+      const { data, error } = await supabase
+        .from('orders')
+        .select(
+          'id, order_id, customer_name, products, total, delivery, status, created_at'
+        )
+        .eq('user_id', user.id)
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        setOrder(null);
+        return;
+      }
+
+      const products = Array.isArray(data.products)
+        ? data.products
+        : [];
+
+      const items = products.reduce(
+        (sum: number, product: any) =>
+          sum + Number(product?.quantity || 0),
+        0
       );
 
-      setOrder(found || null);
+      setOrder({
+        id: data.id,
+        orderId: data.order_id || data.id,
+        customer: {
+          name: data.customer_name || '',
+        },
+        products,
+        items,
+        total: Number(data.total || 0),
+        delivery: data.delivery || 'Standard',
+        status: data.status || STATUS.RECEIVED,
+        createdAt: data.created_at,
+      });
     } catch (error) {
       console.log(
-        'Could not load order:',
+        'Could not load order from Supabase:',
         error
       );
 
@@ -216,7 +255,7 @@ export default function TrackOrderScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() =>
-              router.replace('/order-confirmed')
+              router.replace('/customer-orders')
             }
           >
             <Text style={styles.backText}>

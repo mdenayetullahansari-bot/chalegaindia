@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useLocalSearchParams,
   useRouter,
@@ -169,129 +168,13 @@ export default function CheckoutScreen() {
 
   const [saving, setSaving] = useState(false);
 
-  const getExistingOrders = async (): Promise<any[]> => {
-    const existingOrdersText =
-      await AsyncStorage.getItem('chalega_orders');
-
-    if (!existingOrdersText) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(existingOrdersText);
-
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-
-      return [];
-    } catch {
-      return [];
-    }
-  };
-
-  const saveLocalOrder = async ({
-    orderId,
-    createdAt,
-    deliveryDeadline,
-    paymentStatus,
-    razorpayOrderId,
-    razorpayPaymentId,
-  }: {
-    orderId: string;
-    createdAt: string;
-    deliveryDeadline: string;
-    paymentStatus: string;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-  }) => {
-    const existingOrders = await getExistingOrders();
-
-    const newOrder = {
-      id: orderId,
-      orderId,
-
-      customer: {
-        name: name.trim(),
-        phone: phone.trim(),
-      },
-
-      address: {
-        address: address.trim(),
-        area: area.trim(),
-        pin: pin.trim(),
-      },
-
-      products: selectedProducts.map((product) => ({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        unit: product.unit,
-        category: product.category,
-        emoji: product.emoji,
-        quantity: product.quantity || 1,
-      })),
-
-      items: itemCount,
-      subtotal,
-      deliveryFee,
-      total: orderTotal,
-      delivery,
-      deliveryPromise: 'Within 24 hours',
-      createdAt,
-      deliveryDeadline,
-      deliveryWindow: 'Within 24 hours of order placement',
-      status: 'Order Received',
-      paymentMethod,
-      paymentStatus,
-
-      ...(razorpayOrderId
-        ? {
-            razorpayOrderId,
-          }
-        : {}),
-
-      ...(razorpayPaymentId
-        ? {
-            razorpayPaymentId,
-          }
-        : {}),
-    };
-
-    const updatedOrders = [...existingOrders, newOrder];
-
-    await AsyncStorage.setItem(
-      'chalega_orders',
-      JSON.stringify(updatedOrders),
-    );
-
-    return newOrder;
-  };
-
   const finishOrder = async ({
     orderId,
-    createdAt,
     deliveryDeadline,
-    paymentStatus,
-    razorpayOrderId,
-    razorpayPaymentId,
   }: {
     orderId: string;
-    createdAt: string;
     deliveryDeadline: string;
-    paymentStatus: string;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
   }) => {
-    await saveLocalOrder({
-      orderId,
-      createdAt,
-      deliveryDeadline,
-      paymentStatus,
-      razorpayOrderId,
-      razorpayPaymentId,
-    });
-
     await clearCart();
 
     router.replace({
@@ -665,13 +548,7 @@ export default function CheckoutScreen() {
 
         await finishOrder({
           orderId: dbOrder.order_id,
-          createdAt,
           deliveryDeadline,
-          paymentStatus: 'paid',
-          razorpayOrderId:
-            payment.razorpayOrderId,
-          razorpayPaymentId:
-            payment.razorpayPaymentId,
         });
 
         return;
@@ -679,9 +556,7 @@ export default function CheckoutScreen() {
 
       await finishOrder({
         orderId: dbOrder.order_id,
-        createdAt,
         deliveryDeadline,
-        paymentStatus: 'pending',
       });
     } catch (error: any) {
       console.error(
@@ -743,7 +618,7 @@ export default function CheckoutScreen() {
               <Text
                 style={styles.backText}
               >
-                Î“Ã‡â•£
+                ‹
               </Text>
             </TouchableOpacity>
 
@@ -781,7 +656,7 @@ export default function CheckoutScreen() {
                   styles.promiseIconText
                 }
               >
-                â‰¡Æ’ÃœÃœ
+                🚚
               </Text>
             </View>
 
@@ -961,7 +836,7 @@ export default function CheckoutScreen() {
                         }
                       >
                         {product.quantity}{' '}
-                        â”œÃ¹ Î“Ã©â•£
+                        × ₹
                         {product.price.toLocaleString(
                           'en-IN',
                         )}{' '}
@@ -974,7 +849,7 @@ export default function CheckoutScreen() {
                         styles.productTotal
                       }
                     >
-                      Î“Ã©â•£
+                      ₹
                       {(
                         product.price *
                         (product.quantity ||
@@ -1013,7 +888,7 @@ export default function CheckoutScreen() {
               }
             >
               <Text>
-                â‰¡Æ’ÃœÃœ
+                🚚
               </Text>
             </View>
 
@@ -1079,7 +954,7 @@ export default function CheckoutScreen() {
                   styles.summaryValue
                 }
               >
-                Î“Ã©â•£
+                ₹
                 {subtotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1106,7 +981,7 @@ export default function CheckoutScreen() {
               >
                 {deliveryFee === 0
                   ? 'FREE'
-                  : `Î“Ã©â•£${deliveryFee}`}
+                  : `₹${deliveryFee}`}
               </Text>
             </View>
 
@@ -1117,8 +992,8 @@ export default function CheckoutScreen() {
             >
               {subtotal >=
               FREE_DELIVERY_THRESHOLD
-                ? 'Î“Â£Ã´ You unlocked free delivery.'
-                : `Add Î“Ã©â•£${
+                ? '✓ You unlocked free delivery.'
+                : `Add ₹${
                     FREE_DELIVERY_THRESHOLD -
                     subtotal
                   } more for free delivery.`}
@@ -1146,7 +1021,7 @@ export default function CheckoutScreen() {
                   styles.totalValue
                 }
               >
-                Î“Ã©â•£
+                ₹
                 {orderTotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1187,7 +1062,7 @@ export default function CheckoutScreen() {
                     styles.onlineIconText
                   }
                 >
-                  Î“Ã©â•£
+                  ₹
                 </Text>
               </View>
 
@@ -1249,7 +1124,7 @@ export default function CheckoutScreen() {
               <View
                 style={styles.codIcon}
               >
-                <Text>Î“Ã©â•£</Text>
+                <Text>₹</Text>
               </View>
 
               <View
@@ -1305,7 +1180,7 @@ export default function CheckoutScreen() {
                     styles.onlineNoteTitle
                   }
                 >
-                  â‰¡Æ’Ã¶Ã† Secure online payment
+                  🔒 Secure online payment
                 </Text>
 
                 <Text
@@ -1367,7 +1242,7 @@ export default function CheckoutScreen() {
                   styles.placeOrderTotal
                 }
               >
-                Î“Ã©â•£
+                ₹
                 {orderTotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1380,8 +1255,8 @@ export default function CheckoutScreen() {
           >
             {itemsParam || itemCount}{' '}
             item
-            {itemCount === 1 ? '' : 's'} â”¬â•–
-            Fresh order â”¬â•– Chalega 24-hour
+            {itemCount === 1 ? '' : 's'} •
+            Fresh order • Chalega 24-hour
             delivery
           </Text>
 
@@ -1389,7 +1264,7 @@ export default function CheckoutScreen() {
             style={styles.footer}
           >
             C H A L E G A  I N D I A
-            â‰¡Æ’Ã§Â«â‰¡Æ’Ã§â”‚
+            ♥
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

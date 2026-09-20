@@ -9,8 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 type Order = {
   id?: string;
@@ -87,27 +87,59 @@ export default function CustomerOrdersScreen() {
 
   const loadOrders = async () => {
     try {
-      const stored =
-        await AsyncStorage.getItem('chalega_orders');
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!stored) {
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
         setOrders([]);
         return;
       }
 
-      const parsed = JSON.parse(stored);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(
+          'id, order_id, customer_name, products, total, delivery, status, created_at'
+        )
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      if (!Array.isArray(parsed)) {
-        setOrders([]);
-        return;
+      if (error) {
+        throw error;
       }
 
-      const sorted = [...parsed].reverse();
+      const mappedOrders: Order[] = (data || []).map((row: any) => {
+        const products = Array.isArray(row.products)
+          ? row.products
+          : [];
 
-      setOrders(sorted);
+        const items = products.reduce(
+          (sum: number, product: any) =>
+            sum + Number(product?.quantity || 0),
+          0
+        );
+
+        return {
+          id: row.id,
+          orderId: row.order_id || row.id,
+          products,
+          items,
+          total: Number(row.total || 0),
+          delivery: row.delivery || 'Standard',
+          status: row.status || 'Order Received',
+          createdAt: row.created_at,
+        };
+      });
+
+      setOrders(mappedOrders);
     } catch (error) {
       console.log(
-        'Could not load customer orders:',
+        'Could not load customer orders from Supabase:',
         error
       );
 

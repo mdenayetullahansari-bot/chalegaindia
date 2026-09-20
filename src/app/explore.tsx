@@ -7,25 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-
-const HEALTH_DATA_KEY = 'chalega_health_home';
-const WALKING_DATA_KEY = 'chalega_walking_data';
-
-type HealthData = {
-  water?: number;
-  mood?: string;
-  activity?: string;
-  sleep?: string;
-  lastCheckInDate?: string;
-};
-
-type WalkingData = {
-  steps?: number;
-  goal?: number;
-  streak?: number;
-};
+import { supabase } from '@/lib/supabase';
 
 const getLocalDateKey = () => {
   const now = new Date();
@@ -34,6 +17,36 @@ const getLocalDateKey = () => {
   const day = String(now.getDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
+};
+
+const getStreakFromSteps = (
+  rows: Array<{ step_date: string; steps: number | null }>,
+  today: string,
+) => {
+  const stepsByDate = new Map<string, number>();
+
+  for (const row of rows) {
+    stepsByDate.set(row.step_date, Math.max(0, Number(row.steps) || 0));
+  }
+
+  let streak = 0;
+  const cursor = new Date(`${today}T00:00:00`);
+
+  while (true) {
+    const year = cursor.getFullYear();
+    const month = String(cursor.getMonth() + 1).padStart(2, '0');
+    const day = String(cursor.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
+
+    if ((stepsByDate.get(dateKey) ?? 0) <= 0) {
+      break;
+    }
+
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
 };
 
 const HEALTH_TOPICS = [
@@ -125,51 +138,100 @@ export default function ExploreScreen() {
 
   const loadHealthData = useCallback(async () => {
     try {
-      const [healthSaved, walkingSaved] = await Promise.all([
-        AsyncStorage.getItem(HEALTH_DATA_KEY),
-        AsyncStorage.getItem(WALKING_DATA_KEY),
-      ]);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (healthSaved) {
-        try {
-          const data: HealthData = JSON.parse(healthSaved);
+      if (userError) {
+        throw userError;
+      }
 
-          setWater(
-            typeof data.water === 'number'
-              ? Math.max(0, data.water)
-              : 0
-          );
+      if (!user) {
+        setWater(0);
+        setMood('');
+        setActivity('');
+        setSleep('');
+        setLastCheckInDate('');
+        setSteps(0);
+        setGoal(4000);
+        setStreak(0);
+        return;
+      }
 
-          setMood(
-            typeof data.mood === 'string'
-              ? data.mood
-              : ''
-          );
+      const [{ data: checkIn, error: checkInError }, { data: stepRows, error: stepsError }, { data: profile, error: profileError }] =
+        await Promise.all([
+          supabase
+            .from('daily_health_checkins')
+            .select('checkin_date, mood, water, activity, sleep')
+            .eq('user_id', user.id)
+            .eq('checkin_date', todayKey)
+            .maybeSingle(),
+          supabase
+            .from('daily_steps')
+            .select('step_date, steps')
+            .eq('user_id', user.id)
+            .gte(
+              'step_date',
+              (() => {
+                const date = new Date(`${todayKey}T00:00:00`);
+                date.setDate(date.getDate() - 30);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+              })(),
+            )
+            .lte('step_date', todayKey)
+            .order('step_date', { ascending: false }),
+          supabase
+            .from('profiles')
+            .select('daily_step_goal')
+            .eq('id', user.id)
+            .maybeSingle(),
+        ]);
 
-          setActivity(
-            typeof data.activity === 'string'
-              ? data.activity
-              : ''
-          );
+      if (checkInError) {
+        throw checkInError;
+      }
 
-          setSleep(
-            typeof data.sleep === 'string'
-              ? data.sleep
-              : ''
-          );
+      if (stepsError) {
+        throw stepsError;
+      }
 
-          setLastCheckInDate(
-            typeof data.lastCheckInDate === 'string'
-              ? data.lastCheckInDate
-              : ''
-          );
-        } catch {
-          setWater(0);
-          setMood('');
-          setActivity('');
-          setSleep('');
-          setLastCheckInDate('');
-        }
+      if (profileError) {
+        throw profileError;
+      }
+
+      const todaySteps =
+        (stepRows ?? []).find(row => row.step_date === todayKey)?.steps ?? 0;
+
+      const dailyGoal =
+        typeof profile?.daily_step_goal === 'number' &&
+        profile.daily_step_goal > 0
+          ? profile.daily_step_goal
+          : 4000;
+
+      const calculatedStreak = getStreakFromSteps(
+        (stepRows ?? []).map(row => ({
+          step_date: row.step_date,
+          steps: row.steps,
+        })),
+        todayKey,
+      );
+
+      setSteps(Math.max(0, Number(todaySteps) || 0));
+      setGoal(dailyGoal);
+      setStreak(calculatedStreak);
+
+      if (checkIn) {
+        setWater(Math.max(0, Number(checkIn.water) || 0));
+        setMood(typeof checkIn.mood === 'string' ? checkIn.mood : '');
+        setActivity(
+          typeof checkIn.activity === 'string' ? checkIn.activity : '',
+        );
+        setSleep(typeof checkIn.sleep === 'string' ? checkIn.sleep : '');
+        setLastCheckInDate(checkIn.checkin_date);
       } else {
         setWater(0);
         setMood('');
@@ -177,51 +239,15 @@ export default function ExploreScreen() {
         setSleep('');
         setLastCheckInDate('');
       }
-
-      if (walkingSaved) {
-        try {
-          const data: WalkingData = JSON.parse(walkingSaved);
-
-          setSteps(
-            typeof data.steps === 'number'
-              ? Math.max(0, data.steps)
-              : 0
-          );
-
-          setGoal(
-            typeof data.goal === 'number' &&
-              data.goal > 0
-              ? data.goal
-              : 4000
-          );
-
-          setStreak(
-            typeof data.streak === 'number'
-              ? Math.max(0, data.streak)
-              : 0
-          );
-        } catch {
-          setSteps(0);
-          setGoal(4000);
-          setStreak(0);
-        }
-      } else {
-        setSteps(0);
-        setGoal(4000);
-        setStreak(0);
-      }
     } catch (error) {
-      console.log(
-        'Could not load health dashboard data:',
-        error
-      );
+      console.log('Could not load health dashboard data:', error);
     }
-  }, []);
+  }, [todayKey]);
 
   useFocusEffect(
     useCallback(() => {
       loadHealthData();
-    }, [loadHealthData])
+    }, [loadHealthData]),
   );
 
   useEffect(() => {
@@ -278,11 +304,11 @@ export default function ExploreScreen() {
     Math.min(water / 8, 1);
 
   const walkingScore = Math.round(
-    stepProgress * 30
+    stepProgress * 30,
   );
 
   const hydrationScore = Math.round(
-    waterProgress * 20
+    waterProgress * 20,
   );
 
   const moodScore =
@@ -316,7 +342,7 @@ export default function ExploreScreen() {
 
   const streakScore = Math.min(
     streak,
-    5
+    5,
   );
 
   const checkInScore =
@@ -332,7 +358,7 @@ export default function ExploreScreen() {
       activityScore +
       sleepScore +
       streakScore +
-      checkInScore
+      checkInScore,
   );
 
   const scoreMessage =

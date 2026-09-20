@@ -493,14 +493,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity
           style={styles.wardCard}
-          onPress={() =>
-            Alert.alert(
-              'KMC Ward',
-              profile?.ward_id
-                ? `You are currently assigned to KMC Ward ${profile.ward_id}.`
-                : 'Your KMC ward has not been assigned yet.'
-            )
-          }
+          onPress={() => router.push('/kmc-ward')}
           activeOpacity={0.85}
         >
           <View

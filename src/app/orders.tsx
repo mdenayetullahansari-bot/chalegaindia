@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 type OrderProduct = {
   id: string;
@@ -64,20 +64,55 @@ export default function OrdersScreen() {
 
   const loadOrders = async () => {
     try {
-      const stored = await AsyncStorage.getItem('chalega_orders');
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!stored) {
+      if (userError) throw userError;
+
+      if (!user) {
         setOrders([]);
         return;
       }
 
-      const parsed = JSON.parse(stored);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(
+          'id, order_id, customer_name, customer_phone, address, area, pin, products, total, delivery, status, created_at'
+        )
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      if (Array.isArray(parsed)) {
-        setOrders([...parsed].reverse());
-      } else {
-        setOrders([]);
-      }
+      if (error) throw error;
+
+      const mappedOrders: Order[] = (data || []).map((row: any) => ({
+        id: row.id,
+        orderId: row.order_id,
+        customer: {
+          name: row.customer_name,
+          phone: row.customer_phone,
+        },
+        address: {
+          address: row.address,
+          area: row.area,
+          pin: row.pin,
+        },
+        products: Array.isArray(row.products) ? row.products : [],
+        items: Array.isArray(row.products)
+          ? row.products.reduce(
+              (sum: number, product: any) =>
+                sum + Number(product?.quantity || 0),
+              0
+            )
+          : 0,
+        total: Number(row.total || 0),
+        delivery: row.delivery,
+        status: row.status || STATUS.RECEIVED,
+        createdAt: row.created_at,
+      }));
+
+      setOrders(mappedOrders);
     } catch (error) {
       console.log('Could not load orders:', error);
       setOrders([]);
@@ -86,7 +121,6 @@ export default function OrdersScreen() {
       setRefreshing(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       loadOrders();
@@ -130,33 +164,30 @@ export default function OrdersScreen() {
     newStatus: string
   ) => {
     try {
-      const stored =
-        await AsyncStorage.getItem('chalega_orders');
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!stored) return;
+      if (userError) throw userError;
 
-      const existingOrders = JSON.parse(stored);
+      if (!user) {
+        Alert.alert(
+          'Sign in required',
+          'Please sign in to manage this order.'
+        );
+        return;
+      }
 
-      const updatedOrders = existingOrders.map(
-        (order: Order) => {
-          const currentId =
-            order.orderId || order.id;
-
-          if (currentId === orderId) {
-            return {
-              ...order,
-              status: newStatus,
-            };
-          }
-
-          return order;
+      const { error } = await supabase.rpc(
+        'update_order_status',
+        {
+          p_order_id: orderId,
+          p_status: newStatus,
         }
       );
 
-      await AsyncStorage.setItem(
-        'chalega_orders',
-        JSON.stringify(updatedOrders)
-      );
+      if (error) throw error;
 
       await loadOrders();
 
@@ -173,7 +204,6 @@ export default function OrdersScreen() {
       );
     }
   };
-
   const moveToNextStatus = (order: Order) => {
     const orderId = getOrderId(order);
     const currentStatus = getStatus(order);

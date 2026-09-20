@@ -18,20 +18,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import {
   useFocusEffect,
   useRouter,
 } from 'expo-router';
 
 import {
-  awardOnce,
   getPoints,
   hasTransaction,
 } from '../lib/points';
 
 import { BRAND } from '../lib/brand';
+import { supabase } from '../lib/supabase';
 
 type Mission = {
   id: string;
@@ -86,8 +84,6 @@ const DEFAULT_MISSIONS: Mission[] = [
   },
 ];
 
-const MISSIONS_KEY_PREFIX =
-  'chalega_daily_missions_';
 
 export default function MissionsScreen() {
   const router = useRouter();
@@ -106,243 +102,207 @@ export default function MissionsScreen() {
   const [completingMission, setCompletingMission] =
     useState<string | null>(null);
 
-  /*
-   * ----------------------------------------------------
-   * TODAY
-   * ----------------------------------------------------
-   */
+/*
+ * ----------------------------------------------------
+ * TODAY
+ * ----------------------------------------------------
+ */
 
-  const getTodayKey = useCallback(() => {
-    const today = new Date();
+const getTodayKey = useCallback(() => {
+  const today = new Date();
 
-    return (
-      today.getFullYear() +
-      '-' +
-      String(
-        today.getMonth() + 1
-      ).padStart(2, '0') +
-      '-' +
-      String(
-        today.getDate()
-      ).padStart(2, '0')
-    );
-  }, []);
-
-  /*
-   * ----------------------------------------------------
-   * STORAGE
-   * ----------------------------------------------------
-   */
-
-  const getMissionStorageKey =
-    useCallback(() => {
-      return (
-        MISSIONS_KEY_PREFIX +
-        getTodayKey()
-      );
-    }, [getTodayKey]);
-
-  /*
-   * ----------------------------------------------------
-   * LOAD MISSIONS
-   * ----------------------------------------------------
-   */
-
-  const loadMissions = useCallback(
-    async () => {
-      try {
-        setLoading(true);
-
-        const todayKey =
-          getTodayKey();
-
-        const missionStorageKey =
-          `${MISSIONS_KEY_PREFIX}${todayKey}`;
-
-        const savedMissions =
-          await AsyncStorage.getItem(
-            missionStorageKey
-          );
-
-        let loadedMissions =
-          DEFAULT_MISSIONS.map(
-            mission => ({
-              ...mission,
-            })
-          );
-
-        if (savedMissions) {
-          try {
-            const parsed =
-              JSON.parse(
-                savedMissions
-              );
-
-            if (
-              Array.isArray(parsed) &&
-              parsed.length > 0
-            ) {
-              loadedMissions =
-                DEFAULT_MISSIONS.map(
-                  defaultMission => {
-                    const savedMission =
-                      parsed.find(
-                        (item: Mission) =>
-                          item?.id ===
-                          defaultMission.id
-                      );
-
-                    return {
-                      ...defaultMission,
-                      completed:
-                        savedMission?.completed ===
-                        true,
-                    };
-                  }
-                );
-            }
-          } catch {
-            loadedMissions =
-              DEFAULT_MISSIONS.map(
-                mission => ({
-                  ...mission,
-                })
-              );
-          }
-        }
-
-        /*
-         * ------------------------------------------------
-         * POINTS HISTORY IS THE SOURCE OF TRUTH
-         * ------------------------------------------------
-         */
-
-        const walkingCompleted =
-          await hasTransaction(
-            'walking_mission',
-            `walking_mission_${todayKey}`
-          );
-
-        const waterCompleted =
-          await hasTransaction(
-            'water_mission',
-            `water_mission_${todayKey}`
-          );
-
-        const healthCompleted =
-          await hasTransaction(
-            'health_checkin',
-            `health_checkin_${todayKey}`
-          );
-
-        const streakCompleted =
-          await hasTransaction(
-            'streak_mission',
-            `streak_mission_${todayKey}`
-          );
-
-        loadedMissions =
-          loadedMissions.map(
-            mission => {
-              if (
-                mission.id === 'walk'
-              ) {
-                return {
-                  ...mission,
-                  completed:
-                    walkingCompleted,
-                };
-              }
-
-              if (
-                mission.id === 'water'
-              ) {
-                return {
-                  ...mission,
-                  completed:
-                    waterCompleted,
-                };
-              }
-
-              if (
-                mission.id === 'health'
-              ) {
-                return {
-                  ...mission,
-                  completed:
-                    healthCompleted,
-                };
-              }
-
-              if (
-                mission.id === 'streak'
-              ) {
-                return {
-                  ...mission,
-                  completed:
-                    streakCompleted,
-                };
-              }
-
-              return mission;
-            }
-          );
-
-        setMissions(
-          loadedMissions
-        );
-
-        /*
-         * ------------------------------------------------
-         * CENTRAL POINTS WALLET
-         * ------------------------------------------------
-         */
-
-        const currentPoints =
-          await getPoints();
-
-        setPoints(
-          Number.isFinite(
-            currentPoints
-          )
-            ? Math.max(
-                0,
-                Math.round(
-                  currentPoints
-                )
-              )
-            : 0
-        );
-
-        /*
-         * ------------------------------------------------
-         * SAVE NORMALIZED STATE
-         * ------------------------------------------------
-         */
-
-        await AsyncStorage.setItem(
-          missionStorageKey,
-          JSON.stringify(
-            loadedMissions
-          )
-        );
-      } catch (error) {
-        console.warn(
-          '[MISSIONS] Could not load missions:',
-          error
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [getTodayKey]
+  return (
+    today.getFullYear() +
+    '-' +
+    String(today.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(today.getDate()).padStart(2, '0')
   );
+}, []);
 
-  /*
-   * ----------------------------------------------------
-   * INITIAL LOAD
-   * ----------------------------------------------------
-   */
+/*
+ * ----------------------------------------------------
+ * LOAD MISSIONS FROM SUPABASE
+ * ----------------------------------------------------
+ */
+
+const loadMissions = useCallback(async () => {
+  try {
+    setLoading(true);
+
+    const todayKey = getTodayKey();
+
+    const {
+      data: {
+        user,
+      },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { data: missionRows, error: missionError } =
+      await supabase
+        .from('missions')
+        .select(
+          'id, title, description, target_steps, reward_points, active'
+        )
+        .eq('active', true)
+        .in('id', [4, 5, 6, 7])
+        .order('id', { ascending: true });
+
+    if (missionError) {
+      throw missionError;
+    }
+
+    const { data: userMissionRows, error: userMissionError } =
+      await supabase
+        .from('user_missions')
+        .select('mission_id, progress, completed, completed_at')
+        .eq('user_id', user.id)
+        .eq('mission_date', todayKey);
+
+    if (userMissionError) {
+      throw userMissionError;
+    }
+
+    const userMissionMap = new Map(
+      (userMissionRows ?? []).map(row => [
+        Number(row.mission_id),
+        row,
+      ])
+    );
+
+    const backendMissions: Mission[] = (missionRows ?? []).map(row => {
+      const missionId = Number(row.id);
+      const userMission = userMissionMap.get(missionId);
+
+      let icon: keyof typeof Ionicons.glyphMap = 'flag-outline';
+      let action = 'MARK DONE';
+
+      if (missionId === 4) {
+        icon = 'walk-outline';
+        action = 'OPEN WALK';
+      } else if (missionId === 5) {
+        icon = 'water-outline';
+        action = 'MARK DONE';
+      } else if (missionId === 6) {
+        icon = 'heart-outline';
+        action = 'OPEN HEALTH';
+      } else if (missionId === 7) {
+        icon = 'flame-outline';
+        action = 'CLAIM STREAK';
+      }
+
+      return {
+        id: String(missionId),
+        icon,
+        title: row.title,
+        description: row.description,
+        points: Number(row.reward_points) || 0,
+        action,
+        completed: userMission?.completed === true,
+      };
+    });
+
+    /*
+     * Points history remains the source of truth for rewards while
+     * the user_missions table becomes the persistent daily state.
+     * This also lets the existing Walk and Health flows synchronize
+     * their completion into Supabase when this screen is opened.
+     */
+
+    const walkingCompleted = await hasTransaction(
+      'walking_mission',
+      `walking_mission_${todayKey}`
+    );
+
+    const waterCompleted = await hasTransaction(
+      'water_mission',
+      `water_mission_${todayKey}`
+    );
+
+    const healthCompleted = await hasTransaction(
+      'health_checkin',
+      `health_checkin_${todayKey}`
+    );
+
+    const streakCompleted = await hasTransaction(
+      'streak_mission',
+      `streak_mission_${todayKey}`
+    );
+
+    const completionByMissionId: Record<string, boolean> = {
+      '4': walkingCompleted,
+      '5': waterCompleted,
+      '6': healthCompleted,
+      '7': streakCompleted,
+    };
+
+    const loadedMissions = backendMissions.map(mission => ({
+      ...mission,
+      completed:
+        mission.completed ||
+        completionByMissionId[mission.id] === true,
+    }));
+
+    /*
+     * Synchronize completion detected from the existing reward
+     * transactions into the new daily backend state.
+     */
+    const rowsToSync = loadedMissions
+      .filter(mission => mission.completed)
+      .map(mission => ({
+        user_id: user.id,
+        mission_id: Number(mission.id),
+        mission_date: todayKey,
+        progress: 1,
+        completed: true,
+        completed_at:
+          userMissionMap.get(Number(mission.id))?.completed_at ??
+          new Date().toISOString(),
+      }));
+
+    if (rowsToSync.length > 0) {
+      const { error: syncError } = await supabase
+        .from('user_missions')
+        .upsert(rowsToSync, {
+          onConflict: 'user_id,mission_id,mission_date',
+        });
+
+      if (syncError) {
+        console.warn(
+          '[MISSIONS] Could not synchronize mission state:',
+          syncError
+        );
+      }
+    }
+
+    setMissions(loadedMissions);
+
+    const currentPoints = await getPoints();
+
+    setPoints(
+      Number.isFinite(currentPoints)
+        ? Math.max(0, Math.round(currentPoints))
+        : 0
+    );
+  } catch (error) {
+    console.warn(
+      '[MISSIONS] Could not load missions:',
+      error
+    );
+  } finally {
+    setLoading(false);
+  }
+}, [getTodayKey]);
+
+/*
+ * ----------------------------------------------------
+ * INITIAL LOAD
+ * ----------------------------------------------------
+ */
 
   useEffect(() => {
     loadMissions();
@@ -360,37 +320,53 @@ export default function MissionsScreen() {
     }, [loadMissions])
   );
 
-  /*
-   * ----------------------------------------------------
-   * SAVE MISSIONS
-   * ----------------------------------------------------
-   */
+/*
+ * ----------------------------------------------------
+ * SAVE MISSION STATE
+ * ----------------------------------------------------
+ */
 
-  const saveMissions =
-    useCallback(
-      async (
-        updatedMissions: Mission[]
-      ) => {
-        try {
-          await AsyncStorage.setItem(
-            getMissionStorageKey(),
-            JSON.stringify(
-              updatedMissions
-            )
-          );
-        } catch (error) {
-          console.warn(
-            '[MISSIONS] Could not save missions:',
-            error
-          );
-        }
+const saveMissionState = useCallback(
+  async (missionId: string, completed: boolean) => {
+    const {
+      data: {
+        user,
       },
-      [getMissionStorageKey]
-    );
+    } = await supabase.auth.getUser();
 
-  /*
-   * ----------------------------------------------------
-   * COMPLETE DIRECT MISSION
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { error } = await supabase
+      .from('user_missions')
+      .upsert(
+        {
+          user_id: user.id,
+          mission_id: Number(missionId),
+          mission_date: getTodayKey(),
+          progress: completed ? 1 : 0,
+          completed,
+          completed_at: completed
+            ? new Date().toISOString()
+            : null,
+        },
+        {
+          onConflict:
+            'user_id,mission_id,mission_date',
+        }
+      );
+
+    if (error) {
+      throw error;
+    }
+  },
+  [getTodayKey]
+);
+
+/*
+ * ----------------------------------------------------
+ * COMPLETE DIRECT MISSION
    * ----------------------------------------------------
    *
    * Only Water and Streak are completed here.
@@ -429,8 +405,8 @@ export default function MissionsScreen() {
         }
 
         if (
-          missionId !== 'water' &&
-          missionId !== 'streak'
+          missionId !== '5' &&
+          missionId !== '7'
         ) {
           return;
         }
@@ -445,7 +421,7 @@ export default function MissionsScreen() {
          */
 
         if (
-          missionId === 'streak'
+          missionId === '7'
         ) {
           const walkingCompleted =
             await hasTransaction(
@@ -483,42 +459,54 @@ export default function MissionsScreen() {
         );
 
         try {
-          let transactionType =
-            '';
+          /*
+           * First persist today's completion using the same
+           * device-local date used throughout the missions screen.
+           *
+           * The server reward RPC requires this completed row
+           * to exist before it will award points.
+           */
+          await saveMissionState(
+            missionId,
+            true
+          );
 
-          let transactionKey =
-            '';
+          /*
+           * Secure daily mission reward.
+           *
+           * Points are awarded by the Supabase SECURITY DEFINER
+           * function, not by the client-side points system.
+           *
+           * The transaction key inside the RPC makes the reward
+           * idempotent, so a retry cannot award the same mission
+           * twice.
+           */
+          const {
+            data: rewardResult,
+            error: rewardError,
+          } = await supabase.rpc(
+            'award_daily_mission_reward',
+            {
+              p_mission_id:
+                Number(missionId),
+              p_mission_date:
+                todayKey,
+            }
+          );
 
-          if (
-            missionId ===
-            'water'
-          ) {
-            transactionType =
-              'water_mission';
-
-            transactionKey =
-              `water_mission_${todayKey}`;
+          if (rewardError) {
+            throw rewardError;
           }
 
-          if (
-            missionId ===
-            'streak'
-          ) {
-            transactionType =
-              'streak_mission';
-
-            transactionKey =
-              `streak_mission_${todayKey}`;
-          }
-
-          const result =
-            await awardOnce(
-              transactionType,
-              transactionKey,
-              mission.points,
-              mission.title,
-              transactionKey
-            );
+          const result = {
+            awarded:
+              rewardResult?.already_awarded !==
+              true,
+            balance:
+              Number(
+                rewardResult?.balance ?? 0
+              ),
+          };
 
           setPoints(
             result.balance
@@ -538,10 +526,6 @@ export default function MissionsScreen() {
             );
 
           setMissions(
-            updatedMissions
-          );
-
-          await saveMissions(
             updatedMissions
           );
 
@@ -588,7 +572,7 @@ export default function MissionsScreen() {
         getTodayKey,
         missions,
         router,
-        saveMissions,
+        saveMissionState,
       ]
     );
 
@@ -615,7 +599,7 @@ export default function MissionsScreen() {
         }
 
         if (
-          mission.id === 'walk'
+          mission.id === '4'
         ) {
           router.push(
             '/walking'
@@ -626,7 +610,7 @@ export default function MissionsScreen() {
 
         if (
           mission.id ===
-          'health'
+          '6'
         ) {
           router.push(
             '/health-topic?mission=health'
@@ -1559,7 +1543,7 @@ export default function MissionsScreen() {
               styles.footerText
             }
           >
-            WALK ΓÇó EARN ΓÇó IMPROVE ΓÇó REPEAT
+            WALK Î“Ã‡Ã³ EARN Î“Ã‡Ã³ IMPROVE Î“Ã‡Ã³ REPEAT
           </Text>
         </View>
       </ScrollView>
