@@ -13,6 +13,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { getPoints } from '../lib/points';
+import { supabase } from '../lib/supabase';
+import { completeStreakDay } from '../lib/streak';
 
 type DayData = {
   day: string;
@@ -419,7 +421,7 @@ export default function WalkingScreen() {
        * check fires without awarding +25 twice.
        */
       /* Persist the completed Streak mission first. The secure reward RPC requires this backend record. */
-      const { data: { streakUser } } = await supabase.auth.getUser();
+      const { data: { user: streakUser } } = await supabase.auth.getUser();
       if (!streakUser) throw new Error('No authenticated streakUser');
       const { error: streakMissionSaveError } = await supabase.from('user_missions').upsert({ user_id:streakUser.id, mission_id:7, mission_date:todayKey, progress:1, completed:true, completed_at:new Date().toISOString() }, { onConflict:'user_id,mission_id,mission_date' });
       if (streakMissionSaveError) throw streakMissionSaveError;
