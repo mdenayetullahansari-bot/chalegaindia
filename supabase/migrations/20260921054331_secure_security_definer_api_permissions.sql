@@ -8,7 +8,7 @@ revoke all
   from public, anon;
 
 grant execute
-  on function public.get_competion_leaderboard(uuid, date)
+  on function public.get_competition_leaderboard(uuid, date)
   to authenticated, service_role;
 revoke all
   on function public.get_ward_competition_leaderboard(uuid)
