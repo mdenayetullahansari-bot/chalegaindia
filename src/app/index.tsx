@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { getPoints } from '@/lib/points';
+
 import { BRAND } from '@/lib/brand';
 
 const getLocalDateKey = () => {
@@ -114,7 +114,7 @@ export default function HomeScreen() {
           .order('step_date', { ascending: false }),
         supabase
           .from('profiles')
-          .select('daily_step_goal')
+          .select('daily_step_goal, points')
           .eq('id', user.id)
           .maybeSingle(),
         supabase
@@ -184,8 +184,7 @@ export default function HomeScreen() {
         setLastCheckInDate('');
       }
 
-      const storedPoints = await getPoints();
-      setPoints(storedPoints);
+      setPoints(Math.max(0, Number(profile?.points) || 0));
 
       const { data: missionRows, error: missionError } = await supabase
         .from('daily_steps')

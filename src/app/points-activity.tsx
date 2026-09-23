@@ -18,11 +18,20 @@ import {
   useRouter,
 } from 'expo-router';
 
-import {
-  getPoints,
-  getPointsHistory,
-  type PointsTransaction,
-} from '../lib/points';
+import { supabase } from '../lib/supabase';
+
+type PointsTransaction = {
+  id: string;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  transaction_key: string;
+  description: string;
+  created_at: string;
+  title: string;
+  type: string;
+  timestamp: string;
+};
 
 import {
   formatLocalDateTime,
@@ -52,20 +61,61 @@ export default function PointsActivityScreen() {
       try {
         setLoading(true);
 
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user) {
+          throw new Error(
+            'Please sign in to view your Chalega Points activity.'
+          );
+        }
+
         const [
-          currentPoints,
-          currentHistory,
+          { data: profile, error: profileError },
+          { data: transactions, error: transactionsError },
         ] = await Promise.all([
-          getPoints(),
-          getPointsHistory(),
+          supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', user.id)
+            .single(),
+          supabase.rpc('get_my_points_transactions'),
         ]);
 
+        if (profileError) throw profileError;
+        if (transactionsError) throw transactionsError;
+
         setPoints(
-          currentPoints
+          Math.max(0, Number(profile?.points) || 0)
         );
 
+        const serverHistory = (transactions ?? []) as Array<{
+          id: string;
+          amount: number;
+          balance_after: number;
+          transaction_type: string;
+          transaction_key: string;
+          description: string;
+          created_at: string;
+        }>;
+
         setHistory(
-          currentHistory
+          serverHistory.map(item => ({
+            ...item,
+            title:
+              item.transaction_type === 'health_checkin'
+                ? 'Health Check-in'
+                : item.transaction_type === 'reward_redemption'
+                  ? 'Reward Redeemed'
+                  : item.transaction_type === 'competition_reward'
+                    ? 'Competition Reward'
+                    : item.description,
+            type: item.transaction_type,
+            timestamp: item.created_at,
+          }))
         );
       } catch (error) {
         console.log(

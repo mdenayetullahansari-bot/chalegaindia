@@ -23,13 +23,30 @@ import {
   useRouter,
 } from 'expo-router';
 
-import {
-  getPoints,
-  hasTransaction,
-} from '../lib/points';
-
 import { BRAND } from '../lib/brand';
 import { supabase } from '../lib/supabase';
+
+async function hasServerTransaction(
+  transactionType: string,
+  transactionKey: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc(
+    'get_my_points_transactions'
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).some(
+    (transaction: {
+      transaction_type: string | null;
+      transaction_key: string | null;
+    }) =>
+      transaction.transaction_type === transactionType &&
+      transaction.transaction_key === transactionKey
+  );
+}
 
 type Mission = {
   id: string;
@@ -213,22 +230,22 @@ const loadMissions = useCallback(async () => {
      * their completion into Supabase when this screen is opened.
      */
 
-    const walkingCompleted = await hasTransaction(
+    const walkingCompleted = await hasServerTransaction(
       'walking_mission',
       `walking_mission_${todayKey}`
     );
 
-    const waterCompleted = await hasTransaction(
+    const waterCompleted = await hasServerTransaction(
       'water_mission',
       `water_mission_${todayKey}`
     );
 
-    const healthCompleted = await hasTransaction(
+    const healthCompleted = await hasServerTransaction(
       'health_checkin',
       `health_checkin_${todayKey}`
     );
 
-    const streakCompleted = await hasTransaction(
+    const streakCompleted = await hasServerTransaction(
       'streak_mission',
       `streak_mission_${todayKey}`
     );
@@ -281,7 +298,19 @@ const loadMissions = useCallback(async () => {
 
     setMissions(loadedMissions);
 
-    const currentPoints = await getPoints();
+    const { data: walletProfile, error: walletError } = await supabase
+        .from('profiles')
+        .select('points')
+        .single();
+
+      if (walletError) {
+        throw walletError;
+      }
+
+      const currentPoints = Math.max(
+        0,
+        Math.round(Number(walletProfile?.points) || 0)
+      );
 
     setPoints(
       Number.isFinite(currentPoints)
@@ -424,7 +453,7 @@ const saveMissionState = useCallback(
           missionId === '7'
         ) {
           const walkingCompleted =
-            await hasTransaction(
+            await hasServerTransaction(
               'walking_mission',
               `walking_mission_${todayKey}`
             );

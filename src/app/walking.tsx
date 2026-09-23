@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { getPoints } from '../lib/points';
+
 import { supabase } from '../lib/supabase';
 import { completeStreakDay } from '../lib/streak';
 
@@ -105,7 +105,7 @@ export default function WalkingScreen() {
    *
    * IMPORTANT:
    * data.points is intentionally NOT used as the wallet.
-   * The wallet always comes from getPoints().
+   * The wallet always comes from the server profile.
    */
   const loadWalkingData = async () => {
     try {
@@ -206,8 +206,10 @@ export default function WalkingScreen() {
         }
       }
 
-      const currentPoints = await getPoints();
-      setPoints(currentPoints);
+      const { data: walletProfile, error: walletError } = await supabase.from('profiles').select('points').single();
+      if (!walletError) {
+        setPoints(Math.max(0, Number(walletProfile?.points ?? 0)));
+      }
     } catch (error) {
       console.log(
         'Could not load walking data:',
@@ -228,8 +230,10 @@ export default function WalkingScreen() {
   useEffect(() => {
     const refreshPoints = async () => {
       try {
-        const currentPoints = await getPoints();
-        setPoints(currentPoints);
+        const { data: walletProfile, error: walletError } = await supabase.from('profiles').select('points').single();
+        if (!walletError) {
+          setPoints(Math.max(0, Number(walletProfile?.points ?? 0)));
+        }
       } catch (error) {
         console.log(
           'Could not refresh Chalega Points:',

@@ -81,7 +81,6 @@ export default function OrdersScreen() {
         .select(
           'id, order_id, customer_name, customer_phone, address, area, pin, products, total, delivery, status, created_at'
         )
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

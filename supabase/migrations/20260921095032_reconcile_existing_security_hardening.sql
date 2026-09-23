@@ -1,0 +1,1 @@
+-- Reconciliation migration. The corresponding security hardening is already present in the production database. No schema changes are performed here.
