@@ -277,7 +277,7 @@ export default function CustomerOrdersScreen() {
               </Text>
 
               <Text style={styles.introText}>
-                Track your Chalega India orders
+                Track your Chalega orders
                 anytime.
               </Text>
             </View>
