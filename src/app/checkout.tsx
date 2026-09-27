@@ -1191,7 +1191,7 @@ export default function CheckoutScreen() {
                 >
                   Your payment is processed
                   securely through Razorpay.
-                  Chalega India verifies
+                  Chalega verifies
                   the payment before
                   confirming your order.
                 </Text>
