@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { getMyReferralCode } from '@/services/referralService';
@@ -56,11 +57,20 @@ export default function ReferralScreen() {
     }
 
     try {
+      const referralLink = Linking.createURL('/auth', {
+        queryParams: {
+          ref: referralCode,
+        },
+      });
+
       await Share.share({
         message:
-          `Join me on Chalega Kolkata — walk, compete and connect.\n\n` +
-          `Use my referral code: ${referralCode}\n\n` +
-          `Chalega Kolkata`,
+          'Join me on Chalega Kolkata - walk, compete and connect.\n\n' +
+          'Join using my referral link:\n' +
+          referralLink +
+          '\n\nReferral code: ' +
+          referralCode +
+          '\n\nChalega Kolkata',
       });
     } catch (error) {
       console.log('Referral sharing failed:', error);
