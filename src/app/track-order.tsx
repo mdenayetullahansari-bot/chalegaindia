@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -265,7 +266,7 @@ export default function TrackOrderScreen() {
 
           <View>
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -691,11 +692,11 @@ export default function TrackOrderScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footer}>
-          CHALEGA INDIA 🇮🇳
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
-          Chalo Health Banaye
+          MOVE PEOPLE • HEALTHY COMMUNITIES
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -705,7 +706,7 @@ export default function TrackOrderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -737,7 +738,7 @@ const styles = StyleSheet.create({
   },
 
   notFoundTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 28,
     fontWeight: '900',
     marginTop: 15,
@@ -751,7 +752,7 @@ const styles = StyleSheet.create({
   },
 
   backToShopButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingHorizontal: 30,
     paddingVertical: 16,
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
   },
 
   backToShopText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -774,34 +775,34 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
   },
 
   backText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 42,
     lineHeight: 46,
   },
 
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   title: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 34,
     fontWeight: '900',
     marginTop: 2,
   },
 
   heroCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 27,
     padding: 25,
     alignItems: 'center',
@@ -811,7 +812,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -821,7 +822,7 @@ const styles = StyleSheet.create({
   },
 
   heroTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 25,
     fontWeight: '900',
     textAlign: 'center',
@@ -837,7 +838,7 @@ const styles = StyleSheet.create({
   },
 
   orderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     padding: 21,
     alignItems: 'center',
@@ -852,7 +853,7 @@ const styles = StyleSheet.create({
   },
 
   orderNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 27,
     fontWeight: '900',
     marginTop: 6,
@@ -866,7 +867,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 22,
     fontWeight: '900',
     marginTop: 25,
@@ -874,7 +875,7 @@ const styles = StyleSheet.create({
   },
 
   timeline: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 20,
   },
@@ -888,7 +889,7 @@ const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 22,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -897,7 +898,7 @@ const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 2,
     borderColor: '#D6DADF',
     alignItems: 'center',
@@ -905,7 +906,7 @@ const styles = StyleSheet.create({
   },
 
   circleActiveText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -922,7 +923,7 @@ const styles = StyleSheet.create({
   },
 
   timelineTitleActive: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -951,13 +952,13 @@ const styles = StyleSheet.create({
   lineActive: {
     width: 2,
     height: 25,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     marginLeft: 20,
     marginVertical: 3,
   },
 
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 17,
   },
@@ -972,7 +973,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 14,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -987,7 +988,7 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -999,7 +1000,7 @@ const styles = StyleSheet.create({
   },
 
   productTotal: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1023,19 +1024,19 @@ const styles = StyleSheet.create({
   },
 
   totalLabel: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 13,
     fontWeight: '900',
   },
 
   totalAmount: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 24,
     fontWeight: '900',
   },
 
   deliveryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 21,
     padding: 18,
     flexDirection: 'row',
@@ -1053,7 +1054,7 @@ const styles = StyleSheet.create({
   },
 
   deliveryTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1065,7 +1066,7 @@ const styles = StyleSheet.create({
   },
 
   refreshButton: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 17,
     paddingVertical: 16,
     alignItems: 'center',
@@ -1073,13 +1074,13 @@ const styles = StyleSheet.create({
   },
 
   refreshButtonText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
   },
 
   shopButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingVertical: 17,
     alignItems: 'center',
@@ -1087,13 +1088,13 @@ const styles = StyleSheet.create({
   },
 
   shopButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
 
   footer: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 3,
