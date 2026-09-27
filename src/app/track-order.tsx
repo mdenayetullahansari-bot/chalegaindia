@@ -662,7 +662,7 @@ export default function TrackOrderScreen() {
             </Text>
 
             <Text style={styles.deliveryText}>
-              Chalega India delivery
+              Chalega delivery
             </Text>
           </View>
         </View>
