@@ -30,6 +30,8 @@ import {
   subscribeToGuestMode,
 } from '@/lib/guest-session';
 
+import { BRAND } from '@/lib/brand';
+
 export default function RootLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
@@ -48,12 +50,6 @@ export default function RootLayout() {
     guestMode,
     setGuestMode,
   ] = useState(false);
-
-  /*
-   * ----------------------------------------------------
-   * LOAD SUPABASE SESSION
-   * ----------------------------------------------------
-   */
 
   useEffect(() => {
     let mounted = true;
@@ -115,12 +111,6 @@ export default function RootLayout() {
     };
   }, []);
 
-  /*
-   * ----------------------------------------------------
-   * LOADING
-   * ----------------------------------------------------
-   */
-
   if (loading) {
     return (
       <View
@@ -130,17 +120,11 @@ export default function RootLayout() {
       >
         <ActivityIndicator
           size="large"
-          color="#1976F3"
+          color={BRAND.teal}
         />
       </View>
     );
   }
-
-  /*
-   * ----------------------------------------------------
-   * NOT LOGGED IN
-   * ----------------------------------------------------
-   */
 
   if (
     !session &&
@@ -153,12 +137,6 @@ export default function RootLayout() {
       />
     );
   }
-
-  /*
-   * ----------------------------------------------------
-   * AUTH SCREEN
-   * ----------------------------------------------------
-   */
 
   if (
     !session &&
@@ -185,23 +163,6 @@ export default function RootLayout() {
     );
   }
 
-  /*
-   * ----------------------------------------------------
-   * MAIN CHALEGA INDIA NAVIGATION
-   * ----------------------------------------------------
-   *
-   * ONLY THESE FIVE ARE MAIN TABS:
-   *
-   * Home
-   * Walk
-   * Health
-   * Shop
-   * More
-   *
-   * Every other screen automatically hides
-   * the bottom tab bar.
-   */
-
   const isMainTab =
     pathname === '/' ||
     pathname === '/walking' ||
@@ -215,10 +176,10 @@ export default function RootLayout() {
         headerShown: false,
 
         tabBarActiveTintColor:
-          '#1976F3',
+          BRAND.teal,
 
         tabBarInactiveTintColor:
-          '#888888',
+          BRAND.muted,
 
         tabBarStyle: isMainTab
           ? {
@@ -233,6 +194,12 @@ export default function RootLayout() {
                   8,
                   insets.bottom
                 ),
+
+              backgroundColor:
+                BRAND.white,
+
+              borderTopColor:
+                BRAND.line,
             }
           : {
               display: 'none',
@@ -247,11 +214,6 @@ export default function RootLayout() {
           true,
       }}
     >
-
-      {/* =================================================
-       * MAIN TAB ΓÇö HOME
-       * ================================================= */}
-
       <Tabs.Screen
         name="index"
         options={{
@@ -269,10 +231,6 @@ export default function RootLayout() {
           ),
         }}
       />
-
-      {/* =================================================
-       * MAIN TAB ΓÇö WALK
-       * ================================================= */}
 
       <Tabs.Screen
         name="walking"
@@ -292,10 +250,6 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * MAIN TAB ΓÇö HEALTH
-       * ================================================= */}
-
       <Tabs.Screen
         name="explore"
         options={{
@@ -313,10 +267,6 @@ export default function RootLayout() {
           ),
         }}
       />
-
-      {/* =================================================
-       * MAIN TAB ΓÇö SHOP
-       * ================================================= */}
 
       <Tabs.Screen
         name="shop"
@@ -336,10 +286,6 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * MAIN TAB ΓÇö MORE
-       * ================================================= */}
-
       <Tabs.Screen
         name="more"
         options={{
@@ -358,20 +304,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö PROFILE
-       * ================================================= */}
-
       <Tabs.Screen
         name="profile"
         options={{
           tabBarButton: () => null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö PROFILE SETTINGS
-       * ================================================= */}
 
       <Tabs.Screen
         name="profile-settings"
@@ -380,22 +318,12 @@ export default function RootLayout() {
         }}
       />
 
-
-
-      {/* =================================================
-       * HIDDEN ΓÇö REWARDS
-       * ================================================= */}
-
       <Tabs.Screen
         name="rewards"
         options={{
           href: null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö POINTS ACTIVITY
-       * ================================================= */}
 
       <Tabs.Screen
         name="points-activity"
@@ -404,20 +332,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö MISSIONS
-       * ================================================= */}
-
       <Tabs.Screen
         name="missions"
         options={{
           href: null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö PRODUCT
-       * ================================================= */}
 
       <Tabs.Screen
         name="product"
@@ -426,26 +346,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö CHECKOUT
-       * ================================================= */}
-
       <Tabs.Screen
         name="checkout"
         options={{
           href: null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö CHECKOUT BACKUP
-       * ================================================= */}
-
-
-
-      {/* =================================================
-       * HIDDEN ΓÇö ORDER CONFIRMED
-       * ================================================= */}
 
       <Tabs.Screen
         name="order-confirmed"
@@ -454,20 +360,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö TRACK ORDER
-       * ================================================= */}
-
       <Tabs.Screen
         name="track-order"
         options={{
           href: null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö ORDERS
-       * ================================================= */}
 
       <Tabs.Screen
         name="orders"
@@ -476,20 +374,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö CUSTOMER ORDERS
-       * ================================================= */}
-
       <Tabs.Screen
         name="customer-orders"
         options={{
           href: null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö HEALTH TOPIC
-       * ================================================= */}
 
       <Tabs.Screen
         name="health-topic"
@@ -498,20 +388,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö DAILY HEALTH CHECK-IN
-       * ================================================= */}
-
       <Tabs.Screen
         name="daily-health-checkin"
         options={{
           href: null,
         }}
       />
-
-      {/* =================================================
-       * HIDDEN ΓÇö ENTALLY
-       * ================================================= */}
 
       <Tabs.Screen
         name="entally"
@@ -520,10 +402,6 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö AUTH
-       * ================================================= */}
-
       <Tabs.Screen
         name="auth"
         options={{
@@ -531,38 +409,21 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN ΓÇö KMC WARD FINDER
-       * ================================================= */}
-
       <Tabs.Screen
         name="kmc-ward"
         options={{
           href: null,
         }}
       />
-
     </Tabs>
   );
 }
 
-/*
- * ======================================================
- * STYLES
- * ======================================================
- */
-
 const styles = {
   loadingContainer: {
     flex: 1,
-
-    justifyContent:
-      'center' as const,
-
-    alignItems:
-      'center' as const,
-
-    backgroundColor:
-      '#F5F7FB',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: BRAND.midnight,
   },
 };
