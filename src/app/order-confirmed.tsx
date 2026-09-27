@@ -70,7 +70,7 @@ export default function OrderConfirmedScreen() {
         </Text>
 
         <Text style={styles.subtitle}>
-          Thank you for choosing Chalega India.
+          Thank you for choosing Chalega.
         </Text>
 
         {customerName ? (
