@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, {
   useCallback,
   useEffect,
@@ -234,7 +235,7 @@ export default function PointsActivityScreen() {
                 styles.brand
               }
             >
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text
@@ -579,7 +580,7 @@ export default function PointsActivityScreen() {
               styles.footerBrand
             }
           >
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text
@@ -587,7 +588,7 @@ export default function PointsActivityScreen() {
               styles.footerText
             }
           >
-            Chalo Health Banaye
+            MOVE PEOPLE • HEALTHY COMMUNITIES
           </Text>
         </View>
       </ScrollView>
@@ -606,7 +607,7 @@ const styles =
     container: {
       flex: 1,
       backgroundColor:
-        '#F4F7FB',
+        BRAND.cream,
     },
 
     content: {
@@ -629,7 +630,7 @@ const styles =
       height: 46,
       borderRadius: 16,
       backgroundColor:
-        '#FFFFFF',
+        BRAND.white,
       alignItems:
         'center',
       justifyContent:
@@ -637,7 +638,7 @@ const styles =
     },
 
     backText: {
-      color: '#1677FF',
+      color: BRAND.teal,
       fontSize: 38,
       lineHeight: 42,
       fontWeight: '600',
@@ -655,7 +656,7 @@ const styles =
     },
 
     brand: {
-      color: '#1677FF',
+      color: BRAND.teal,
       fontSize: 10,
       fontWeight: '900',
       letterSpacing: 4,
@@ -663,14 +664,14 @@ const styles =
     },
 
     headerTitle: {
-      color: '#111111',
+      color: BRAND.ink,
       fontSize: 25,
       fontWeight: '900',
     },
 
     walletCard: {
       backgroundColor:
-        '#1677FF',
+        BRAND.teal,
       borderRadius: 30,
       paddingVertical: 30,
       paddingHorizontal: 20,
@@ -680,7 +681,7 @@ const styles =
     },
 
     walletLabel: {
-      color: '#FFFFFF',
+      color: BRAND.white,
       fontSize: 10,
       fontWeight: '900',
       letterSpacing: 2,
@@ -688,14 +689,14 @@ const styles =
     },
 
     walletPoints: {
-      color: '#FFFFFF',
+      color: BRAND.white,
       fontSize: 54,
       lineHeight: 60,
       fontWeight: '900',
     },
 
     walletSub: {
-      color: '#FFFFFF',
+      color: BRAND.white,
       fontSize: 10,
       fontWeight: '900',
       letterSpacing: 2,
@@ -711,14 +712,14 @@ const styles =
     summaryCard: {
       flex: 1,
       backgroundColor:
-        '#FFFFFF',
+        BRAND.white,
       borderRadius: 22,
       padding: 18,
       minHeight: 112,
     },
 
     summaryIcon: {
-      color: '#1677FF',
+      color: BRAND.teal,
       fontSize: 22,
       fontWeight: '900',
       marginBottom: 5,
@@ -732,14 +733,14 @@ const styles =
     },
 
     earnedValue: {
-      color: '#168A43',
+      color: BRAND.green,
       fontSize: 22,
       fontWeight: '900',
       marginTop: 4,
     },
 
     spentValue: {
-      color: '#D64545',
+      color: '#B23A48',
       fontSize: 22,
       fontWeight: '900',
       marginTop: 4,
@@ -756,20 +757,20 @@ const styles =
     },
 
     sectionTitle: {
-      color: '#111111',
+      color: BRAND.ink,
       fontSize: 19,
       fontWeight: '900',
     },
 
     activityCount: {
-      color: '#1677FF',
+      color: BRAND.teal,
       fontSize: 11,
       fontWeight: '800',
     },
 
     activityCard: {
       backgroundColor:
-        '#FFFFFF',
+        BRAND.white,
       borderRadius: 24,
       paddingHorizontal: 16,
       overflow: 'hidden',
@@ -818,11 +819,11 @@ const styles =
     },
 
     positiveText: {
-      color: '#168A43',
+      color: BRAND.green,
     },
 
     negativeText: {
-      color: '#D64545',
+      color: '#B23A48',
     },
 
     activityMiddle: {
@@ -831,7 +832,7 @@ const styles =
     },
 
     activityTitle: {
-      color: '#111111',
+      color: BRAND.ink,
       fontSize: 14,
       fontWeight: '900',
       marginBottom: 3,
@@ -865,11 +866,11 @@ const styles =
     },
 
     positiveAmount: {
-      color: '#168A43',
+      color: BRAND.green,
     },
 
     negativeAmount: {
-      color: '#D64545',
+      color: '#B23A48',
     },
 
     empty: {
@@ -888,7 +889,7 @@ const styles =
     },
 
     emptyTitle: {
-      color: '#111111',
+      color: BRAND.ink,
       fontSize: 18,
       fontWeight: '900',
       marginBottom: 8,
@@ -906,18 +907,18 @@ const styles =
       borderRadius: 18,
       borderWidth: 2,
       borderColor:
-        '#1677FF',
+        BRAND.teal,
       alignItems:
         'center',
       justifyContent:
         'center',
       marginTop: 20,
       backgroundColor:
-        '#FFFFFF',
+        BRAND.white,
     },
 
     backToRewardsText: {
-      color: '#1677FF',
+      color: BRAND.teal,
       fontSize: 13,
       fontWeight: '900',
       letterSpacing: 0.4,
@@ -930,7 +931,7 @@ const styles =
     },
 
     footerBrand: {
-      color: '#1677FF',
+      color: BRAND.teal,
       fontSize: 13,
       fontWeight: '900',
       letterSpacing: 5,
@@ -957,7 +958,7 @@ const styles =
     },
 
     loadingTitle: {
-      color: '#111111',
+      color: BRAND.ink,
       fontSize: 18,
       fontWeight: '900',
     },
