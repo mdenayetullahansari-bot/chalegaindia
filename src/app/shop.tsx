@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, {
   useCallback,
   useEffect,
@@ -1253,7 +1254,7 @@ export default function ShopScreen() {
         </View>
 
         <Text style={styles.footer}>
-          C H A L E G A  I N D I A 🇮🇳
+          CHALEGA KOLKATA
         </Text>
       </ScrollView>
 
@@ -1307,7 +1308,7 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -1315,7 +1316,7 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    backgroundColor: '#123B2A',
+    backgroundColor: BRAND.midnight,
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 22,
@@ -1334,14 +1335,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#E9F6EE',
+    backgroundColor: BRAND.greenLight,
   },
 
   heroBadgeText: {
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   cartButton: {
@@ -1413,7 +1414,7 @@ const styles = StyleSheet.create({
   heroPromiseTitle: {
     fontSize: 12,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
     letterSpacing: 0.5,
   },
 
@@ -1519,8 +1520,8 @@ const styles = StyleSheet.create({
   },
 
   categorySelected: {
-    backgroundColor: '#EAF6EE',
-    borderColor: '#2FA84F',
+    backgroundColor: BRAND.greenLight,
+    borderColor: BRAND.green,
   },
 
   categoryEmoji: {
@@ -1656,7 +1657,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 7,
-    backgroundColor: '#E8F5EB',
+    backgroundColor: BRAND.greenLight,
   },
 
   seasonBadgeText: {
@@ -1697,7 +1698,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   addButton: {
@@ -1705,7 +1706,7 @@ const styles = StyleSheet.create({
     height: 34,
     paddingHorizontal: 10,
     borderRadius: 11,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1734,7 +1735,7 @@ const styles = StyleSheet.create({
   miniButtonText: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#1D6FF2',
+    color: BRAND.teal,
   },
 
   miniNumber: {
@@ -1778,7 +1779,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     padding: 18,
     borderRadius: 20,
-    backgroundColor: '#123B2A',
+    backgroundColor: BRAND.midnight,
   },
 
   footerTitle: {
@@ -1811,7 +1812,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderRadius: 18,
-    backgroundColor: '#123B2A',
+    backgroundColor: BRAND.midnight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1858,7 +1859,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 34,
     lineHeight: 38,
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   headerCenter: {
@@ -1891,7 +1892,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 15,
     borderRadius: 18,
-    backgroundColor: '#EAF6EE',
+    backgroundColor: BRAND.greenLight,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -2007,7 +2008,7 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1D6FF2',
+    color: BRAND.teal,
   },
 
   quantityNumber: {
@@ -2088,7 +2089,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   checkoutButton: {
@@ -2097,7 +2098,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
     paddingHorizontal: 18,
     borderRadius: 17,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -2151,7 +2152,7 @@ const styles = StyleSheet.create({
     minHeight: 46,
     paddingHorizontal: 18,
     borderRadius: 13,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
