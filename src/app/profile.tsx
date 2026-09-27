@@ -248,7 +248,7 @@ export default function ProfileScreen() {
       >
         <ActivityIndicator
           size="large"
-          color="#1D6FF2"
+          color="#00D1A7"
         />
 
         <Text style={styles.loadingText}>
@@ -271,7 +271,7 @@ export default function ProfileScreen() {
             <Ionicons
               name="person-outline"
               size={38}
-              color="#1D6FF2"
+              color="#00D1A7"
             />
           </View>
 
@@ -575,7 +575,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="footsteps-outline"
                 size={24}
-                color="#1D6FF2"
+                color="#00D1A7"
               />
             </View>
 
