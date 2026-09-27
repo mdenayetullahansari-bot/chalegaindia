@@ -356,7 +356,7 @@ export default function MoreScreen() {
           <TouchableOpacity
             style={styles.partnerButton}
             onPress={() =>
-              showComingSoon('Health Partner Program')
+              goTo('/partner')
             }
             activeOpacity={0.85}
           >

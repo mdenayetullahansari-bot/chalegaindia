@@ -778,12 +778,7 @@ export default function RewardsScreen() {
 
           <TouchableOpacity
             style={styles.sponsorButton}
-            onPress={() =>
-              Alert.alert(
-                'Chalega Partners',
-                'The partner marketplace is coming next.'
-              )
-            }
+            onPress={() => router.push('/partner')}
           >
             <Text style={styles.sponsorButtonText}>
               PARTNER WITH CHALEGA
