@@ -13,6 +13,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { getPoints } from '../lib/points';
+import { BRAND } from '@/lib/brand';
 
 type DayData = {
   day: string;
@@ -528,7 +529,7 @@ Your rewards have been added to your account.`,
       if (!available) {
         Alert.alert(
           'Step Tracking Unavailable',
-          'Your phone does not currently provide pedometer data to Chalega India.'
+          'Your phone does not currently provide pedometer data to Chalega.'
         );
         return;
       }
@@ -541,7 +542,7 @@ Your rewards have been added to your account.`,
 
         Alert.alert(
           'Permission Needed',
-          'Please allow physical activity access so Chalega India can count your steps.'
+          'Please allow physical activity access so Chalega can count your steps.'
         );
 
         return;
@@ -742,7 +743,7 @@ Your rewards have been added to your account.`,
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerBrand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.headerTitle}>
@@ -865,7 +866,7 @@ Your rewards have been added to your account.`,
               marginTop: 16,
               padding: 16,
               borderRadius: 16,
-              backgroundColor: '#EAF2FF',
+              backgroundColor: '#D7F7F1',
             }}
           >
             <Text
@@ -885,7 +886,7 @@ Your rewards have been added to your account.`,
                   flex: 1,
                   padding: 12,
                   borderRadius: 10,
-                  backgroundColor: '#1976F3',
+                  backgroundColor: BRAND.teal,
                 }}
               >
                 <Text
@@ -905,7 +906,7 @@ Your rewards have been added to your account.`,
                   flex: 1,
                   padding: 12,
                   borderRadius: 10,
-                  backgroundColor: '#1976F3',
+                  backgroundColor: BRAND.teal,
                 }}
               >
                 <Text
@@ -925,7 +926,7 @@ Your rewards have been added to your account.`,
                   flex: 1,
                   padding: 12,
                   borderRadius: 10,
-                  backgroundColor: '#1976F3',
+                  backgroundColor: BRAND.teal,
                 }}
               >
                 <Text
@@ -1385,11 +1386,11 @@ Your rewards have been added to your account.`,
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>
-            Walk more ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Live better ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Stay healthy
+            MOVE PEOPLE • LIVE HEALTHIER
           </Text>
         </View>
       </ScrollView>
@@ -1400,7 +1401,7 @@ Your rewards have been added to your account.`,
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -1426,7 +1427,7 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 31,
     lineHeight: 34,
     fontWeight: '300',
@@ -1437,14 +1438,14 @@ const styles = StyleSheet.create({
   },
 
   headerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 2,
   },
 
   headerTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 21,
     fontWeight: '900',
     marginTop: 2,
@@ -1465,17 +1466,17 @@ const styles = StyleSheet.create({
   },
 
   pointsSmallNumber: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 3,
   },
 
   heroCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 27,
     padding: 23,
-    shadowColor: '#1976F3',
+    shadowColor: BRAND.teal,
     shadowOpacity: 0.2,
     shadowRadius: 15,
     shadowOffset: {
@@ -1486,7 +1487,7 @@ const styles = StyleSheet.create({
   },
 
   heroEyebrow: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.7,
@@ -1507,7 +1508,7 @@ const styles = StyleSheet.create({
   },
 
   stepLabel: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
@@ -1523,7 +1524,7 @@ const styles = StyleSheet.create({
   },
 
   goalCircleNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 23,
     fontWeight: '900',
   },
@@ -1538,7 +1539,7 @@ const styles = StyleSheet.create({
   heroProgressBackground: {
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#4D93F6',
+    backgroundColor: '#25DDBB',
     marginTop: 18,
     overflow: 'hidden',
   },
@@ -1556,7 +1557,7 @@ const styles = StyleSheet.create({
   },
 
   heroProgressText: {
-    color: '#EAF2FF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1564,7 +1565,7 @@ const styles = StyleSheet.create({
   trackButton: {
     height: 51,
     borderRadius: 15,
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -1585,7 +1586,7 @@ const styles = StyleSheet.create({
   },
 
   sensorStatus: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 9,
     fontWeight: '800',
     textAlign: 'center',
@@ -1600,7 +1601,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E6EBF2',
+    borderColor: BRAND.line,
   },
 
   missionStatusComplete: {
@@ -1612,7 +1613,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 17,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#D7F7F1',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1627,14 +1628,14 @@ const styles = StyleSheet.create({
   },
 
   missionStatusLabel: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.1,
   },
 
   missionStatusTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
     marginTop: 3,
@@ -1647,13 +1648,13 @@ const styles = StyleSheet.create({
   },
 
   missionStatusCheck: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
   },
 
   sectionTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 18,
     fontWeight: '900',
     marginTop: 25,
@@ -1680,7 +1681,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
-    shadowColor: '#071522',
+    shadowColor: BRAND.shadow,
     shadowOpacity: 0.16,
     shadowRadius: 7,
     shadowOffset: {
@@ -1691,15 +1692,15 @@ const styles = StyleSheet.create({
   },
 
   statIconBlue: {
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
   },
 
   statIconOrange: {
-    backgroundColor: '#F47B20',
+    backgroundColor: BRAND.orange,
   },
 
   statIconGreen: {
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
   },
 
   statIconEmoji: {
@@ -1707,7 +1708,7 @@ const styles = StyleSheet.create({
   },
 
   statNumber: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 20,
     fontWeight: '900',
     marginTop: 7,
@@ -1741,7 +1742,7 @@ const styles = StyleSheet.create({
   },
 
   weekTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1753,7 +1754,7 @@ const styles = StyleSheet.create({
   },
 
   weekStreak: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1777,14 +1778,14 @@ const styles = StyleSheet.create({
     width: 18,
     height: 100,
     borderRadius: 9,
-    backgroundColor: '#EEF2F7',
+    backgroundColor: '#EAF0F2',
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
 
   dayBarFill: {
     width: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 9,
   },
 
@@ -1796,14 +1797,14 @@ const styles = StyleSheet.create({
   },
 
   dayLabelToday: {
-    color: '#1976F3',
+    color: BRAND.teal,
   },
 
   todayDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     marginTop: 3,
   },
 
@@ -1822,7 +1823,7 @@ const styles = StyleSheet.create({
   },
 
   changeGoal: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
   },
@@ -1862,7 +1863,7 @@ const styles = StyleSheet.create({
   },
 
   streakNumber: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 21,
     fontWeight: '900',
     marginTop: 2,
@@ -1881,7 +1882,7 @@ const styles = StyleSheet.create({
   },
 
   levelCard: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 22,
     padding: 20,
     marginTop: 15,
@@ -1917,7 +1918,7 @@ const styles = StyleSheet.create({
   },
 
   levelBadgeText: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 20,
     fontWeight: '900',
   },
@@ -1958,7 +1959,7 @@ const styles = StyleSheet.create({
     width: 53,
     height: 53,
     borderRadius: 17,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1968,7 +1969,7 @@ const styles = StyleSheet.create({
   },
 
   challengeTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 19,
     fontWeight: '900',
     marginTop: 13,
@@ -1992,7 +1993,7 @@ const styles = StyleSheet.create({
   challengeProgressFill: {
     width: '63%',
     height: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 5,
   },
 
@@ -2009,7 +2010,7 @@ const styles = StyleSheet.create({
   },
 
   challengeButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 13,
     paddingVertical: 13,
     alignItems: 'center',
@@ -2024,7 +2025,7 @@ const styles = StyleSheet.create({
   },
 
   communityCard: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#D7F7F1',
     borderRadius: 22,
     padding: 19,
     marginTop: 15,
@@ -2041,14 +2042,14 @@ const styles = StyleSheet.create({
   },
 
   communityEyebrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.3,
   },
 
   communityTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 16,
     fontWeight: '900',
     marginTop: 3,
@@ -2062,7 +2063,7 @@ const styles = StyleSheet.create({
   },
 
   completeButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 17,
     height: 54,
     alignItems: 'center',
@@ -2071,11 +2072,11 @@ const styles = StyleSheet.create({
   },
 
   completeButtonActive: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
   },
 
   completeButtonDone: {
-    backgroundColor: '#228B45',
+    backgroundColor: BRAND.green,
   },
 
   completeButtonText: {
@@ -2091,7 +2092,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 3,
