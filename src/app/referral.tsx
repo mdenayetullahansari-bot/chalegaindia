@@ -177,9 +177,9 @@ export default function ReferralScreen() {
 
             <Text style={styles.infoBody}>
               Share your personal referral code with
-              someone you know. Referral rewards and
-              eligibility will be added as the Chalega
-              referral programme develops.
+              someone you know. When they join through
+              your referral and complete Mission 1 -
+              First 1,000 Steps - you earn 25 Chalega Points.
             </Text>
           </View>
         </View>
