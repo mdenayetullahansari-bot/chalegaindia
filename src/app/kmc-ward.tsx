@@ -15,12 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
-const BRAND = {
+const COLORS = {
   blue: BRAND.teal,
   navy: '#0B1F33',
   muted: '#6B7785',
   background: '#F7F5F0',
-  white: BRAND.white,
+  white: COLORS.white,
   border: '#E4E8ED',
   green: '#247A3A',
 };
@@ -176,7 +176,7 @@ export default function KmcWardScreen() {
             <Ionicons
               name="chevron-back"
               size={23}
-              color={BRAND.navy}
+              color={COLORS.navy}
             />
           </TouchableOpacity>
 
@@ -217,7 +217,7 @@ export default function KmcWardScreen() {
             <Ionicons
               name="shield-checkmark-outline"
               size={22}
-              color={BRAND.green}
+              color={COLORS.green}
             />
           </View>
 
@@ -279,7 +279,7 @@ export default function KmcWardScreen() {
                 <Ionicons
                   name="checkmark"
                   size={20}
-                  color={BRAND.green}
+                  color={COLORS.green}
                 />
               </View>
 
@@ -311,7 +311,7 @@ export default function KmcWardScreen() {
                 <Ionicons
                   name="checkmark-circle"
                   size={16}
-                  color={BRAND.green}
+                  color={COLORS.green}
                 />
 
                 <Text style={styles.assignedBadgeText}>
@@ -324,7 +324,7 @@ export default function KmcWardScreen() {
               <Ionicons
                 name="shield-checkmark-outline"
                 size={15}
-                color={BRAND.green}
+                color={COLORS.green}
               />
 
               <Text style={styles.assignmentInfoText}>
@@ -338,7 +338,7 @@ export default function KmcWardScreen() {
               <View style={styles.resultIcon}>
                 <ActivityIndicator
                   size="small"
-                  color={BRAND.green}
+                  color={COLORS.green}
                 />
               </View>
 
@@ -392,8 +392,8 @@ export default function KmcWardScreen() {
               size={18}
               color={
                 wardAssignment
-                  ? BRAND.green
-                  : BRAND.blue
+                  ? COLORS.green
+                  : COLORS.blue
               }
             />
 
@@ -485,7 +485,7 @@ function Step({
         <Ionicons
           name={icon}
           size={19}
-          color={BRAND.blue}
+          color={COLORS.blue}
         />
       </View>
 
@@ -505,7 +505,7 @@ function Step({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BRAND.background,
+    backgroundColor: COLORS.background,
   },
 
   content: {
@@ -525,13 +525,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: BRAND.white,
+    backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   headerTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 2,
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    backgroundColor: BRAND.navy,
+    backgroundColor: COLORS.navy,
     borderRadius: 27,
     padding: 24,
     marginTop: 20,
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   },
 
   heroTitle: {
-    color: BRAND.white,
+    color: COLORS.white,
     fontSize: 28,
     lineHeight: 33,
     fontWeight: '900',
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   },
 
   privacyCard: {
-    backgroundColor: BRAND.white,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
     padding: 17,
     flexDirection: 'row',
@@ -605,13 +605,13 @@ const styles = StyleSheet.create({
   },
 
   privacyTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 13,
     fontWeight: '900',
   },
 
   privacyText: {
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 10,
     lineHeight: 16,
     fontWeight: '600',
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   findButton: {
     height: 57,
     borderRadius: 19,
-    backgroundColor: BRAND.blue,
+    backgroundColor: COLORS.blue,
     marginTop: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -634,14 +634,14 @@ const styles = StyleSheet.create({
   },
 
   findButtonText: {
-    color: BRAND.white,
+    color: COLORS.white,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1,
   },
 
   resultCard: {
-    backgroundColor: BRAND.white,
+    backgroundColor: COLORS.white,
     borderRadius: 22,
     padding: 18,
     marginTop: 16,
@@ -667,13 +667,13 @@ const styles = StyleSheet.create({
   },
 
   resultTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 14,
     fontWeight: '900',
   },
 
   resultSubtitle: {
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 10,
     fontWeight: '600',
     marginTop: 3,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
 
   resultDivider: {
     height: 1,
-    backgroundColor: BRAND.border,
+    backgroundColor: COLORS.border,
     marginVertical: 17,
   },
 
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
   },
 
   wardNumber: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 25,
     fontWeight: '900',
     marginTop: 5,
@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
   },
 
   assignedBadgeText: {
-    color: BRAND.green,
+    color: COLORS.green,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -731,14 +731,14 @@ const styles = StyleSheet.create({
 
   assignmentInfoText: {
     flex: 1,
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 9,
     lineHeight: 14,
     fontWeight: '700',
   },
 
   waitingText: {
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 11,
     lineHeight: 17,
     fontWeight: '600',
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
 
   nextBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: BRAND.blue,
+    backgroundColor: COLORS.blue,
     borderRadius: 10,
     paddingHorizontal: 9,
     paddingVertical: 5,
@@ -761,14 +761,14 @@ const styles = StyleSheet.create({
   },
 
   nextBadgeText: {
-    color: BRAND.white,
+    color: COLORS.white,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1,
   },
 
   nextTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -789,17 +789,17 @@ const styles = StyleSheet.create({
   },
 
   nextRowText: {
-    color: BRAND.blue,
+    color: COLORS.blue,
     fontSize: 10,
     fontWeight: '900',
   },
 
   nextRowTextSuccess: {
-    color: BRAND.green,
+    color: COLORS.green,
   },
 
   sectionTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
   },
 
   stepsCard: {
-    backgroundColor: BRAND.white,
+    backgroundColor: COLORS.white,
     borderRadius: 22,
     padding: 18,
   },
@@ -823,13 +823,13 @@ const styles = StyleSheet.create({
     width: 27,
     height: 27,
     borderRadius: 10,
-    backgroundColor: BRAND.navy,
+    backgroundColor: COLORS.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   stepNumberText: {
-    color: BRAND.white,
+    color: COLORS.white,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -850,13 +850,13 @@ const styles = StyleSheet.create({
   },
 
   stepTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 12,
     fontWeight: '900',
   },
 
   stepText: {
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 10,
     lineHeight: 15,
     fontWeight: '600',
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: BRAND.blue,
+    color: COLORS.blue,
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 4,
