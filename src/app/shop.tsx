@@ -1722,7 +1722,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 11,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
   },
 
   miniButton: {
@@ -1995,7 +1995,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
   },
 
   quantityButton: {
