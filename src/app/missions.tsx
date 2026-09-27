@@ -29,7 +29,6 @@ import {
   hasTransaction,
 } from '../lib/points';
 
-import { BRAND } from '../lib/brand';
 import { supabase } from '../lib/supabase';
 
 type Mission = {
