@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -551,7 +552,7 @@ export default function CompetitionsScreen() {
           </Pressable>
 
           <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>CHALEGA INDIA</Text>
+            <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
             <Text style={styles.title}>Competition HQ</Text>
           </View>
 
@@ -1041,7 +1042,7 @@ export default function CompetitionsScreen() {
         </View>
 
         <Text style={styles.footerTagline}>WALK • COMPETE • WIN • REPEAT</Text>
-        <Text style={styles.footerBrand}>CHALEGA INDIA™</Text>
+        <Text style={styles.footerBrand}>CHALEGA KOLKATA™</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1065,7 +1066,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1116,7 +1117,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 30,
     fontWeight: '900',
   },
@@ -1136,7 +1137,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   liveText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -1154,7 +1155,7 @@ const styles = StyleSheet.create({
     paddingTop: 15,
   },
   ruleText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 18,
     fontWeight: '900',
   },
@@ -1165,7 +1166,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   loadingCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 24,
     marginBottom: 20,
@@ -1177,7 +1178,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   categoryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 17,
     flexDirection: 'row',
@@ -1188,7 +1189,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 15,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 13,
@@ -1229,7 +1230,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1256,7 +1257,7 @@ const styles = StyleSheet.create({
   },
   rewardMini: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 14,
     alignItems: 'center',
     paddingVertical: 12,
@@ -1299,14 +1300,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#2E9D62',
   },
   joinButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.7,
     marginLeft: 8,
   },
   submitResultButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 15,
     minHeight: 50,
     marginTop: 10,
@@ -1336,7 +1337,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
@@ -1357,7 +1358,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 22,
     alignItems: 'center',
@@ -1378,7 +1379,7 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
   secondaryButton: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1409,7 +1410,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   performanceCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
@@ -1476,7 +1477,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   podiumCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -1486,7 +1487,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -1573,7 +1574,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1629,7 +1630,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   yourRankNumber: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 24,
     fontWeight: '900',
     marginTop: 2,
@@ -1638,7 +1639,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   yourRankSteps: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 17,
     fontWeight: '900',
   },
@@ -1675,7 +1676,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   rewardTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 18,
     fontWeight: '900',
     marginTop: 2,
@@ -1687,7 +1688,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   infoCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 18,
     padding: 17,
     flexDirection: 'row',
