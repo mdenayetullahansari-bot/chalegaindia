@@ -1959,7 +1959,7 @@ const styles = StyleSheet.create({
     width: 53,
     height: 53,
     borderRadius: 17,
-    backgroundColor: BRAND.greenLight',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
