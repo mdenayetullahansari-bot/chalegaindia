@@ -47,7 +47,7 @@ export default function MoreScreen() {
   const showComingSoon = (title: string) => {
     Alert.alert(
       title,
-      'This Chalega India feature is being prepared for the next release.'
+      'This Chalega feature is being prepared for the next release.'
     );
   };
 
@@ -100,7 +100,7 @@ export default function MoreScreen() {
       <Ionicons
         name="chevron-forward"
         size={21}
-        color={BRAND.blue}
+        color={BRAND.teal}
       />
     </TouchableOpacity>
   );
@@ -113,7 +113,7 @@ export default function MoreScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CHALEGA INDIA™</Text>
+          <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
 
           <Text style={styles.title}>More</Text>
 
@@ -132,7 +132,7 @@ export default function MoreScreen() {
             <Ionicons
               name="person"
               size={27}
-              color={BRAND.blue}
+              color={BRAND.teal}
             />
           </View>
 
@@ -226,7 +226,7 @@ export default function MoreScreen() {
         <MenuRow
           icon="receipt-outline"
           title="My Orders"
-          subtitle="View and track your Chalega India orders."
+          subtitle="View and track your Chalega orders."
           onPress={() => goTo('/customer-orders')}
           tone="grey"
         />
@@ -321,7 +321,7 @@ export default function MoreScreen() {
               <Ionicons
                 name="heart"
                 size={23}
-                color={BRAND.blue}
+                color={BRAND.teal}
               />
             </View>
 
@@ -393,7 +393,7 @@ export default function MoreScreen() {
             <Ionicons
               name="people-outline"
               size={24}
-              color={BRAND.blue}
+              color={BRAND.teal}
             />
             <Text style={styles.smallTitle}>
               Community
@@ -443,11 +443,11 @@ export default function MoreScreen() {
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>
-            Chalo Health Banaye 🇮🇳
+            MOVE PEOPLE • HEALTHY COMMUNITIES
           </Text>
 
           <Text style={styles.footerText}>
@@ -476,14 +476,14 @@ const styles = StyleSheet.create({
   },
 
   eyebrow: {
-    color: BRAND.blue,
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 2.2,
   },
 
   title: {
-    color: BRAND.navy,
+    color: BRAND.midnight,
     fontSize: 34,
     fontWeight: '900',
     marginTop: 5,
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
 
   profileCard: {
-    backgroundColor: BRAND.blue,
+    backgroundColor: BRAND.teal,
     borderRadius: 23,
     padding: 18,
     flexDirection: 'row',
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   },
 
   profileSubtitle: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '700',
     marginTop: 4,
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: BRAND.navy,
+    color: BRAND.midnight,
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 0.7,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 16,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
-    color: BRAND.navy,
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     width: 53,
     height: 53,
     borderRadius: 17,
-    backgroundColor: '#17324B',
+    backgroundColor: '#12395A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   },
 
   wardTitle: {
-    color: BRAND.navy,
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
   },
 
   partnerCard: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 22,
     padding: 20,
     marginBottom: 25,
@@ -755,14 +755,14 @@ const styles = StyleSheet.create({
   },
 
   partnerLabel: {
-    color: BRAND.blue,
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.1,
   },
 
   partnerTitle: {
-    color: BRAND.navy,
+    color: BRAND.midnight,
     fontSize: 18,
     fontWeight: '900',
     marginTop: 5,
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   },
 
   smallTitle: {
-    color: BRAND.navy,
+    color: BRAND.midnight,
     fontSize: 13,
     fontWeight: '900',
     marginTop: 9,
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: BRAND.blue,
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 2.5,
