@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -604,7 +605,7 @@ export default function DailyHealthCheckIn() {
 
           <View style={styles.headerTextWrap}>
             <Text style={styles.eyebrow}>
-              CHALEGA INDIA • DAILY WELLNESS
+              CHALEGA KOLKATA • DAILY WELLNESS
             </Text>
 
             <Text style={styles.title}>
@@ -861,7 +862,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -890,7 +891,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.2,
-    color: '#2FA84F',
+    color: BRAND.green,
     marginBottom: 5,
   },
 
@@ -929,7 +930,7 @@ const styles = StyleSheet.create({
   introTitle: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
     marginBottom: 4,
   },
 
@@ -954,7 +955,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 15,
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 13,
@@ -963,7 +964,7 @@ const styles = StyleSheet.create({
   completedIconText: {
     fontSize: 25,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 
   completedContent: {
@@ -987,13 +988,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 15,
     fontWeight: '900',
-    color: '#2FA84F',
+    color: BRAND.green,
     marginTop: 6,
     letterSpacing: 0.7,
   },
 
   snapshotCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E4E8ED',
@@ -1012,7 +1013,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.4,
-    color: '#2FA84F',
+    color: BRAND.green,
   },
 
   snapshotTitle: {
@@ -1026,13 +1027,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   snapshotScoreText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 17,
     fontWeight: '900',
   },
@@ -1068,7 +1069,7 @@ const styles = StyleSheet.create({
   },
 
   questionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 17,
     marginBottom: 14,
@@ -1124,11 +1125,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
   },
 
   optionSelected: {
-    borderColor: '#1D6FF2',
+    borderColor: BRAND.teal,
     backgroundColor: '#EEF5FF',
   },
 
@@ -1157,13 +1158,13 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   checkText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1171,7 +1172,7 @@ const styles = StyleSheet.create({
   submitButton: {
     minHeight: 56,
     borderRadius: 18,
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
@@ -1190,7 +1191,7 @@ const styles = StyleSheet.create({
   },
 
   submitButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 0.3,
@@ -1199,14 +1200,14 @@ const styles = StyleSheet.create({
   doneButton: {
     minHeight: 56,
     borderRadius: 18,
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
   },
 
   doneButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1216,7 +1217,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#DCE2E8',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
