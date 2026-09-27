@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
@@ -279,7 +280,7 @@ export default function ProductScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   header: {
     height: 70,
     paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 38,
     lineHeight: 40,
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   headerTitle: {
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 34,
-    backgroundColor: '#EAF6EE',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 18,
-    backgroundColor: '#EAF6EE',
+    backgroundColor: BRAND.greenLight,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
     marginRight: 6,
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
   },
 
   availabilityText: {
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#EAF6EE',
+    backgroundColor: BRAND.greenLight,
   },
 
   seasonBadgeText: {
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   unit: {
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     padding: 14,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: '#DDE8E0',
     flexDirection: 'row',
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     height: 45,
     borderRadius: 13,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: 21,
     fontWeight: '800',
-    color: '#1D6FF2',
+    color: BRAND.teal,
   },
 
   quantityNumber: {
@@ -525,7 +526,7 @@ const styles = StyleSheet.create({
   total: {
     fontSize: 23,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   addButton: {
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     minHeight: 56,
     paddingHorizontal: 18,
     borderRadius: 17,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -546,14 +547,14 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 0.5,
   },
 
   addButtonTotal: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 
   impactCard: {
@@ -595,7 +596,7 @@ const styles = StyleSheet.create({
     minHeight: 46,
     paddingHorizontal: 18,
     borderRadius: 14,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -603,7 +604,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 12,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 
   notFound: {
