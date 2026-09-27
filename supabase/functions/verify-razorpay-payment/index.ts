@@ -149,8 +149,7 @@ export default {
           );
         }
 
-        const userId =
-          ctx.userClaims.sub;
+        const userId = ctx.userClaims.id;
 
         const supabaseUrl =
           Deno.env.get("SUPABASE_URL");

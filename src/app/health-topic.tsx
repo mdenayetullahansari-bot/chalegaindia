@@ -20,7 +20,7 @@ type HealthTopic = {
 
 const healthData: Record<string, HealthTopic> = {
   Heart: {
-    emoji: 'Ã¢ÂÂ¤Ã¯Â¸Â',
+    emoji: '❤️',
     title: 'Heart Health',
     subtitle:
       'Take care of your heart, one healthy habit at a time.',
@@ -34,7 +34,7 @@ const healthData: Record<string, HealthTopic> = {
   },
 
   Water: {
-    emoji: 'Ã°Å¸â€™Â§',
+    emoji: '💧',
     title: 'Stay Hydrated',
     subtitle:
       'Water is an important part of a healthy daily routine.',
@@ -48,7 +48,7 @@ const healthData: Record<string, HealthTopic> = {
   },
 
   Diet: {
-    emoji: 'Ã°Å¸Â¥â€”',
+    emoji: '🥗',
     title: 'Eat Better',
     subtitle:
       'Small changes in your daily food choices can make a difference.',
@@ -62,7 +62,7 @@ const healthData: Record<string, HealthTopic> = {
   },
 
   Walking: {
-    emoji: 'Ã°Å¸Å¡Â¶',
+    emoji: '🚶',
     title: 'Keep Walking',
     subtitle:
       'Every step is a step towards a more active lifestyle.',
@@ -76,7 +76,7 @@ const healthData: Record<string, HealthTopic> = {
   },
 
   Sleep: {
-    emoji: 'Ã°Å¸ËœÂ´',
+    emoji: '😴',
     title: 'Better Sleep',
     subtitle:
       'Good sleep gives your body and mind time to recover.',
@@ -90,7 +90,7 @@ const healthData: Record<string, HealthTopic> = {
   },
 
   Mind: {
-    emoji: 'Ã°Å¸Â§Â ',
+    emoji: '🧠',
     title: 'Mind & Wellbeing',
     subtitle:
       'Looking after your mind is part of looking after your health.',
@@ -217,7 +217,7 @@ export default function HealthTopicScreen() {
         activeOpacity={0.8}
       >
         <Text style={styles.backArrow}>
-          Ã¢â‚¬Â¹
+          ‹
         </Text>
 
         <Text style={styles.backText}>
@@ -274,7 +274,7 @@ export default function HealthTopicScreen() {
 
       <View style={styles.messageCard}>
         <Text style={styles.messageEmoji}>
-          Ã¢ÂÂ¤Ã¯Â¸Â
+          ❤️
         </Text>
 
         <Text style={styles.messageTitle}>
@@ -292,7 +292,7 @@ export default function HealthTopicScreen() {
       {isHealthMission && (
         <View style={styles.missionCard}>
           <Text style={styles.missionEmoji}>
-            Ã¢ÂÂ¤Ã¯Â¸Â
+            ❤️
           </Text>
 
           <Text style={styles.missionTitle}>
@@ -326,7 +326,7 @@ export default function HealthTopicScreen() {
               ]}
             >
               {completed
-                ? 'Ã¢Å“â€œ COMPLETED +10 POINTS'
+                ? '✓ COMPLETED +10 POINTS'
                 : completing
                 ? 'SAVING...'
                 : 'COMPLETE HEALTH CHECK-IN +10'}
@@ -349,7 +349,7 @@ export default function HealthTopicScreen() {
         </Text>
 
         <Text style={styles.arrow}>
-          Ã¢â€ â€™
+          →
         </Text>
       </TouchableOpacity>
 
@@ -367,14 +367,14 @@ export default function HealthTopicScreen() {
         </Text>
 
         <Text style={styles.shopArrow}>
-          Ã¢â€ â€™
+          →
         </Text>
       </TouchableOpacity>
 
       {/* FOOTER */}
 
       <Text style={styles.footer}>
-        C H A L E G A  I N D I A Ã°Å¸â€¡Â®Ã°Å¸â€¡Â³
+        C H A L E G A  I N D I A 🇮🇳
       </Text>
 
       <Text style={styles.footerSmall}>

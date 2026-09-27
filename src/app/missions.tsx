@@ -38,13 +38,28 @@ async function hasServerTransaction(
     throw error;
   }
 
+  const dateKey = transactionKey.startsWith(`${transactionType}_`)
+    ? transactionKey.slice(transactionType.length + 1)
+    : transactionKey;
+
   return (data ?? []).some(
     (transaction: {
       transaction_type: string | null;
       transaction_key: string | null;
-    }) =>
-      transaction.transaction_type === transactionType &&
-      transaction.transaction_key === transactionKey
+    }) => {
+      if (transaction.transaction_type !== transactionType) {
+        return false;
+      }
+
+      const serverKey = transaction.transaction_key;
+
+      return (
+        serverKey === transactionKey ||
+        (serverKey !== null &&
+          serverKey.startsWith(`${transactionType}:`) &&
+          serverKey.endsWith(`:${dateKey}`))
+      );
+    }
   );
 }
 
@@ -1572,7 +1587,7 @@ const saveMissionState = useCallback(
               styles.footerText
             }
           >
-            WALK Î“Ã‡Ã³ EARN Î“Ã‡Ã³ IMPROVE Î“Ã‡Ã³ REPEAT
+            WALK • EARN • IMPROVE • REPEAT
           </Text>
         </View>
       </ScrollView>
@@ -2305,3 +2320,6 @@ const styles =
       marginTop: 8,
     },
   });
+
+
+

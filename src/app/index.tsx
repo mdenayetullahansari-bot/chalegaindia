@@ -331,7 +331,7 @@ export default function HomeScreen() {
   };
 
   const openCompetitions = () => {
-    router.push('/competitions');
+    router.push('/competitions?from=home');
   };
 
   const openRewards = () => {
@@ -376,7 +376,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              Chalo Health Banaye
+              Walk. Healthier. Stronger. Together.
             </Text>
           </View>
 
@@ -398,41 +398,43 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* HEALTH SCORE */}
+        {/* TODAY'S MOVEMENT */}
 
         <View style={styles.scoreCard}>
           <View style={styles.scoreLeft}>
             <Text style={styles.cardEyebrow}>
-              YOUR HEALTH TODAY
+              TODAY'S MOVEMENT
             </Text>
 
             <Text style={styles.scoreNumber}>
-              {healthScore}
-              <Text style={styles.scoreOutOf}>
-                /100
-              </Text>
+              {steps.toLocaleString('en-IN')}
+            </Text>
+
+            <Text style={styles.scoreOutOf}>
+              / {safeGoal.toLocaleString('en-IN')} steps
             </Text>
 
             <Text style={styles.scoreMessage}>
-              {healthScore >= 90
-                ? 'Outstanding! You are building a great healthy routine.'
-                : healthScore >= 80
-                ? 'Excellent work. Keep your healthy routine going!'
-                : healthScore >= 65
-                ? 'Good progress. A few small habits can make it even better.'
-                : healthScore >= 45
-                ? 'You are moving in the right direction. Keep building your habits.'
-                : 'Every healthy choice counts.'}
+              {missionCompleted
+                ? 'Amazing! You reached your daily walking goal.'
+                : `${remainingSteps.toLocaleString('en-IN')} steps to reach today's goal.`}
             </Text>
+
+            <View style={styles.heroHealthBadge}>
+              <View style={styles.heroHealthDot} />
+              <Text style={styles.heroHealthText}>
+                Health Score {healthScore}/100
+              </Text>
+            </View>
           </View>
 
           <View style={styles.scoreCircle}>
             <Text style={styles.scoreCircleText}>
-              {healthScore}
+              {Math.round(stepProgress * 100)}%
             </Text>
 
             <Text style={styles.scoreCircleLabel}>
-              HEALTH
+              GOAL
             </Text>
           </View>
         </View>
@@ -942,20 +944,21 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F5F0',
+    backgroundColor: '#F5F1E8',
   },
 
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 60,
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 58,
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 12,
+    paddingTop: 0,
   },
 
   headerText: {
@@ -963,9 +966,9 @@ const styles = StyleSheet.create({
   },
 
   homeLogo: {
-    width: 180,
-    height: 90,
-    marginBottom: 4,
+    width: 110,
+    height: 48,
+    marginBottom: 0,
   },
 
   brand: {
@@ -976,35 +979,39 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    color: BRAND.ink,
-    fontSize: 28,
+    color: '#102A43',
+    fontSize: 23,
     fontWeight: '900',
-    marginTop: 6,
+    marginTop: 0,
+    letterSpacing: -0.6,
   },
 
   subtitle: {
-    color: BRAND.muted,
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 3,
+    color: '#6B7280',
+    fontSize: 10.5,
+    fontWeight: '700',
+    marginTop: 1,
+    letterSpacing: 0.15,
   },
 
   pointsButton: {
-    width: 70,
+    width: 76,
     minHeight: 76,
-    backgroundColor: BRAND.white,
-    borderRadius: 18,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E9E1CF',
     shadowColor: BRAND.shadow,
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 11,
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 4,
     },
-    elevation: 2,
+    elevation: 3,
   },
 
   pointsIcon: {
@@ -1026,15 +1033,16 @@ const styles = StyleSheet.create({
   },
 
   scoreCard: {
-    backgroundColor: BRAND.blue,
-    borderRadius: 25,
-    padding: 23,
+    backgroundColor: '#102A43',
+    borderRadius: 28,
+    padding: 18,
+    minHeight: 178,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: BRAND.blue,
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
     shadowOffset: {
       width: 0,
       height: 7,
@@ -1047,79 +1055,107 @@ const styles = StyleSheet.create({
   },
 
   cardEyebrow: {
-    color: '#DCEAFF',
-    fontSize: 11,
+    color: '#FFB347',
+    fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 1.7,
   },
 
   scoreNumber: {
     color: '#FFFFFF',
-    fontSize: 47,
+    fontSize: 43,
     fontWeight: '900',
-    marginTop: 2,
+    marginTop: 3,
+    letterSpacing: -1,
   },
 
   scoreOutOf: {
-    fontSize: 19,
-    fontWeight: '700',
-    color: '#DCEAFF',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#BFD0E2',
+    marginTop: -2,
   },
 
   scoreMessage: {
     color: '#E8F1FF',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
     fontWeight: '600',
-    marginTop: 3,
-    maxWidth: 190,
+    marginTop: 7,
+    maxWidth: 205,
+  },
+
+  heroHealthBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 11,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+
+  heroHealthDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: BRAND.green,
+    marginRight: 6,
+  },
+
+  heroHealthText: {
+    color: '#DCEAFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
 
   scoreCircle: {
-    width: 108,
-    height: 108,
-    borderRadius: 54,
-    backgroundColor: BRAND.white,
-    borderWidth: 7,
-    borderColor: BRAND.green,
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 8,
+    borderColor: BRAND.orange,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: BRAND.shadow,
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
+    shadowOpacity: 0.14,
+    shadowRadius: 13,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 5,
     },
-    elevation: 4,
+    elevation: 5,
   },
 
   scoreCircleText: {
-    color: BRAND.blue,
+    color: '#102A43',
     fontSize: 28,
     fontWeight: '900',
   },
 
   scoreCircleLabel: {
-    color: BRAND.muted,
+    color: '#7A8490',
     fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1.2,
-    marginTop: 1,
+    letterSpacing: 1.4,
+    marginTop: 2,
   },
 
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: 27,
-    marginBottom: 12,
+    marginTop: 18,
+    marginBottom: 9,
   },
 
   sectionTitle: {
-    color: BRAND.ink,
-    fontSize: 18,
+    color: '#102A43',
+    fontSize: 16,
     fontWeight: '900',
+    letterSpacing: 0.1,
   },
 
   viewAll: {
@@ -1130,15 +1166,17 @@ const styles = StyleSheet.create({
   },
 
   competitionCard: {
-    backgroundColor: '#102A43',
-    borderRadius: 23,
-    padding: 18,
-    marginTop: 18,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 13,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9E1CF',
     shadowColor: BRAND.shadow,
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     shadowOffset: {
       width: 0,
       height: 5,
@@ -1147,10 +1185,10 @@ const styles = StyleSheet.create({
   },
 
   competitionIconBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: BRAND.orangeLight,
+    width: 56,
+    height: 56,
+    borderRadius: 19,
+    backgroundColor: '#FFF0DE',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1165,21 +1203,21 @@ const styles = StyleSheet.create({
   },
 
   competitionEyebrow: {
-    color: '#FFB347',
+    color: '#C87819',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.4,
   },
 
   competitionTitle: {
-    color: '#FFFFFF',
-    fontSize: 19,
+    color: '#102A43',
+    fontSize: 17,
     fontWeight: '900',
     marginTop: 3,
   },
 
   competitionSubtitle: {
-    color: '#DCEAFF',
+    color: '#6B7280',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 3,
@@ -1193,13 +1231,13 @@ const styles = StyleSheet.create({
   },
 
   competitionMeta: {
-    color: '#FFFFFF',
+    color: '#102A43',
     fontSize: 10,
     fontWeight: '900',
   },
 
   competitionOpen: {
-    color: '#7FE3A5',
+    color: BRAND.green,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -1365,19 +1403,21 @@ const styles = StyleSheet.create({
 
   quickCard: {
     width: '48.2%',
-    backgroundColor: BRAND.white,
-    borderRadius: 22,
-    padding: 17,
-    marginBottom: 12,
-    minHeight: 132,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 10,
+    minHeight: 126,
+    borderWidth: 1,
+    borderColor: '#E6E0D4',
     shadowColor: BRAND.shadow,
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 9,
     shadowOffset: {
       width: 0,
       height: 3,
     },
-    elevation: 1,
+    elevation: 2,
   },
 
   quickIcon: {
@@ -1397,19 +1437,23 @@ const styles = StyleSheet.create({
   },
 
   quickWalking: {
-    backgroundColor: BRAND.blue,
+    backgroundColor: '#F3F7FF',
+    borderColor: '#D7E5FF',
   },
 
   quickMissions: {
-    backgroundColor: BRAND.orange,
+    backgroundColor: '#FFF5EA',
+    borderColor: '#F7DEC2',
   },
 
   quickHealth: {
-    backgroundColor: BRAND.green,
+    backgroundColor: '#EEF9F1',
+    borderColor: '#D6EEDC',
   },
 
   quickRewards: {
-    backgroundColor: BRAND.gold,
+    backgroundColor: '#FFF8E6',
+    borderColor: '#F2E2B5',
   },
 
   quickImage: {
@@ -1419,23 +1463,25 @@ const styles = StyleSheet.create({
   },
 
   quickTitle: {
-    color: BRAND.white,
+    color: BRAND.ink,
     fontSize: 14,
     fontWeight: '900',
-    marginTop: 10,
+    marginTop: 7,
   },
 
   quickText: {
-    color: 'rgba(255,255,255,0.82)',
+    color: BRAND.muted,
     fontSize: 10,
     marginTop: 3,
   },
 
   hydrationCard: {
-    backgroundColor: BRAND.white,
-    borderRadius: 22,
-    padding: 20,
-    marginTop: 8,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
+    padding: 19,
+    marginTop: 7,
+    borderWidth: 1,
+    borderColor: '#E9E5DC',
   },
 
   hydrationHeader: {
@@ -1494,12 +1540,14 @@ const styles = StyleSheet.create({
   },
 
   streakCard: {
-    backgroundColor: '#FFF8E8',
-    borderRadius: 22,
+    backgroundColor: '#FFF1D5',
+    borderRadius: 24,
     padding: 18,
-    marginTop: 20,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F2D9A7',
   },
 
   streakIconBox: {
@@ -1546,10 +1594,18 @@ const styles = StyleSheet.create({
   },
 
   communityCard: {
-    backgroundColor: '#10202F',
-    borderRadius: 23,
-    padding: 20,
+    backgroundColor: '#102A43',
+    borderRadius: 25,
+    padding: 19,
     flexDirection: 'row',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
   },
 
   communityIcon: {
@@ -1674,12 +1730,20 @@ const styles = StyleSheet.create({
   },
 
   shopPromo: {
-    backgroundColor: BRAND.blue,
-    borderRadius: 23,
+    backgroundColor: '#2D73E8',
+    borderRadius: 25,
     padding: 21,
-    marginTop: 20,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
   },
 
   shopPromoText: {
@@ -1714,12 +1778,14 @@ const styles = StyleSheet.create({
   },
 
   ordersButton: {
-    backgroundColor: BRAND.white,
-    borderRadius: 22,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 23,
     padding: 17,
-    marginTop: 13,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9E5DC',
   },
 
   ordersIcon: {

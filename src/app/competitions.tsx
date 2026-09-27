@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -94,6 +94,8 @@ function getIndiaDateKey(date = new Date()): string {
 }
 
 export default function CompetitionsScreen() {
+  const params = useLocalSearchParams();
+  const from = typeof params.from === "string" ? params.from : undefined;
   const [steps, setSteps] = useState(0);
   const [goal, setGoal] = useState(4000);
   const [streak, setStreak] = useState(0);
@@ -544,7 +546,7 @@ export default function CompetitionsScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            onPress={() => router.back()}
+            onPress={() => router.replace(from === "more" ? "/more" : "/")}
             style={styles.backButton}
           >
             <Ionicons name="arrow-back" size={22} color="#0B2239" />

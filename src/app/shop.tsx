@@ -1307,15 +1307,15 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: '#F6F8FA',
   },
 
   content: {
-    paddingBottom: 140,
+    paddingBottom: 220,
   },
 
   hero: {
-    backgroundColor: '#123B2A',
+    backgroundColor: '#102A43',
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 22,
@@ -1334,14 +1334,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#E9F6EE',
+    backgroundColor: '#EAF2F8',
   },
 
   heroBadgeText: {
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
-    color: '#123B2A',
+    color: '#102A43',
   },
 
   cartButton: {
@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     fontWeight: '700',
-    color: '#E5F4EB',
+    color: '#DCEBFA',
   },
 
   heroPromise: {
@@ -1413,7 +1413,7 @@ const styles = StyleSheet.create({
   heroPromiseTitle: {
     fontSize: 12,
     fontWeight: '900',
-    color: '#123B2A',
+    color: '#102A43',
     letterSpacing: 0.5,
   },
 
@@ -1498,7 +1498,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 20,
     fontWeight: '900',
-    color: '#152330',
+    color: '#13283D',
   },
 
   categoryRow: {
@@ -1542,7 +1542,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontSize: 10,
     lineHeight: 14,
-    color: '#71808D',
+    color: '#6B7C8C',
     fontWeight: '600',
   },
 
@@ -1605,7 +1605,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     marginTop: 3,
     fontSize: 12,
-    color: '#7A8793',
+    color: '#718292',
     fontWeight: '600',
   },
 
@@ -1648,7 +1648,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.7,
     fontWeight: '900',
-    color: '#71808D',
+    color: '#6B7C8C',
   },
 
   seasonBadge: {
@@ -1670,7 +1670,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '900',
-    color: '#1A2732',
+    color: '#182B3D',
   },
 
   productDescription: {
@@ -1697,7 +1697,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#123B2A',
+    color: '#102A43',
   },
 
   addButton: {
@@ -1705,7 +1705,7 @@ const styles = StyleSheet.create({
     height: 34,
     paddingHorizontal: 10,
     borderRadius: 11,
-    backgroundColor: '#1976F3',
+    backgroundColor: '#F28C28',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1721,7 +1721,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 11,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: '#FFF2E6',
   },
 
   miniButton: {
@@ -1734,7 +1734,7 @@ const styles = StyleSheet.create({
   miniButtonText: {
     fontSize: 19,
     fontWeight: '800',
-    color: '#1D6FF2',
+    color: '#D96F00',
   },
 
   miniNumber: {
@@ -1770,7 +1770,7 @@ const styles = StyleSheet.create({
   noResultsText: {
     marginTop: 4,
     fontSize: 13,
-    color: '#71808D',
+    color: '#6B7C8C',
   },
 
   footerCard: {
@@ -1778,7 +1778,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     padding: 18,
     borderRadius: 20,
-    backgroundColor: '#123B2A',
+    backgroundColor: '#102A43',
   },
 
   footerTitle: {
@@ -1811,7 +1811,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 11,
     borderRadius: 18,
-    backgroundColor: '#123B2A',
+    backgroundColor: '#102A43',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1858,7 +1858,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 34,
     lineHeight: 38,
-    color: '#123B2A',
+    color: '#102A43',
   },
 
   headerCenter: {
@@ -1868,13 +1868,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#152330',
+    color: '#13283D',
   },
 
   headerSubtitle: {
     marginTop: 2,
     fontSize: 10,
-    color: '#7A8793',
+    color: '#718292',
     fontWeight: '700',
   },
 
@@ -1961,7 +1961,7 @@ const styles = StyleSheet.create({
   cartItemName: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#1C2934',
+    color: '#20364A',
   },
 
   cartItemUnit: {
@@ -1985,7 +1985,7 @@ const styles = StyleSheet.create({
   cartItemTotal: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#173E2A',
+    color: '#18324A',
   },
 
   quantityRow: {
@@ -1994,7 +1994,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 10,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: '#FFF2E6',
   },
 
   quantityButton: {
@@ -2007,7 +2007,7 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1D6FF2',
+    color: '#D96F00',
   },
 
   quantityNumber: {
@@ -2015,7 +2015,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 13,
     fontWeight: '900',
-    color: '#1C2934',
+    color: '#20364A',
   },
 
   freeDeliveryCard: {
@@ -2065,7 +2065,7 @@ const styles = StyleSheet.create({
 
   summaryValue: {
     fontSize: 13,
-    color: '#1B2934',
+    color: '#20364A',
     fontWeight: '800',
   },
 
@@ -2082,13 +2082,13 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#1A2731',
+    color: '#182B3D',
   },
 
   totalValue: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#123B2A',
+    color: '#102A43',
   },
 
   checkoutButton: {
@@ -2097,7 +2097,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
     paddingHorizontal: 18,
     borderRadius: 17,
-    backgroundColor: '#1976F3',
+    backgroundColor: '#F28C28',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -2135,7 +2135,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 22,
     fontWeight: '900',
-    color: '#152330',
+    color: '#13283D',
   },
 
   emptyCartText: {
@@ -2151,7 +2151,7 @@ const styles = StyleSheet.create({
     minHeight: 46,
     paddingHorizontal: 18,
     borderRadius: 13,
-    backgroundColor: '#1976F3',
+    backgroundColor: '#F28C28',
     alignItems: 'center',
     justifyContent: 'center',
   },

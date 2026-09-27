@@ -423,7 +423,7 @@ export default function MoreScreen() {
 
           <TouchableOpacity
             style={styles.smallCard}
-            onPress={() => goTo('/missions')}
+            onPress={() => goTo('/competitions?from=more')}
             activeOpacity={0.84}
           >
             <Ionicons

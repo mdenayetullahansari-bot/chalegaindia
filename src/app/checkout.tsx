@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -50,8 +50,11 @@ type RazorpayOrderResponse = {
 type SupabaseOrder = {
   id: string;
   order_id: string;
+  delivery_deadline: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
 };
-
 const FREE_DELIVERY_THRESHOLD = 499;
 
 const getDeliveryFee = (subtotal: number) => {
@@ -65,7 +68,6 @@ const getDeliveryFee = (subtotal: number) => {
 
   return 49;
 };
-
 const getDeliveryDeadline = (createdAt: string) => {
   const created = new Date(createdAt);
 
@@ -170,9 +172,11 @@ export default function CheckoutScreen() {
 
   const finishOrder = async ({
     orderId,
+    total,
     deliveryDeadline,
   }: {
     orderId: string;
+    total: number;
     deliveryDeadline: string;
   }) => {
     await clearCart();
@@ -182,7 +186,7 @@ export default function CheckoutScreen() {
       params: {
         orderId,
         name: name.trim(),
-        total: orderTotal.toString(),
+        total: total.toString(),
         deliveryDeadline,
       },
     });
@@ -190,92 +194,71 @@ export default function CheckoutScreen() {
 
   const createSupabaseOrder = async ({
     publicOrderId,
-    createdAt,
-    deliveryDeadline,
   }: {
     publicOrderId: string;
-    createdAt: string;
-    deliveryDeadline: string;
   }): Promise<SupabaseOrder> => {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (sessionError) {
-      console.error('Session error:', sessionError);
-    }
-
-    if (!session) {
-      throw new Error(
-        'Your session has expired. Please sign in again.',
-      );
-    }
-
-    const dbProducts = selectedProducts.map((product) => ({
+    const cartItems = selectedProducts.map((product) => ({
       id: product.id,
-      name: product.name,
-      price: product.price,
-      unit: product.unit,
-      category: product.category,
-      emoji: product.emoji,
       quantity: product.quantity || 1,
     }));
 
     const {
       data,
       error,
-    } = await supabase
-      .from('orders')
-      .insert({
-        user_id: session.user.id,
-        order_id: publicOrderId,
-        customer_name: name.trim(),
-        customer_phone: phone.trim(),
-        address: address.trim(),
-        area: area.trim(),
-        pin: pin.trim(),
-        products: dbProducts,
-        subtotal,
-        delivery_fee: deliveryFee,
-        total: orderTotal,
-        delivery,
-        delivery_promise: 'Within 24 hours',
-        delivery_deadline: deliveryDeadline,
-        status: 'Order Received',
-        payment_method:
-          paymentMethod === 'online' ? 'Razorpay' : 'COD',
-        payment_status: 'pending',
-      })
-      .select('id, order_id')
-      .single();
+    } = await supabase.rpc(
+      'create_chalega_order',
+      {
+        p_order_id: publicOrderId,
+        p_customer_name: name.trim(),
+        p_customer_phone: phone.trim(),
+        p_address: address.trim(),
+        p_area: area.trim(),
+        p_pin: pin.trim(),
+        p_items: cartItems,
+        p_delivery: delivery,
+        p_payment_method:
+          paymentMethod === 'online'
+            ? 'Razorpay'
+            : 'COD',
+      },
+    );
 
     if (error) {
       console.error(
-        'Supabase order creation error:',
+        'Secure order creation error:',
         error,
       );
 
-      if (error.code === '23505') {
+      if (
+        error.code === '23505' ||
+        error.message?.toLowerCase().includes('duplicate')
+      ) {
         throw new Error(
           'We could not create a unique order number. Please try again.',
         );
       }
 
       throw new Error(
-        'We could not save your order. Please try again.',
+        error.message ||
+          'We could not save your order. Please try again.',
       );
     }
 
-    if (!data?.id || !data?.order_id) {
+    const createdOrder = Array.isArray(data)
+      ? data[0]
+      : data;
+
+    if (
+      !createdOrder?.id ||
+      !createdOrder?.order_id
+    ) {
       throw new Error(
         'The order was created but its database ID was missing.',
       );
     }
 
-    return data as SupabaseOrder;
+    return createdOrder as SupabaseOrder;
   };
-
   const startOnlinePayment = async ({
     chalegaOrderId,
     publicOrderId,
@@ -532,12 +515,10 @@ export default function CheckoutScreen() {
       const orderId =
         generatePublicOrderId();
 
-      const dbOrder =
-        await createSupabaseOrder({
-          publicOrderId: orderId,
-          createdAt,
-          deliveryDeadline,
-        });
+    const dbOrder =
+  await createSupabaseOrder({
+    publicOrderId: orderId,
+  });
 
       if (paymentMethod === 'online') {
         const payment =
@@ -548,22 +529,22 @@ export default function CheckoutScreen() {
 
         await finishOrder({
           orderId: dbOrder.order_id,
-          deliveryDeadline,
+          total: dbOrder.total,
+          deliveryDeadline: dbOrder.delivery_deadline,
         });
 
-        return;
       }
 
       await finishOrder({
         orderId: dbOrder.order_id,
-        deliveryDeadline,
+        total: dbOrder.total,
+        deliveryDeadline: dbOrder.delivery_deadline,
       });
     } catch (error: any) {
       console.error(
         'Order/payment error:',
         error,
       );
-
       const message =
         error?.message ||
         'We could not complete your order. Please try again.';
@@ -618,7 +599,7 @@ export default function CheckoutScreen() {
               <Text
                 style={styles.backText}
               >
-                ‹
+                â€¹
               </Text>
             </TouchableOpacity>
 
@@ -656,7 +637,7 @@ export default function CheckoutScreen() {
                   styles.promiseIconText
                 }
               >
-                🚚
+                ðŸšš
               </Text>
             </View>
 
@@ -836,7 +817,7 @@ export default function CheckoutScreen() {
                         }
                       >
                         {product.quantity}{' '}
-                        × ₹
+                        Ã— â‚¹
                         {product.price.toLocaleString(
                           'en-IN',
                         )}{' '}
@@ -849,7 +830,7 @@ export default function CheckoutScreen() {
                         styles.productTotal
                       }
                     >
-                      ₹
+                      â‚¹
                       {(
                         product.price *
                         (product.quantity ||
@@ -888,7 +869,7 @@ export default function CheckoutScreen() {
               }
             >
               <Text>
-                🚚
+                ðŸšš
               </Text>
             </View>
 
@@ -954,7 +935,7 @@ export default function CheckoutScreen() {
                   styles.summaryValue
                 }
               >
-                ₹
+                â‚¹
                 {subtotal.toLocaleString(
                   'en-IN',
                 )}
@@ -981,7 +962,7 @@ export default function CheckoutScreen() {
               >
                 {deliveryFee === 0
                   ? 'FREE'
-                  : `₹${deliveryFee}`}
+                  : `â‚¹${deliveryFee}`}
               </Text>
             </View>
 
@@ -992,8 +973,8 @@ export default function CheckoutScreen() {
             >
               {subtotal >=
               FREE_DELIVERY_THRESHOLD
-                ? '✓ You unlocked free delivery.'
-                : `Add ₹${
+                ? 'âœ“ You unlocked free delivery.'
+                : `Add â‚¹${
                     FREE_DELIVERY_THRESHOLD -
                     subtotal
                   } more for free delivery.`}
@@ -1021,7 +1002,7 @@ export default function CheckoutScreen() {
                   styles.totalValue
                 }
               >
-                ₹
+                â‚¹
                 {orderTotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1062,7 +1043,7 @@ export default function CheckoutScreen() {
                     styles.onlineIconText
                   }
                 >
-                  ₹
+                  â‚¹
                 </Text>
               </View>
 
@@ -1124,7 +1105,7 @@ export default function CheckoutScreen() {
               <View
                 style={styles.codIcon}
               >
-                <Text>₹</Text>
+                <Text>â‚¹</Text>
               </View>
 
               <View
@@ -1180,7 +1161,7 @@ export default function CheckoutScreen() {
                     styles.onlineNoteTitle
                   }
                 >
-                  🔒 Secure online payment
+                  ðŸ”’ Secure online payment
                 </Text>
 
                 <Text
@@ -1242,7 +1223,7 @@ export default function CheckoutScreen() {
                   styles.placeOrderTotal
                 }
               >
-                ₹
+                â‚¹
                 {orderTotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1255,8 +1236,8 @@ export default function CheckoutScreen() {
           >
             {itemsParam || itemCount}{' '}
             item
-            {itemCount === 1 ? '' : 's'} •
-            Fresh order • Chalega 24-hour
+            {itemCount === 1 ? '' : 's'} â€¢
+            Fresh order â€¢ Chalega 24-hour
             delivery
           </Text>
 
@@ -1264,7 +1245,7 @@ export default function CheckoutScreen() {
             style={styles.footer}
           >
             C H A L E G A  I N D I A
-            ♥
+            â™¥
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1771,3 +1752,12 @@ const styles = StyleSheet.create({
     color: '#8A96A0',
   },
 });
+
+
+
+
+
+
+
+
+
