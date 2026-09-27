@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -230,7 +231,7 @@ export default function CustomerOrdersScreen() {
 
           <View>
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -479,11 +480,11 @@ export default function CustomerOrdersScreen() {
         {/* FOOTER */}
 
         <Text style={styles.footer}>
-          CHALEGA INDIA 🇮🇳
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
-          Chalo Health Banaye
+          MOVE PEOPLE • HEALTHY COMMUNITIES
         </Text>
 
       </ScrollView>
@@ -494,7 +495,7 @@ export default function CustomerOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -524,41 +525,41 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
   },
 
   backText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 42,
     lineHeight: 46,
   },
 
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   title: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 34,
     fontWeight: '900',
     marginTop: 2,
   },
 
   introCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 24,
     padding: 22,
     marginBottom: 17,
   },
 
   introTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 22,
     fontWeight: '900',
   },
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
   },
 
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 25,
     padding: 30,
     alignItems: 'center',
@@ -582,7 +583,7 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 26,
     fontWeight: '900',
     marginTop: 15,
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
   },
 
   shopButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingHorizontal: 28,
     paddingVertical: 16,
@@ -605,13 +606,13 @@ const styles = StyleSheet.create({
   },
 
   shopButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
 
   orderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 18,
     marginBottom: 16,
@@ -636,14 +637,14 @@ const styles = StyleSheet.create({
   },
 
   orderNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 20,
     fontWeight: '900',
     marginTop: 4,
   },
 
   statusBadge: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 7,
@@ -658,7 +659,7 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeLabel: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     flexShrink: 1,
@@ -681,7 +682,7 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
   },
 
   progressDot: {
@@ -694,7 +695,7 @@ const styles = StyleSheet.create({
   progressLineActive: {
     height: 3,
     flex: 1,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
   },
 
   progressLine: {
@@ -723,14 +724,14 @@ const styles = StyleSheet.create({
   },
 
   infoValue: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 12,
     fontWeight: '800',
     marginTop: 4,
   },
 
   totalValue: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     marginTop: 3,
@@ -769,7 +770,7 @@ const styles = StyleSheet.create({
   },
 
   productPrice: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
   },
@@ -781,7 +782,7 @@ const styles = StyleSheet.create({
   },
 
   trackButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 15,
     paddingVertical: 15,
     alignItems: 'center',
@@ -789,13 +790,13 @@ const styles = StyleSheet.create({
   },
 
   trackButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 12,
     fontWeight: '900',
   },
 
   footer: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 3,
