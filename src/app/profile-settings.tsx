@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -20,11 +21,11 @@ import { supabase } from '@/lib/supabase';
 const WALKING_DATA_KEY = 'chalega_walking_data';
 
 const BRAND = {
-  blue: '#1D6FF2',
+  blue: BRAND.teal,
   navy: '#0B1F33',
   muted: '#6B7785',
   background: '#F7F5F0',
-  white: '#FFFFFF',
+  white: BRAND.white,
   border: '#E4E8ED',
   saffron: '#F28C28',
   saffronBackground: '#FFF3E4',
@@ -332,7 +333,7 @@ export default function ProfileSettingsScreen() {
 
           <View style={styles.intro}>
             <Text style={styles.introEyebrow}>
-              YOUR CHALEGA INDIA PROFILE
+              YOUR CHALEGA KOLKATA PROFILE
             </Text>
             <Text style={styles.introTitle}>Make it yours.</Text>
             <Text style={styles.introText}>
@@ -545,7 +546,7 @@ export default function ProfileSettingsScreen() {
           </Text>
 
           <View style={styles.footer}>
-            <Text style={styles.footerBrand}>CHALEGA INDIA™</Text>
+            <Text style={styles.footerBrand}>CHALEGA KOLKATA™</Text>
             <Text style={styles.footerTagline}>
               WALK • COMPETE • WIN • REPEAT
             </Text>
@@ -585,7 +586,7 @@ function GenderButton({
         <Ionicons
           name={icon}
           size={23}
-          color={active ? '#FFFFFF' : undefined}
+          color={active ? BRAND.white : undefined}
         />
       </View>
 
@@ -843,7 +844,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.saffronBackground,
   },
   genderIconMen: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
   },
   genderIconActive: {
     backgroundColor: 'rgba(255,255,255,0.20)',
@@ -858,7 +859,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   genderTitleActive: {
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
   genderSubtitle: {
     color: '#7A8691',
@@ -909,7 +910,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   goalChipActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
   },
   goalChipText: {
     color: '#6B7785',
