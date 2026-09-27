@@ -25,6 +25,7 @@ import {
 
 import { BRAND } from '../lib/brand';
 import { supabase } from '../lib/supabase';
+import { qualifyMyReferral } from '@/services/referralService';
 
 async function hasServerTransaction(
   transactionType: string,
@@ -551,6 +552,38 @@ const saveMissionState = useCallback(
                 rewardResult?.balance ?? 0
               ),
           };
+          /*
+           * Referral qualification:
+           * Mission 1 = First 1,000 Steps.
+           * The secure backend function decides whether the
+           * referral qualifies and whether the referrer receives
+           * the one-time 25-point reward.
+           */
+          if (String(missionId) === '1') {
+            try {
+              const referralResult =
+                await qualifyMyReferral();
+
+              if (referralResult.qualified) {
+                console.log(
+                  '[REFERRAL] Qualified:',
+                  referralResult.referralId,
+                  'Points:',
+                  referralResult.referrerPointsAwarded
+                );
+              } else {
+                console.log(
+                  '[REFERRAL] Not qualified:',
+                  referralResult.reason
+                );
+              }
+            } catch (referralError) {
+              console.warn(
+                '[REFERRAL] Qualification check failed:',
+                referralError
+              );
+            }
+          }
 
           setPoints(
             result.balance

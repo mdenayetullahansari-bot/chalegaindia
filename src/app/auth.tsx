@@ -23,6 +23,10 @@ import {
 
 import { supabase } from '@/lib/supabase';
 import { startGuestSession } from '@/lib/guest-session';
+import {
+  applyPendingReferral,
+  captureReferralCode,
+} from '@/services/referralService';
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -79,6 +83,18 @@ export default function AuthScreen() {
       const parsed = Linking.parse(url);
       const params = parsed.queryParams || {};
       const hash = url.includes('#') ? url.split('#')[1] : '';
+
+      const referralParam = params.ref
+        ? String(params.ref)
+        : '';
+
+      if (referralParam) {
+        await captureReferralCode(referralParam);
+        console.log(
+          'REFERRAL CODE CAPTURED:',
+          referralParam
+        );
+      }
 
       if (String(params.type || '') === 'recovery') {
         setIsRecovery(true);
@@ -183,7 +199,7 @@ export default function AuthScreen() {
 
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('AUTH STATE EVENT:', event);
 
       if (event === 'PASSWORD_RECOVERY') {
@@ -191,6 +207,26 @@ export default function AuthScreen() {
         setIsLogin(false);
         setMessage('');
         setMessageType('');
+      }
+
+      if (session?.user) {
+        setTimeout(() => {
+          void applyPendingReferral()
+            .then((result) => {
+              if (result) {
+                console.log(
+                  'REFERRAL RECORDED:',
+                  result.referralId
+                );
+              }
+            })
+            .catch((error) => {
+              console.log(
+                'REFERRAL RECORDING SKIPPED:',
+                error?.message || error
+              );
+            });
+        }, 0);
       }
     });
 

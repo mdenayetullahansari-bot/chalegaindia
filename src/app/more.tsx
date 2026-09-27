@@ -310,6 +310,18 @@ export default function MoreScreen() {
           />
         </TouchableOpacity>
 
+        {/* REFERRALS */}
+        <Text style={styles.sectionTitle}>
+          GROW WITH CHALEGA
+        </Text>
+
+        <MenuRow
+          icon="people-outline"
+          title="Refer & Grow"
+          subtitle="Invite friends and family to join Chalega."
+          onPress={() => goTo('/referral')}
+          tone="green"
+        />
         {/* HEALTH PARTNERS */}
         <Text style={styles.sectionTitle}>
           PARTNERSHIPS
