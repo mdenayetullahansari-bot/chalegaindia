@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,11 +16,11 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 
 const BRAND = {
-  blue: '#1D6FF2',
+  blue: BRAND.teal,
   navy: '#0B1F33',
   muted: '#6B7785',
   background: '#F7F5F0',
-  white: '#FFFFFF',
+  white: BRAND.white,
   border: '#E4E8ED',
   green: '#247A3A',
 };
@@ -77,7 +78,7 @@ export default function KmcWardScreen() {
       if (permission.status !== 'granted') {
         Alert.alert(
           'Location permission needed',
-          'Chalega India needs your location permission to find your KMC ward.',
+          'Chalega needs your location permission to find your KMC ward.',
         );
         return;
       }
@@ -226,7 +227,7 @@ export default function KmcWardScreen() {
             </Text>
 
             <Text style={styles.privacyText}>
-              Chalega India uses your current location
+              Chalega uses your current location
               only to determine your KMC ward. Your
               precise GPS coordinates are not permanently
               stored in your profile.
@@ -377,7 +378,7 @@ export default function KmcWardScreen() {
 
           <Text style={styles.nextText}>
             {wardAssignment
-              ? 'Your KMC ward has been saved to your Chalega India profile. Your precise GPS coordinates are not stored as part of the ward assignment.'
+              ? 'Your KMC ward has been saved to your Chalega profile. Your precise GPS coordinates are not stored as part of the ward assignment.'
               : 'Your location is matched against the official KMC ward boundary data. The server determines the matching ward before assigning it to your profile.'}
           </Text>
 
@@ -419,7 +420,7 @@ export default function KmcWardScreen() {
             number="1"
             icon="location-outline"
             title="Allow location"
-            text="Give Chalega India temporary access to your current location."
+            text="Give Chalega temporary access to your current location."
           />
 
           <Step
@@ -447,7 +448,7 @@ export default function KmcWardScreen() {
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA INDIA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.footerTagline}>
@@ -744,7 +745,7 @@ const styles = StyleSheet.create({
   },
 
   nextCard: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 22,
     padding: 19,
     marginTop: 16,
@@ -837,7 +838,7 @@ const styles = StyleSheet.create({
     width: 35,
     height: 35,
     borderRadius: 11,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
