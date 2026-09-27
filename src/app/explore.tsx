@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   RefreshControl,
@@ -54,48 +55,48 @@ const HEALTH_TOPICS = [
     icon: '❤️',
     title: 'Heart Health',
     description: 'Simple habits for a stronger heart.',
-    color: '#F47B20',
-    light: '#FFF1E6',
+    color: BRAND.orange,
+    light: BRAND.orangeLight,
     topic: 'Heart',
   },
   {
     icon: '💧',
     title: 'Hydration',
     description: 'Keep your body refreshed and active.',
-    color: '#1D6FF2',
-    light: '#EAF2FF',
+    color: BRAND.teal,
+    light: BRAND.greenLight,
     topic: 'Water',
   },
   {
     icon: '🥗',
     title: 'Healthy Diet',
     description: 'Better food choices, one meal at a time.',
-    color: '#2FA84F',
-    light: '#EAF7EE',
+    color: BRAND.green,
+    light: BRAND.greenLight,
     topic: 'Diet',
   },
   {
     icon: '🚶',
     title: 'Daily Walking',
     description: 'Move more and build your walking habit.',
-    color: '#1D6FF2',
-    light: '#EAF2FF',
+    color: BRAND.teal,
+    light: BRAND.greenLight,
     topic: 'Walking',
   },
   {
     icon: '😴',
     title: 'Better Sleep',
     description: 'Good rest helps your body recover.',
-    color: '#6C63C7',
-    light: '#F0EEFF',
+    color: BRAND.teal,
+    light: BRAND.greenLight,
     topic: 'Sleep',
   },
   {
     icon: '🧠',
     title: 'Mind & Mood',
     description: 'Take care of your mental wellbeing.',
-    color: '#F47B20',
-    light: '#FFF1E6',
+    color: BRAND.orange,
+    light: BRAND.orangeLight,
     topic: 'Mind',
   },
 ];
@@ -428,7 +429,7 @@ export default function ExploreScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.eyebrow}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -879,7 +880,7 @@ export default function ExploreScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA INDIA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.footerTagline}>
@@ -898,7 +899,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F7F5F0',
+    backgroundColor: BRAND.cream,
   },
 
   container: {
@@ -924,14 +925,14 @@ const styles = StyleSheet.create({
   },
 
   eyebrow: {
-    color: '#2FA84F',
+    color: BRAND.green,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
   },
 
   title: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 38,
     lineHeight: 40,
     fontWeight: '900',
@@ -950,7 +951,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 21,
-    backgroundColor: '#FFF1E6',
+    backgroundColor: BRAND.orangeLight,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -962,7 +963,7 @@ const styles = StyleSheet.create({
   },
 
   scoreCard: {
-    backgroundColor: '#0B1F33',
+    backgroundColor: BRAND.midnight,
     borderRadius: 26,
     padding: 21,
     marginBottom: 15,
@@ -980,7 +981,7 @@ const styles = StyleSheet.create({
   },
 
   scoreEyebrow: {
-    color: '#8FB9E8',
+    color: '#8BD7C9',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.4,
@@ -999,7 +1000,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1012,7 +1013,7 @@ const styles = StyleSheet.create({
   },
 
   scoreOutOf: {
-    color: '#C7DDFF',
+    color: '#C9F5EC',
     fontSize: 9,
     fontWeight: '800',
     marginTop: -1,
@@ -1020,7 +1021,7 @@ const styles = StyleSheet.create({
 
   scoreTrack: {
     height: 8,
-    backgroundColor: '#203B54',
+    backgroundColor: '#12395A',
     borderRadius: 8,
     overflow: 'hidden',
     marginTop: 20,
@@ -1028,7 +1029,7 @@ const styles = StyleSheet.create({
 
   scoreFill: {
     height: '100%',
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
     borderRadius: 8,
   },
 
@@ -1040,7 +1041,7 @@ const styles = StyleSheet.create({
   },
 
   scoreFooterText: {
-    color: '#8FB9E8',
+    color: '#8BD7C9',
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 0.7,
@@ -1076,21 +1077,21 @@ const styles = StyleSheet.create({
   },
 
   breakdownEyebrow: {
-    color: '#2FA84F',
+    color: BRAND.green,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.4,
   },
 
   breakdownTitle: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 17,
     fontWeight: '900',
     marginTop: 4,
   },
 
   breakdownBadge: {
-    backgroundColor: '#EAF7EE',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 11,
     paddingHorizontal: 9,
     paddingVertical: 7,
@@ -1124,7 +1125,7 @@ const styles = StyleSheet.create({
   },
 
   breakdownItemValue: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -1138,7 +1139,7 @@ const styles = StyleSheet.create({
 
   breakdownFill: {
     height: '100%',
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
     borderRadius: 6,
   },
 
@@ -1167,15 +1168,15 @@ const styles = StyleSheet.create({
   },
 
   statBlue: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
   },
 
   statGreen: {
-    backgroundColor: '#EAF7EE',
+    backgroundColor: BRAND.greenLight,
   },
 
   statOrange: {
-    backgroundColor: '#FFF1E6',
+    backgroundColor: BRAND.orangeLight,
   },
 
   statIconText: {
@@ -1190,7 +1191,7 @@ const styles = StyleSheet.create({
   },
 
   statValue: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 20,
     fontWeight: '900',
     marginTop: 3,
@@ -1211,14 +1212,14 @@ const styles = StyleSheet.create({
   },
 
   sectionEyebrow: {
-    color: '#2FA84F',
+    color: BRAND.green,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.4,
   },
 
   sectionTitle: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 23,
     fontWeight: '900',
     marginTop: 4,
@@ -1243,14 +1244,14 @@ const styles = StyleSheet.create({
     width: 53,
     height: 53,
     borderRadius: 18,
-    backgroundColor: '#FFF1E6',
+    backgroundColor: BRAND.orangeLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 13,
   },
 
   checkinIconCompleted: {
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
   },
 
   checkinIconText: {
@@ -1263,14 +1264,14 @@ const styles = StyleSheet.create({
   },
 
   checkinEyebrow: {
-    color: '#F47B20',
+    color: BRAND.orange,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.1,
   },
 
   checkinTitle: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 18,
     lineHeight: 22,
     fontWeight: '900',
@@ -1286,7 +1287,7 @@ const styles = StyleSheet.create({
   },
 
   checkinButton: {
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1297,7 +1298,7 @@ const styles = StyleSheet.create({
   },
 
   checkinButtonCompleted: {
-    backgroundColor: '#2FA84F',
+    backgroundColor: BRAND.green,
   },
 
   checkinButtonText: {
@@ -1353,7 +1354,7 @@ const styles = StyleSheet.create({
   },
 
   topicTitle: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 15,
     lineHeight: 19,
     fontWeight: '900',
@@ -1410,7 +1411,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#EAF7EE',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1425,7 +1426,7 @@ const styles = StyleSheet.create({
   },
 
   habitTitle: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1439,14 +1440,14 @@ const styles = StyleSheet.create({
   },
 
   habitCheck: {
-    color: '#2FA84F',
+    color: BRAND.green,
     fontSize: 19,
     fontWeight: '900',
     marginLeft: 8,
   },
 
   walkingCard: {
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     borderRadius: 25,
     padding: 19,
     flexDirection: 'row',
@@ -1472,7 +1473,7 @@ const styles = StyleSheet.create({
   },
 
   walkingEyebrow: {
-    color: '#BFD8FF',
+    color: '#BFEFE5',
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.1,
@@ -1487,7 +1488,7 @@ const styles = StyleSheet.create({
   },
 
   walkingDescription: {
-    color: '#D9E8FF',
+    color: '#D7F7F1',
     fontSize: 10,
     lineHeight: 15,
     fontWeight: '600',
@@ -1508,7 +1509,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#0B1F33',
+    color: BRAND.midnight,
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: 2.7,
