@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import {
   Tabs,
   TabList,
@@ -98,7 +99,7 @@ export function CustomTabList(props: TabListProps) {
           type="smallBold"
           style={styles.brandText}
         >
-          Expo Starter
+          Chalega
         </ThemedText>
 
         {props.children}
