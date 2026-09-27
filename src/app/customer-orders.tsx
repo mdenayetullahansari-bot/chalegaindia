@@ -193,7 +193,7 @@ export default function CustomerOrdersScreen() {
         <View style={styles.loading}>
           <ActivityIndicator
             size="large"
-            color="#1976F3"
+            color="#00D1A7"
           />
 
           <Text style={styles.loadingText}>
