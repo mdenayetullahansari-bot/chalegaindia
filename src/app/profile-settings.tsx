@@ -20,12 +20,12 @@ import { supabase } from '@/lib/supabase';
 
 const WALKING_DATA_KEY = 'chalega_walking_data';
 
-const BRAND = {
+const COLORS = {
   blue: BRAND.teal,
   navy: '#0B1F33',
   muted: '#6B7785',
   background: '#F7F5F0',
-  white: BRAND.white,
+  white: COLORS.white,
   border: '#E4E8ED',
   saffron: '#F28C28',
   saffronBackground: '#FFF3E4',
@@ -295,7 +295,7 @@ export default function ProfileSettingsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={BRAND.blue} />
+        <ActivityIndicator size="large" color={COLORS.blue} />
         <Text style={styles.loadingText}>
           Loading your profile...
         </Text>
@@ -323,7 +323,7 @@ export default function ProfileSettingsScreen() {
               <Ionicons
                 name="chevron-back"
                 size={23}
-                color={BRAND.navy}
+                color={COLORS.navy}
               />
             </TouchableOpacity>
 
@@ -586,7 +586,7 @@ function GenderButton({
         <Ionicons
           name={icon}
           size={23}
-          color={active ? BRAND.white : undefined}
+          color={active ? COLORS.white : undefined}
         />
       </View>
 
@@ -668,20 +668,20 @@ function Field({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BRAND.background,
+    backgroundColor: COLORS.background,
   },
   keyboard: {
     flex: 1,
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: BRAND.background,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingText: {
     marginTop: 12,
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -700,12 +700,12 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: BRAND.white,
+    backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
   topTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 2,
@@ -719,19 +719,19 @@ const styles = StyleSheet.create({
     paddingBottom: 25,
   },
   introEyebrow: {
-    color: BRAND.blue,
+    color: COLORS.blue,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.6,
   },
   introTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 30,
     fontWeight: '900',
     marginTop: 7,
   },
   introText: {
-    color: BRAND.muted,
+    color: COLORS.muted,
     fontSize: 13,
     lineHeight: 20,
     fontWeight: '600',
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
   sectionTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: BRAND.white,
+    backgroundColor: COLORS.white,
     borderRadius: 22,
     padding: 18,
     marginBottom: 24,
@@ -764,14 +764,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   inputPrefix: {
-    color: BRAND.blue,
+    color: COLORS.blue,
     fontSize: 18,
     fontWeight: '900',
     marginRight: 2,
   },
   input: {
     flex: 1,
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 16,
     fontWeight: '700',
     paddingVertical: 7,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: BRAND.border,
+    backgroundColor: COLORS.border,
     marginVertical: 17,
   },
   helperText: {
@@ -796,18 +796,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: BRAND.border,
+    borderBottomColor: COLORS.border,
     paddingBottom: 7,
   },
   ageInput: {
     flex: 1,
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 25,
     fontWeight: '900',
     paddingVertical: 4,
   },
   ageUnit: {
-    color: BRAND.saffron,
+    color: COLORS.saffron,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.7,
@@ -826,12 +826,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   genderCardWomenActive: {
-    backgroundColor: BRAND.saffron,
-    borderColor: BRAND.saffron,
+    backgroundColor: COLORS.saffron,
+    borderColor: COLORS.saffron,
   },
   genderCardMenActive: {
-    backgroundColor: BRAND.blue,
-    borderColor: BRAND.blue,
+    backgroundColor: COLORS.blue,
+    borderColor: COLORS.blue,
   },
   genderIcon: {
     width: 48,
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   genderIconWomen: {
-    backgroundColor: BRAND.saffronBackground,
+    backgroundColor: COLORS.saffronBackground,
   },
   genderIconMen: {
     backgroundColor: BRAND.greenLight,
@@ -854,12 +854,12 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
   },
   genderTitle: {
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 15,
     fontWeight: '900',
   },
   genderTitleActive: {
-    color: BRAND.white,
+    color: COLORS.white,
   },
   genderSubtitle: {
     color: '#7A8691',
@@ -881,18 +881,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: BRAND.border,
+    borderBottomColor: COLORS.border,
     paddingBottom: 7,
   },
   goalInput: {
     flex: 1,
-    color: BRAND.navy,
+    color: COLORS.navy,
     fontSize: 25,
     fontWeight: '900',
     paddingVertical: 4,
   },
   goalUnit: {
-    color: BRAND.blue,
+    color: COLORS.blue,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.7,
@@ -918,10 +918,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   goalChipTextActive: {
-    color: BRAND.blue,
+    color: COLORS.blue,
   },
   wardCard: {
-    backgroundColor: BRAND.navy,
+    backgroundColor: COLORS.navy,
     borderRadius: 22,
     padding: 17,
     flexDirection: 'row',
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   wardTitle: {
-    color: BRAND.white,
+    color: COLORS.white,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
   saveButton: {
     height: 56,
     borderRadius: 19,
-    backgroundColor: BRAND.blue,
+    backgroundColor: COLORS.blue,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   saveText: {
-    color: BRAND.white,
+    color: COLORS.white,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1.2,
@@ -993,7 +993,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   footerBrand: {
-    color: BRAND.blue,
+    color: COLORS.blue,
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 4,
