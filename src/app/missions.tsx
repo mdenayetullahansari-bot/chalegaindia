@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, {
   useCallback,
   useEffect,
@@ -814,7 +815,7 @@ const saveMissionState = useCallback(
                 styles.brand
               }
             >
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text
@@ -1535,7 +1536,7 @@ const saveMissionState = useCallback(
               styles.footerBrand
             }
           >
-            CHALEGA INDIA
+            CHALEGA KOLKATA
           </Text>
 
           <Text
@@ -2147,7 +2148,7 @@ const styles =
 
     partnerCard: {
       backgroundColor:
-        '#EAF2FF',
+        BRAND.greenLight,
       borderRadius: 30,
       padding: 25,
       marginTop: 2,
