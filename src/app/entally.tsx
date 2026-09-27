@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -21,7 +22,7 @@ export default function EntallyScreen() {
           <Ionicons name="location" size={15} color="#fff" />
           <Text style={styles.badgeText}>ENTALLY • ASSEMBLY 163</Text>
         </View>
-        <Text style={styles.title}>Chalega India</Text>
+        <Text style={styles.title}>Chalega</Text>
         <Text style={styles.heroTitle}>{ENTALLY_ASSEMBLY.copy.title}</Text>
         <Text style={styles.subtitle}>{ENTALLY_ASSEMBLY.copy.subtitle}</Text>
       </View>
