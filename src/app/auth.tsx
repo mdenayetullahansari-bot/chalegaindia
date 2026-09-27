@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useEffect, useState } from 'react';
 
 import {
@@ -49,7 +50,7 @@ export default function AuthScreen() {
 
     if (Platform.OS !== 'web') {
       Alert.alert(
-        type === 'success' ? 'Chalega India' : 'Error',
+        type === 'success' ? 'Chalega' : 'Error',
         text
       );
     }
@@ -109,7 +110,7 @@ export default function AuthScreen() {
           );
         } else {
           showMessage(
-            'Email confirmed successfully. Welcome to Chalega India!',
+            'Email confirmed successfully. Welcome to Chalega!',
             'success'
           );
         }
@@ -146,7 +147,7 @@ export default function AuthScreen() {
             );
           } else {
             showMessage(
-              'Email confirmed successfully. Welcome to Chalega India!',
+              'Email confirmed successfully. Welcome to Chalega!',
               'success'
             );
           }
@@ -263,7 +264,7 @@ export default function AuthScreen() {
         }
 
         showMessage(
-          'Login successful. Welcome back to Chalega India!',
+          'Login successful. Welcome back to Chalega!',
           'success'
         );
 
@@ -449,7 +450,7 @@ export default function AuthScreen() {
             </View>
 
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -457,7 +458,7 @@ export default function AuthScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              Choose a new password for your Chalega India account.
+              Choose a new password for your Chalega account.
             </Text>
 
             <View style={styles.field}>
@@ -549,13 +550,13 @@ export default function AuthScreen() {
           </View>
 
           <Text style={styles.brand}>
-            CHALEGA INDIA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.title}>
             {isLogin
               ? 'Welcome back 👋'
-              : 'Join Chalega India'}
+              : 'Join Chalega'}
           </Text>
 
           <Text style={styles.subtitle}>
@@ -735,7 +736,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   flex: {
@@ -760,21 +761,21 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
   },
 
   logoText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 42,
     fontWeight: '800',
   },
 
   brand: {
     textAlign: 'center',
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 5,
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: '800',
-    color: '#111111',
+    color: BRAND.ink,
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -811,13 +812,13 @@ const styles = StyleSheet.create({
 
   input: {
     height: 54,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: '#E1E5EB',
     borderRadius: 14,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#111111',
+    color: BRAND.ink,
   },
 
   forgotButton: {
@@ -828,14 +829,14 @@ const styles = StyleSheet.create({
   },
 
   forgotText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '700',
   },
 
   primaryButton: {
     height: 56,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
@@ -844,7 +845,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -856,7 +857,7 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -914,7 +915,7 @@ const styles = StyleSheet.create({
   },
 
   switchButton: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -926,7 +927,7 @@ const styles = StyleSheet.create({
   },
 
   guestButtonText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.8,
