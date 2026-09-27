@@ -367,7 +367,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Image
-              source={require("../../assets/chalega-india-logo.png")}
+              source={require("../../assets/images/icon.png")}
               style={styles.homeLogo}
               resizeMode="contain"
             />
@@ -377,7 +377,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              Chalo Health Banaye
+              MOVE PEOPLE • LIVE HEALTHIER
             </Text>
           </View>
 
@@ -870,7 +870,7 @@ export default function HomeScreen() {
           <View style={styles.shopPromoText}>
 
             <Text style={styles.shopPromoEyebrow}>
-              CHALEGA INDIA HEALTH SHOP
+              CHALEGA KOLKATA HEALTH SHOP
             </Text>
 
             <Text style={styles.shopPromoTitle}>
@@ -907,7 +907,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.ordersSubtitle}>
-              Track your Chalega India purchases
+              Track your Chalega purchases
             </Text>
           </View>
 
@@ -922,11 +922,11 @@ export default function HomeScreen() {
         <View style={styles.footer}>
 
           <Text style={styles.footerBrand}>
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>
-            Chalo Health Banaye
+            MOVE PEOPLE • LIVE HEALTHIER
           </Text>
 
           <Text style={styles.footerText}>
@@ -943,7 +943,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F5F0',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -964,13 +964,13 @@ const styles = StyleSheet.create({
   },
 
   homeLogo: {
-    width: 180,
-    height: 90,
+    width: 72,
+    height: 72,
     marginBottom: 4,
   },
 
   brand: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 2.5,
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
   },
 
   cardEyebrow: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.5,
@@ -1064,11 +1064,11 @@ const styles = StyleSheet.create({
   scoreOutOf: {
     fontSize: 19,
     fontWeight: '700',
-    color: '#DCEAFF',
+    color: '#D7F7F1',
   },
 
   scoreMessage: {
-    color: '#E8F1FF',
+    color: '#E6FAF6',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',
@@ -1124,14 +1124,14 @@ const styles = StyleSheet.create({
   },
 
   viewAll: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     marginBottom: 2,
   },
 
   competitionCard: {
-    backgroundColor: '#102A43',
+    backgroundColor: BRAND.midnight,
     borderRadius: 23,
     padding: 18,
     marginTop: 18,
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
   },
 
   competitionSubtitle: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 3,
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
   },
 
   missionArrow: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 30,
     fontWeight: '300',
   },
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
   },
 
   openText: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -1446,7 +1446,7 @@ const styles = StyleSheet.create({
   },
 
   hydrationEyebrow: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.5,
@@ -1460,7 +1460,7 @@ const styles = StyleSheet.create({
   },
 
   hydrationCount: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 23,
     fontWeight: '900',
   },
@@ -1547,7 +1547,7 @@ const styles = StyleSheet.create({
   },
 
   communityCard: {
-    backgroundColor: '#10202F',
+    backgroundColor: BRAND.midnight,
     borderRadius: 23,
     padding: 20,
     flexDirection: 'row',
@@ -1662,7 +1662,7 @@ const styles = StyleSheet.create({
   },
 
   adButton: {
-    backgroundColor: '#10202F',
+    backgroundColor: BRAND.midnight,
     borderRadius: 9,
     paddingHorizontal: 9,
     paddingVertical: 8,
@@ -1688,7 +1688,7 @@ const styles = StyleSheet.create({
   },
 
   shopPromoEyebrow: {
-    color: '#CFE2FF',
+    color: '#BFEFE5',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.2,
@@ -1745,7 +1745,7 @@ const styles = StyleSheet.create({
   },
 
   ordersArrow: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 28,
   },
 
@@ -1756,7 +1756,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 3,
