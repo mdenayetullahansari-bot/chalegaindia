@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
@@ -375,7 +376,7 @@ export default function CheckoutScreen() {
       );
 
       throw new Error(
-        'Online payment is available only in the Chalega India development build, not Expo Go.',
+        'Online payment is available only in the Chalega development build, not Expo Go.',
       );
     }
 
@@ -394,7 +395,7 @@ export default function CheckoutScreen() {
         amount: serverAmount,
         currency: order.currency || 'INR',
         order_id: order.id,
-        name: 'Chalega India',
+        name: 'Chalega',
         description: 'Chalega Fresh order',
         prefill: {
           name: name.trim(),
@@ -405,7 +406,7 @@ export default function CheckoutScreen() {
           chalega_order_uuid: chalegaOrderId,
         },
         theme: {
-          color: '#1976F3',
+          color: BRAND.teal,
         },
       })) as RazorpayPaymentResult;
 
@@ -459,7 +460,7 @@ export default function CheckoutScreen() {
 
       throw new Error(
         verification?.error ||
-          'Payment verification failed. Please contact Chalega India support before trying again.',
+          'Payment verification failed. Please contact Chalega support before trying again.',
       );
     }
 
@@ -1263,7 +1264,7 @@ export default function CheckoutScreen() {
           <Text
             style={styles.footer}
           >
-            C H A L E G A  I N D I A
+            CHALEGA
             ♥
           </Text>
         </ScrollView>
@@ -1275,7 +1276,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   keyboard: {
@@ -1289,7 +1290,7 @@ const styles = StyleSheet.create({
   header: {
     height: 72,
     paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1307,7 +1308,7 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: 34,
     lineHeight: 38,
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   headerCenter: {
@@ -1336,7 +1337,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     padding: 15,
     borderRadius: 20,
-    backgroundColor: '#EAF6EE',
+    backgroundColor: BRAND.greenLight,
     borderWidth: 1,
     borderColor: '#C9E4D0',
     flexDirection: 'row',
@@ -1347,7 +1348,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1389,7 +1390,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: '#E3E8ED',
   },
@@ -1422,7 +1423,7 @@ const styles = StyleSheet.create({
   productsCard: {
     marginHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: '#E3E8ED',
     overflow: 'hidden',
@@ -1467,7 +1468,7 @@ const styles = StyleSheet.create({
   productTotal: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   emptyProducts: {
@@ -1481,7 +1482,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     padding: 15,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 2,
     borderColor: '#E2E7EC',
     flexDirection: 'row',
@@ -1497,7 +1498,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#EAF6EE',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
@@ -1541,7 +1542,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: '#E3E8ED',
   },
@@ -1591,7 +1592,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 21,
     fontWeight: '900',
-    color: '#123B2A',
+    color: BRAND.midnight,
   },
 
   paymentCard: {
@@ -1599,7 +1600,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: '#E3E8ED',
   },
@@ -1635,7 +1636,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1644,14 +1645,14 @@ const styles = StyleSheet.create({
   onlineIconText: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#1976F3',
+    color: BRAND.teal,
   },
 
   codIcon: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1724,7 +1725,7 @@ const styles = StyleSheet.create({
     minHeight: 60,
     paddingHorizontal: 18,
     borderRadius: 18,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1737,7 +1738,7 @@ const styles = StyleSheet.create({
   placeOrderText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 0.4,
   },
 
@@ -1751,7 +1752,7 @@ const styles = StyleSheet.create({
   placeOrderTotal: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 
   orderNote: {
