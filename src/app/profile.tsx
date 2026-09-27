@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -279,7 +280,7 @@ export default function ProfileScreen() {
           </Text>
 
           <Text style={styles.emptyText}>
-            Join Chalega India to save your
+            Join Chalega to save your
             progress, choose your KMC ward
             and build your healthy journey.
           </Text>
@@ -531,7 +532,7 @@ export default function ProfileScreen() {
               }
             >
               Your ward will connect you
-              with local Chalega India
+              with local Chalega
               community activity and
               impact.
             </Text>
@@ -825,7 +826,7 @@ export default function ProfileScreen() {
           <Text
             style={styles.footerBrand}
           >
-            CHALEGA INDIA™
+            CHALEGA KOLKATA™
           </Text>
 
           <Text
@@ -876,7 +877,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -899,7 +900,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -921,7 +922,7 @@ const styles = StyleSheet.create({
     width: 104,
     height: 104,
     borderRadius: 52,
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 4,
@@ -931,20 +932,20 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
   },
 
   avatarFallback: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   avatarLetter: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 38,
     fontWeight: '900',
   },
@@ -991,7 +992,7 @@ const styles = StyleSheet.create({
   },
 
   statsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     paddingVertical: 19,
     flexDirection: 'row',
@@ -1068,7 +1069,7 @@ const styles = StyleSheet.create({
   },
 
   wardCardTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 17,
     fontWeight: '900',
     marginTop: 3,
@@ -1093,7 +1094,7 @@ const styles = StyleSheet.create({
 
   journeyTile: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 20,
     padding: 15,
     marginBottom: 10,
@@ -1109,7 +1110,7 @@ const styles = StyleSheet.create({
   },
 
   blueTile: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
   },
 
   greenTile: {
@@ -1143,7 +1144,7 @@ const styles = StyleSheet.create({
   },
 
   goalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     padding: 18,
     marginTop: 14,
@@ -1157,7 +1158,7 @@ const styles = StyleSheet.create({
   },
 
   goalEyebrow: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1,
@@ -1171,7 +1172,7 @@ const styles = StyleSheet.create({
   },
 
   goalPercent: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 20,
     fontWeight: '900',
   },
@@ -1186,7 +1187,7 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: '100%',
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     borderRadius: 10,
   },
 
@@ -1240,7 +1241,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1D6FF2',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 2,
@@ -1265,7 +1266,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 28,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1292,7 +1293,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButton: {
-    backgroundColor: '#1D6FF2',
+    backgroundColor: BRAND.teal,
     borderRadius: 14,
     paddingHorizontal: 22,
     paddingVertical: 14,
@@ -1300,7 +1301,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.5,
