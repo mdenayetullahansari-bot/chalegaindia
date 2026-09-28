@@ -499,6 +499,42 @@ const saveMissionState = useCallback(
           }
         }
 
+        if (missionId === '5') {
+          const { data: healthCheckIn, error: healthCheckInError } =
+            await supabase
+              .from('daily_health_checkins')
+              .select('water')
+              .eq('checkin_date', todayKey)
+              .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+              .maybeSingle();
+
+          if (healthCheckInError) {
+            console.warn(
+              "[MISSIONS] Could not read today's Health Check-in:",
+              healthCheckInError
+            );
+            Alert.alert(
+              'Health Check-in Required',
+              "Please complete today's Health Check-in before claiming the water mission."
+            );
+            return;
+          }
+
+          const waterGlasses = Number(healthCheckIn?.water ?? 0);
+
+          if (waterGlasses < 6) {
+            Alert.alert(
+              'Complete Health Check-in',
+              "Please record at least 6 glasses of water in today's Health Check-in before claiming this mission.",
+              [
+                { text: 'OPEN HEALTH', onPress: () => router.push('/daily-health-checkin') },
+                { text: 'NOT NOW', style: 'cancel' },
+              ]
+            );
+            return;
+          }
+        }
+
         setCompletingMission(
           missionId
         );
@@ -2353,6 +2389,3 @@ const styles =
       marginTop: 8,
     },
   });
-
-
-
