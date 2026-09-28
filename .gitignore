@@ -97,3 +97,4 @@ ward-rpc.txt
 *.failed-replacement.tsx
 *.web-redemption.tsx
 *.backup.ts
+.vercel
