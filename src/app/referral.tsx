@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -57,11 +57,9 @@ export default function ReferralScreen() {
     }
 
     try {
-      const referralLink = Linking.createURL('/auth', {
-        queryParams: {
-          ref: referralCode,
-        },
-      });
+      const referralLink =
+        'https://chalegaindia.vercel.app/auth?ref=' +
+        encodeURIComponent(referralCode);
 
       await Share.share({
         message:
@@ -131,7 +129,7 @@ export default function ReferralScreen() {
           ) : (
             <>
               <Text style={styles.code}>
-                {referralCode || '—'}
+                {referralCode || 'â€”'}
               </Text>
 
               <Text style={styles.codeHint}>
