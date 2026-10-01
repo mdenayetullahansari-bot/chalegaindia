@@ -13,7 +13,11 @@ import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { getMyReferralCode } from '@/services/referralService';
+import {
+  getMyReferralCode,
+  getMyReferralSummary,
+  type ReferralSummary,
+} from '@/services/referralService';
 
 const NAVY = '#061B2E';
 const TEAL = '#00D1A7';
@@ -27,14 +31,25 @@ export default function ReferralScreen() {
 
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<ReferralSummary>({
+    totalReferrals: 0,
+    pendingReferrals: 0,
+    qualifiedReferrals: 0,
+    rewardedReferrals: 0,
+    coinsEarned: 0,
+  });
 
   const loadReferralCode = useCallback(async () => {
     try {
       setLoading(true);
 
-      const code = await getMyReferralCode();
+      const [code, referralSummary] = await Promise.all([
+        getMyReferralCode(),
+        getMyReferralSummary(),
+      ]);
 
       setReferralCode(code);
+      setSummary(referralSummary);
     } catch (error) {
       console.log('Could not load referral code:', error);
 
@@ -137,6 +152,33 @@ export default function ReferralScreen() {
               </Text>
             </>
           )}
+        </View>
+
+        <View style={styles.statsCard}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>
+              {summary.totalReferrals}
+            </Text>
+            <Text style={styles.statLabel}>INVITED</Text>
+          </View>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>
+              {summary.rewardedReferrals}
+            </Text>
+            <Text style={styles.statLabel}>REWARDED</Text>
+          </View>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>
+              {summary.coinsEarned}
+            </Text>
+            <Text style={styles.statLabel}>COINS EARNED</Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -300,7 +342,43 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  shareButton: {
+  statsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: LINE,
+    paddingVertical: 16,
+    marginTop: 14,
+  },
+
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  statValue: {
+    color: NAVY,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  statLabel: {
+    color: MUTED,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: LINE,
+  },
+
+  shareButton:
     height: 56,
     borderRadius: 17,
     backgroundColor: TEAL,
