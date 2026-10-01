@@ -218,8 +218,8 @@ export default function ReferralScreen() {
             <Text style={styles.infoBody}>
               Share your personal referral code with
               someone you know. When they join through
-              your referral and complete Mission 1 -
-              First 1,000 Steps - you earn 25 Chalega Points.
+              your referral and complete the first 1,000 steps,
+              both of you receive 25 Chalega Coins.
             </Text>
           </View>
         </View>
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     backgroundColor: LINE,
   },
 
-  shareButton:
+  shareButton: {
     height: 56,
     borderRadius: 17,
     backgroundColor: TEAL,
