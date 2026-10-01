@@ -10,18 +10,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 
-import {
-  getPoints,
-  getPointsHistory,
-  subtractPoints,
-  type PointsTransaction,
-} from '../lib/points';
-import { formatLocalDateTime } from '../lib/date';
+import { supabase } from '../lib/supabase';
 
-const CLAIMED_REWARDS_KEY = 'chalega_claimed_rewards';
+type PointsTransaction = {
+  id: string;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  transaction_key: string;
+  description: string;
+  created_at: string;
+  title: string;
+  type: string;
+  timestamp: string;
+};
+import { formatLocalDateTime } from '../lib/date';
 
 type Reward = {
   id: string;
@@ -81,29 +86,59 @@ export default function RewardsScreen() {
       setLoading(true);
 
       const [
-        currentPoints,
-        currentHistory,
-        savedClaims,
+        { data: profileData, error: profileError },
+        { data: transactionData, error: transactionError },
+        { data: redemptionData, error: redemptionError },
       ] = await Promise.all([
-        getPoints(),
-        getPointsHistory(),
-        AsyncStorage.getItem(CLAIMED_REWARDS_KEY),
+        supabase
+          .from('profiles')
+          .select('points')
+          .single(),
+        supabase.rpc('get_my_points_transactions'),
+        supabase.rpc('get_my_reward_redemptions'),
       ]);
 
-      setPoints(currentPoints);
-      setHistory(currentHistory);
+      if (profileError) throw profileError;
+      if (transactionError) throw transactionError;
+      if (redemptionError) throw redemptionError;
 
-      if (savedClaims) {
-        try {
-          const parsed = JSON.parse(savedClaims);
+      setPoints(
+        Math.max(
+          0,
+          Math.round(Number(profileData?.points) || 0)
+        )
+      );
 
-          if (Array.isArray(parsed)) {
-            setClaimed(parsed);
-          }
-        } catch {
-          setClaimed([]);
-        }
-      }
+      setHistory(
+        (transactionData ?? []).map(
+          (transaction: {
+            id: string;
+            amount: number;
+            balance_after: number;
+            transaction_type: string;
+            transaction_key: string;
+            description: string;
+            created_at: string;
+          }) => ({
+            ...transaction,
+            title: transaction.description,
+            type: transaction.transaction_type,
+            timestamp: transaction.created_at,
+          })
+        )
+      );
+
+      setClaimed(
+        (redemptionData ?? [])
+          .map(
+            (redemption: { reward_id: string | null }) =>
+              redemption.reward_id
+          )
+          .filter(
+            (rewardId: string | null): rewardId is string =>
+              Boolean(rewardId)
+          )
+      );
     } catch (error) {
       console.log(
         'Could not load Chalega wallet:',
@@ -199,35 +234,27 @@ export default function RewardsScreen() {
 
     const redeem = async () => {
       try {
-        const newBalance =
-          await subtractPoints(
-            reward.cost,
-            'reward_redemption',
-            reward.title,
-            `redeemed_${reward.id}_${Date.now()}`
-          );
-
-        if (newBalance === null) {
-          Alert.alert(
-            'Not enough points',
-            'Your available balance has changed. Please try again.'
-          );
-
-          await loadWallet();
-          return;
-        }
-
-        const updatedClaims = [
-          ...claimed,
-          reward.id,
-        ];
-
-        await AsyncStorage.setItem(
-          CLAIMED_REWARDS_KEY,
-          JSON.stringify(updatedClaims)
+        const {
+          data: redemptionResult,
+          error: redemptionError,
+        } = await supabase.rpc(
+          'redeem_chalega_reward',
+          {
+            p_reward_id: reward.id,
+          }
         );
 
-        setClaimed(updatedClaims);
+        if (redemptionError) {
+          throw redemptionError;
+        }
+
+        const newBalance = Math.max(
+          0,
+          Math.round(
+            Number(redemptionResult?.balance) || 0
+          )
+        );
+
         setPoints(newBalance);
 
         await loadWallet();
@@ -752,12 +779,7 @@ export default function RewardsScreen() {
 
           <TouchableOpacity
             style={styles.sponsorButton}
-            onPress={() =>
-              Alert.alert(
-                'Chalega Partners',
-                'The partner marketplace is coming next.'
-              )
-            }
+            onPress={() => router.push('/partner')}
           >
             <Text style={styles.sponsorButtonText}>
               PARTNER WITH CHALEGA

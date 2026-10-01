@@ -310,6 +310,18 @@ export default function MoreScreen() {
           />
         </TouchableOpacity>
 
+        {/* REFERRALS */}
+        <Text style={styles.sectionTitle}>
+          GROW WITH CHALEGA
+        </Text>
+
+        <MenuRow
+          icon="people-outline"
+          title="Refer & Grow"
+          subtitle="Invite friends and family to join Chalega."
+          onPress={() => goTo('/referral')}
+          tone="green"
+        />
         {/* HEALTH PARTNERS */}
         <Text style={styles.sectionTitle}>
           PARTNERSHIPS
@@ -344,7 +356,7 @@ export default function MoreScreen() {
           <TouchableOpacity
             style={styles.partnerButton}
             onPress={() =>
-              showComingSoon('Health Partner Program')
+              goTo('/partner')
             }
             activeOpacity={0.85}
           >
@@ -423,7 +435,7 @@ export default function MoreScreen() {
 
           <TouchableOpacity
             style={styles.smallCard}
-            onPress={() => goTo('/missions')}
+            onPress={() => goTo('/competitions?from=more')}
             activeOpacity={0.84}
           >
             <Ionicons

@@ -305,6 +305,13 @@ export default function RootLayout() {
       />
 
       <Tabs.Screen
+        name="competitions"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
         name="profile"
         options={{
           tabBarButton: () => null,

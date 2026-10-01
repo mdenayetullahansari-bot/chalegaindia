@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { getPoints } from '@/lib/points';
+
 
 type Profile = {
   full_name: string | null;
@@ -58,30 +58,6 @@ export default function ProfileScreen() {
       setLoading(true);
 
       /*
-       * CENTRAL CHALEGA POINTS
-       *
-       * Profile always reads the central wallet.
-       * It does not use profiles.points or walking.points
-       * for the displayed Points balance.
-       */
-      const currentPoints =
-        await getPoints();
-
-      console.log(
-        '[PROFILE] CENTRAL POINTS =',
-        currentPoints
-      );
-
-      setPoints(
-        Number.isFinite(currentPoints)
-          ? Math.max(
-              0,
-              Math.round(currentPoints)
-            )
-          : 0
-      );
-
-      /*
        * SUPABASE SESSION
        */
       const {
@@ -123,6 +99,13 @@ export default function ProfileScreen() {
 
       if (data) {
         setProfile(data);
+
+        const currentPoints = Math.max(
+          0,
+          Math.round(Number(data.points) || 0)
+        );
+
+        setPoints(currentPoints);
       } else {
         setProfile({
           full_name:

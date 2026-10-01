@@ -20,7 +20,7 @@ const COLORS = {
   navy: '#0B1F33',
   muted: '#6B7785',
   background: '#F7F5F0',
-  white: COLORS.white,
+  white: '#FFFFFF',
   border: '#E4E8ED',
   green: '#247A3A',
 };

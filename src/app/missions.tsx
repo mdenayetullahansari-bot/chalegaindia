@@ -24,12 +24,51 @@ import {
   useRouter,
 } from 'expo-router';
 
+
 import {
   getPoints,
   hasTransaction,
 } from '../lib/points';
 
 import { supabase } from '../lib/supabase';
+import { qualifyMyReferral } from '@/services/referralService';
+
+async function hasServerTransaction(
+  transactionType: string,
+  transactionKey: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc(
+    'get_my_points_transactions'
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  const dateKey = transactionKey.startsWith(`${transactionType}_`)
+    ? transactionKey.slice(transactionType.length + 1)
+    : transactionKey;
+
+  return (data ?? []).some(
+    (transaction: {
+      transaction_type: string | null;
+      transaction_key: string | null;
+    }) => {
+      if (transaction.transaction_type !== transactionType) {
+        return false;
+      }
+
+      const serverKey = transaction.transaction_key;
+
+      return (
+        serverKey === transactionKey ||
+        (serverKey !== null &&
+          serverKey.startsWith(`${transactionType}:`) &&
+          serverKey.endsWith(`:${dateKey}`))
+      );
+    }
+  );
+}
 
 type Mission = {
   id: string;
@@ -213,22 +252,22 @@ const loadMissions = useCallback(async () => {
      * their completion into Supabase when this screen is opened.
      */
 
-    const walkingCompleted = await hasTransaction(
+    const walkingCompleted = await hasServerTransaction(
       'walking_mission',
       `walking_mission_${todayKey}`
     );
 
-    const waterCompleted = await hasTransaction(
+    const waterCompleted = await hasServerTransaction(
       'water_mission',
       `water_mission_${todayKey}`
     );
 
-    const healthCompleted = await hasTransaction(
+    const healthCompleted = await hasServerTransaction(
       'health_checkin',
       `health_checkin_${todayKey}`
     );
 
-    const streakCompleted = await hasTransaction(
+    const streakCompleted = await hasServerTransaction(
       'streak_mission',
       `streak_mission_${todayKey}`
     );
@@ -281,7 +320,19 @@ const loadMissions = useCallback(async () => {
 
     setMissions(loadedMissions);
 
-    const currentPoints = await getPoints();
+    const { data: walletProfile, error: walletError } = await supabase
+        .from('profiles')
+        .select('points')
+        .single();
+
+      if (walletError) {
+        throw walletError;
+      }
+
+      const currentPoints = Math.max(
+        0,
+        Math.round(Number(walletProfile?.points) || 0)
+      );
 
     setPoints(
       Number.isFinite(currentPoints)
@@ -424,7 +475,7 @@ const saveMissionState = useCallback(
           missionId === '7'
         ) {
           const walkingCompleted =
-            await hasTransaction(
+            await hasServerTransaction(
               'walking_mission',
               `walking_mission_${todayKey}`
             );
@@ -450,6 +501,42 @@ const saveMissionState = useCallback(
               ]
             );
 
+            return;
+          }
+        }
+
+        if (missionId === '5') {
+          const { data: healthCheckIn, error: healthCheckInError } =
+            await supabase
+              .from('daily_health_checkins')
+              .select('water')
+              .eq('checkin_date', todayKey)
+              .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+              .maybeSingle();
+
+          if (healthCheckInError) {
+            console.warn(
+              "[MISSIONS] Could not read today's Health Check-in:",
+              healthCheckInError
+            );
+            Alert.alert(
+              'Health Check-in Required',
+              "Please complete today's Health Check-in before claiming the water mission."
+            );
+            return;
+          }
+
+          const waterGlasses = Number(healthCheckIn?.water ?? 0);
+
+          if (waterGlasses < 6) {
+            Alert.alert(
+              'Complete Health Check-in',
+              "Please record at least 6 glasses of water in today's Health Check-in before claiming this mission.",
+              [
+                { text: 'OPEN HEALTH', onPress: () => router.push('/daily-health-checkin') },
+                { text: 'NOT NOW', style: 'cancel' },
+              ]
+            );
             return;
           }
         }
@@ -507,6 +594,38 @@ const saveMissionState = useCallback(
                 rewardResult?.balance ?? 0
               ),
           };
+          /*
+           * Referral qualification:
+           * Mission 1 = First 1,000 Steps.
+           * The secure backend function decides whether the
+           * referral qualifies and whether the referrer receives
+           * the one-time 25-point reward.
+           */
+          if (String(missionId) === '1') {
+            try {
+              const referralResult =
+                await qualifyMyReferral();
+
+              if (referralResult.qualified) {
+                console.log(
+                  '[REFERRAL] Qualified:',
+                  referralResult.referralId,
+                  'Points:',
+                  referralResult.referrerPointsAwarded
+                );
+              } else {
+                console.log(
+                  '[REFERRAL] Not qualified:',
+                  referralResult.reason
+                );
+              }
+            } catch (referralError) {
+              console.warn(
+                '[REFERRAL] Qualification check failed:',
+                referralError
+              );
+            }
+          }
 
           setPoints(
             result.balance
@@ -1543,7 +1662,7 @@ const saveMissionState = useCallback(
               styles.footerText
             }
           >
-            WALK Î“Ã‡Ã³ EARN Î“Ã‡Ã³ IMPROVE Î“Ã‡Ã³ REPEAT
+            WALK • EARN • IMPROVE • REPEAT
           </Text>
         </View>
       </ScrollView>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pedometer } from 'expo-sensors';
 import {
   Alert,
@@ -14,6 +14,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { getPoints } from '../lib/points';
 import { BRAND } from '@/lib/brand';
+import { supabase } from '../lib/supabase';
+import { completeStreakDay } from '../lib/streak';
+import { syncDailySteps } from '../services/dailyStepsService';
 
 type DayData = {
   day: string;
@@ -53,6 +56,8 @@ export default function WalkingScreen() {
     useState(false);
   const [sensorBaseSteps, setSensorBaseSteps] =
     useState<number | null>(null);
+  const lastDailyStepsSyncAt = useRef(0);
+  const lastDailyStepsSyncedValue = useRef<number | null>(null);
 
   const progress = Math.min(steps / goal, 1);
 
@@ -104,7 +109,7 @@ export default function WalkingScreen() {
    *
    * IMPORTANT:
    * data.points is intentionally NOT used as the wallet.
-   * The wallet always comes from getPoints().
+   * The wallet always comes from the server profile.
    */
   const loadWalkingData = async () => {
     try {
@@ -205,8 +210,10 @@ export default function WalkingScreen() {
         }
       }
 
-      const currentPoints = await getPoints();
-      setPoints(currentPoints);
+      const { data: walletProfile, error: walletError } = await supabase.from('profiles').select('points').single();
+      if (!walletError) {
+        setPoints(Math.max(0, Number(walletProfile?.points ?? 0)));
+      }
     } catch (error) {
       console.log(
         'Could not load walking data:',
@@ -227,8 +234,10 @@ export default function WalkingScreen() {
   useEffect(() => {
     const refreshPoints = async () => {
       try {
-        const currentPoints = await getPoints();
-        setPoints(currentPoints);
+        const { data: walletProfile, error: walletError } = await supabase.from('profiles').select('points').single();
+        if (!walletError) {
+          setPoints(Math.max(0, Number(walletProfile?.points ?? 0)));
+        }
       } catch (error) {
         console.log(
           'Could not refresh Chalega Points:',
@@ -420,7 +429,7 @@ export default function WalkingScreen() {
        * check fires without awarding +25 twice.
        */
       /* Persist the completed Streak mission first. The secure reward RPC requires this backend record. */
-      const { data: { streakUser } } = await supabase.auth.getUser();
+      const { data: { user: streakUser } } = await supabase.auth.getUser();
       if (!streakUser) throw new Error('No authenticated streakUser');
       const { error: streakMissionSaveError } = await supabase.from('user_missions').upsert({ user_id:streakUser.id, mission_id:7, mission_date:todayKey, progress:1, completed:true, completed_at:new Date().toISOString() }, { onConflict:'user_id,mission_id,mission_date' });
       if (streakMissionSaveError) throw streakMissionSaveError;
@@ -435,6 +444,7 @@ export default function WalkingScreen() {
         nextStreak
       );
 
+
       /*
        * Only show the mission-complete alert when the +40 mission
        * reward was actually newly awarded. The streak engine and
@@ -442,7 +452,7 @@ export default function WalkingScreen() {
        */
       if (missionResult.awarded) {
         Alert.alert(
-          'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â° Walking Mission Complete!',
+          '🎉 Walking Mission Complete!',
           `You reached ${WALK_MISSION_GOAL.toLocaleString(
             'en-IN'
           )} steps today.
@@ -569,7 +579,7 @@ Your rewards have been added to your account.`,
       );
 
       Alert.alert(
-        'Walking Tracking Started ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶',
+        'Walking Tracking Started 🚶',
         `Live phone step tracking is now on. You currently have ${baseSteps.toLocaleString(
           'en-IN'
         )} steps. Keep walking!`
@@ -629,7 +639,7 @@ Your rewards have been added to your account.`,
   const completeMission = async () => {
     if (steps < WALK_MISSION_GOAL) {
       Alert.alert(
-        'Keep going! ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶',
+        'Keep going! 🚶',
         `You still need ${(WALK_MISSION_GOAL - steps).toLocaleString(
           'en-IN'
         )} more steps to complete today's walking mission.`
@@ -640,7 +650,7 @@ Your rewards have been added to your account.`,
 
     if (walkMissionComplete) {
       Alert.alert(
-        'Already Complete ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°',
+        'Already Complete 🎉',
         `You've already earned today's ${WALK_MISSION_POINTS} walking mission points. Keep walking for your health!`
       );
 
@@ -699,7 +709,7 @@ Your rewards have been added to your account.`,
                 week,
                 goal,
                 streak
-              );
+              );syncDailySteps(nextSteps);
             }
           );
       } catch (error) {
@@ -721,24 +731,20 @@ Your rewards have been added to your account.`,
     sensorBaseSteps,
   ]);
 
-  return (
-    <SafeAreaView
-      style={styles.container}
-    >
+    return (
+    <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
         {/* HEADER */}
-
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.8}
           >
-            <Text style={styles.backText}>
-              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹
-            </Text>
+            <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -759,95 +765,80 @@ Your rewards have been added to your account.`,
                 `You currently have ${points} points.`
               )
             }
+            activeOpacity={0.8}
           >
-            <Text
-              style={styles.pointsSmallEmoji}
-            >
-              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂªÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
-            </Text>
-
-            <Text
-              style={styles.pointsSmallNumber}
-            >
-              {points}
-            </Text>
+            <Text style={styles.pointsSmallEmoji}>🪙</Text>
+            <Text style={styles.pointsSmallNumber}>{points}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* MAIN WALKING CARD */}
-
+        {/* HERO */}
         <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>
-            TODAY'S WALK
-          </Text>
+          <View style={styles.heroTopRow}>
+            <View>
+              <Text style={styles.heroEyebrow}>TODAY'S MOVEMENT</Text>
+              <Text style={styles.heroTitle}>Keep moving.</Text>
+              <Text style={styles.heroSubtitle}>
+                Every step counts toward a healthier you.
+              </Text>
+            </View>
 
-          <View style={styles.heroMain}>
+            <View style={styles.heroGoalCircle}>
+              <Text style={styles.heroGoalPercent}>
+                {Math.round(progress * 100)}%
+              </Text>
+              <Text style={styles.heroGoalLabel}>GOAL</Text>
+            </View>
+          </View>
+
+          <View style={styles.heroStepsRow}>
             <View>
               <Text style={styles.stepNumber}>
                 {steps.toLocaleString('en-IN')}
               </Text>
-
-              <Text style={styles.stepLabel}>
-                STEPS
-              </Text>
+              <Text style={styles.stepLabel}>STEPS TODAY</Text>
             </View>
 
-            <View style={styles.goalCircle}>
-              <Text
-                style={styles.goalCircleNumber}
-              >
-                {Math.round(progress * 100)}%
-              </Text>
-
-              <Text style={styles.goalCircleText}>
-                GOAL
+            <View style={styles.remainingPill}>
+              <Text style={styles.remainingPillText}>
+                {todayComplete
+                  ? 'GOAL COMPLETE'
+                  : `${remainingSteps.toLocaleString('en-IN')} TO GO`}
               </Text>
             </View>
           </View>
 
-          <View
-            style={
-              styles.heroProgressBackground
-            }
-          >
+          <View style={styles.heroProgressBackground}>
             <View
               style={[
                 styles.heroProgressFill,
-                {
-                  width: `${progress * 100}%`,
-                },
+                { width: `${progress * 100}%` },
               ]}
             />
           </View>
 
           <View style={styles.heroProgressRow}>
             <Text style={styles.heroProgressText}>
-              {todayComplete
-                ? 'Goal completed! ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°'
-                : `${remainingSteps.toLocaleString(
-                    'en-IN'
-                  )} steps to go`}
+              Daily target
             </Text>
-
             <Text style={styles.heroProgressText}>
-              {goal.toLocaleString('en-IN')}
+              {goal.toLocaleString('en-IN')} steps
             </Text>
           </View>
 
           <TouchableOpacity
-            style={styles.trackButton}
+            style={[
+              styles.trackButton,
+              tracking && styles.trackButtonActive,
+            ]}
             onPress={startTracking}
+            activeOpacity={0.88}
           >
-            <Text
-              style={styles.trackButtonIcon}
-            >
-              {tracking ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¹' : 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶'}
+            <Text style={styles.trackButtonIcon}>
+              {tracking ? '⏹' : '▶'}
             </Text>
-
             <Text style={styles.trackButtonText}>
-              {tracking
-                ? 'TRACKING WALK'
-                : 'START WALKING'}
+              {tracking ? 'TRACKING WALK' : 'START WALKING'}
             </Text>
           </TouchableOpacity>
 
@@ -855,11 +846,12 @@ Your rewards have been added to your account.`,
             {pedometerAvailable === false
               ? 'Step sensor unavailable on this device'
               : pedometerPermission
-              ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â LIVE PHONE STEP TRACKING'
+              ? '● LIVE PHONE STEP TRACKING'
               : 'Phone steps connect when you start walking'}
           </Text>
         </View>
 
+        {/* WEB TEST CONTROLS */}
         {WEB_TEST_CONTROLS && (
           <View
             style={{
@@ -879,7 +871,7 @@ Your rewards have been added to your account.`,
               WEB TEST - SIMULATE STEPS
             </Text>
 
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={styles.webTestRow}>
               <TouchableOpacity
                 onPress={() => addSteps(1000)}
                 style={{
@@ -889,15 +881,7 @@ Your rewards have been added to your account.`,
                   backgroundColor: BRAND.teal,
                 }}
               >
-                <Text
-                  style={{
-                    color: '#FFFFFF',
-                    fontWeight: '900',
-                    textAlign: 'center',
-                  }}
-                >
-                  +1,000
-                </Text>
+                <Text style={styles.webTestButtonText}>+1,000</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -909,15 +893,7 @@ Your rewards have been added to your account.`,
                   backgroundColor: BRAND.teal,
                 }}
               >
-                <Text
-                  style={{
-                    color: '#FFFFFF',
-                    fontWeight: '900',
-                    textAlign: 'center',
-                  }}
-                >
-                  +4,000
-                </Text>
+                <Text style={styles.webTestButtonText}>+4,000</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -929,195 +905,108 @@ Your rewards have been added to your account.`,
                   backgroundColor: BRAND.teal,
                 }}
               >
-                <Text
-                  style={{
-                    color: '#FFFFFF',
-                    fontWeight: '900',
-                    textAlign: 'center',
-                  }}
-                >
-                  +8,000
-                </Text>
+                <Text style={styles.webTestButtonText}>+8,000</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* WALKING MISSION STATUS */}
-
+        {/* MISSION */}
         <TouchableOpacity
           style={[
-            styles.missionStatusCard,
-            walkMissionComplete &&
-              styles.missionStatusComplete,
+            styles.missionCard,
+            walkMissionComplete && styles.missionCardComplete,
           ]}
-          activeOpacity={0.85}
-          onPress={() =>
-            router.push('/missions')
-          }
+          activeOpacity={0.88}
+          onPress={() => router.push('/missions')}
         >
-          <View style={styles.missionStatusIcon}>
-            <Text
-              style={styles.missionStatusEmoji}
-            >
-              {walkMissionComplete
-                ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â°'
-                : 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶'}
+          <View
+            style={[
+              styles.missionIcon,
+              walkMissionComplete && styles.missionIconComplete,
+            ]}
+          >
+            <Text style={styles.missionEmoji}>
+              {walkMissionComplete ? '✓' : '🚶'}
             </Text>
           </View>
 
-          <View
-            style={styles.missionStatusContent}
-          >
-            <Text
-              style={styles.missionStatusLabel}
-            >
+          <View style={styles.missionContent}>
+            <Text style={styles.eyebrow}>
               TODAY'S WALKING MISSION
             </Text>
-
-            <Text
-              style={styles.missionStatusTitle}
-            >
+            <Text style={styles.missionTitle}>
               {walkMissionComplete
                 ? 'Mission complete!'
-                : `Reach ${WALK_MISSION_GOAL.toLocaleString(
-                    'en-IN'
-                  )} steps`}
+                : `Reach ${WALK_MISSION_GOAL.toLocaleString('en-IN')} steps`}
             </Text>
-
-            <Text
-              style={styles.missionStatusText}
-            >
+            <Text style={styles.missionText}>
               {walkMissionComplete
                 ? `+${WALK_MISSION_POINTS} points earned today`
                 : `Earn +${WALK_MISSION_POINTS} Chalega Points`}
             </Text>
           </View>
 
-          <Text
-            style={styles.missionStatusCheck}
-          >
+          <Text style={styles.missionArrow}>
             {walkMissionComplete
-              ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“'
-              : `${Math.max(
-                  remainingSteps,
-                  0
-                ).toLocaleString('en-IN')}`}
+              ? '✓'
+              : `${Math.max(remainingSteps, 0).toLocaleString('en-IN')}`}
           </Text>
         </TouchableOpacity>
 
-        {/* DAILY STATS */}
-
-        <Text style={styles.sectionTitle}>
-          TODAY'S ACTIVITY
-        </Text>
+        {/* STATS */}
+        <Text style={styles.sectionTitle}>TODAY'S ACTIVITY</Text>
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <View
-              style={[
-                styles.statIcon,
-                styles.statIconBlue,
-              ]}
-            >
-              <Text
-                style={styles.statIconEmoji}
-              >
-                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
-              </Text>
+            <View style={[styles.statIcon, styles.statIconBlue]}>
+              <Text style={styles.statIconEmoji}>📍</Text>
             </View>
-
-            <Text style={styles.statNumber}>
-              {distanceKm}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              KM
-            </Text>
+            <Text style={styles.statNumber}>{distanceKm}</Text>
+            <Text style={styles.statLabel}>KM</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View
-              style={[
-                styles.statIcon,
-                styles.statIconOrange,
-              ]}
-            >
-              <Text
-                style={styles.statIconEmoji}
-              >
-                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥
-              </Text>
+            <View style={[styles.statIcon, styles.statIconOrange]}>
+              <Text style={styles.statIconEmoji}>🔥</Text>
             </View>
-
-            <Text style={styles.statNumber}>
-              {calories}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              CALORIES*
-            </Text>
+            <Text style={styles.statNumber}>{calories}</Text>
+            <Text style={styles.statLabel}>CALORIES*</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View
-              style={[
-                styles.statIcon,
-                styles.statIconGreen,
-              ]}
-            >
-              <Text
-                style={styles.statIconEmoji}
-              >
-                ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
-              </Text>
+            <View style={[styles.statIcon, styles.statIconGreen]}>
+              <Text style={styles.statIconEmoji}>⏱️</Text>
             </View>
-
-            <Text style={styles.statNumber}>
-              {Math.round(steps / 100)}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              MINUTES*
-            </Text>
+            <Text style={styles.statNumber}>{Math.round(steps / 100)}</Text>
+            <Text style={styles.statLabel}>MINUTES*</Text>
           </View>
         </View>
 
         <Text style={styles.disclaimer}>
-          *Estimated values. Actual results vary by
-          person.
+          *Estimated values. Actual results vary by person.
         </Text>
 
-        {/* WEEKLY ACTIVITY */}
-
-        <Text style={styles.sectionTitle}>
-          YOUR WEEK
-        </Text>
+        {/* WEEK */}
+        <Text style={styles.sectionTitle}>YOUR WEEK</Text>
 
         <View style={styles.weekCard}>
           <View style={styles.weekHeader}>
             <View>
-              <Text style={styles.weekTitle}>
-                Walking activity
-              </Text>
-
+              <Text style={styles.weekTitle}>Walking activity</Text>
               <Text style={styles.weekSubtitle}>
                 Keep your momentum going.
               </Text>
             </View>
 
-            <Text style={styles.weekStreak}>
-              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥ {streak}
-            </Text>
+            <View style={styles.weekStreakPill}>
+              <Text style={styles.weekStreak}>🔥 {streak}</Text>
+            </View>
           </View>
 
           <View style={styles.weekRow}>
             {week.map((item, index) => {
-              const percentage = Math.min(
-                item.steps / goal,
-                1
-              );
-
+              const percentage = Math.min(item.steps / goal, 1);
               const isToday = index === 3;
 
               return (
@@ -1125,11 +1014,7 @@ Your rewards have been added to your account.`,
                   key={`${item.day}-${index}`}
                   style={styles.dayColumn}
                 >
-                  <View
-                    style={
-                      styles.dayBarBackground
-                    }
-                  >
+                  <View style={styles.dayBarBackground}>
                     <View
                       style={[
                         styles.dayBarFill,
@@ -1137,9 +1022,7 @@ Your rewards have been added to your account.`,
                           height: `${
                             Math.max(
                               percentage * 100,
-                              item.steps > 0
-                                ? 10
-                                : 3
+                              item.steps > 0 ? 10 : 3
                             )
                           }%`,
                         },
@@ -1150,167 +1033,100 @@ Your rewards have been added to your account.`,
                   <Text
                     style={[
                       styles.dayLabel,
-                      isToday &&
-                        styles.dayLabelToday,
+                      isToday && styles.dayLabelToday,
                     ]}
                   >
                     {item.day}
                   </Text>
 
-                  {isToday && (
-                    <View
-                      style={styles.todayDot}
-                    />
-                  )}
+                  {isToday && <View style={styles.todayDot} />}
                 </View>
               );
             })}
           </View>
 
           <View style={styles.weekBottom}>
-            <Text
-              style={styles.weekBottomText}
-            >
-              Goal: {goal.toLocaleString('en-IN')}{' '}
-              steps/day
+            <Text style={styles.weekBottomText}>
+              Goal: {goal.toLocaleString('en-IN')} steps/day
             </Text>
 
-            <TouchableOpacity
-              onPress={changeGoal}
-            >
-              <Text style={styles.changeGoal}>
-                CHANGE
-              </Text>
+            <TouchableOpacity onPress={changeGoal} activeOpacity={0.8}>
+              <Text style={styles.changeGoal}>CHANGE</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* STREAK */}
-
         <View style={styles.streakCard}>
           <View style={styles.streakFire}>
-            <Text style={styles.streakFireText}>
-              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥
-            </Text>
+            <Text style={styles.streakFireText}>🔥</Text>
           </View>
 
           <View style={styles.streakContent}>
-            <Text
-              style={styles.streakEyebrow}
-            >
-              WALKING STREAK
-            </Text>
-
-            <Text style={styles.streakNumber}>
-              {streak} DAYS
-            </Text>
-
-            <Text
-              style={styles.streakDescription}
-            >
-              You're building a healthy habit.
-              Keep today's walk going!
+            <Text style={styles.streakEyebrow}>WALKING STREAK</Text>
+            <Text style={styles.streakNumber}>{streak} DAYS</Text>
+            <Text style={styles.streakDescription}>
+              You're building a healthy habit. Keep today's walk going!
             </Text>
           </View>
 
-          <Text style={styles.streakArrow}>
-            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âº
-          </Text>
+          <Text style={styles.streakArrow}>›</Text>
         </View>
 
         {/* LEVEL */}
-
         <View style={styles.levelCard}>
           <View style={styles.levelTop}>
             <View>
-              <Text style={styles.levelEyebrow}>
-                CHALEGA LEVEL
-              </Text>
-
-              <Text style={styles.levelTitle}>
-                Walker Level {level}
-              </Text>
+              <Text style={styles.levelEyebrow}>CHALEGA LEVEL</Text>
+              <Text style={styles.levelTitle}>Walker Level {level}</Text>
             </View>
 
             <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeText}>
-                {level}
-              </Text>
+              <Text style={styles.levelBadgeText}>{level}</Text>
             </View>
           </View>
 
-          <View
-            style={
-              styles.levelProgressBackground
-            }
-          >
+          <View style={styles.levelProgressBackground}>
             <View
               style={[
                 styles.levelProgressFill,
-                {
-                  width: `${levelProgress}%`,
-                },
+                { width: `${levelProgress}%` },
               ]}
             />
           </View>
 
           <View style={styles.levelBottom}>
-            <Text style={styles.levelText}>
-              {points} points
-            </Text>
-
-            <Text style={styles.levelText}>
-              {level * 250} points
-            </Text>
+            <Text style={styles.levelText}>{points} points</Text>
+            <Text style={styles.levelText}>{level * 250} points</Text>
           </View>
         </View>
 
         {/* CHALLENGE */}
-
-        <Text style={styles.sectionTitle}>
-          THIS WEEK'S CHALLENGE
-        </Text>
+        <Text style={styles.sectionTitle}>THIS WEEK'S CHALLENGE</Text>
 
         <View style={styles.challengeCard}>
-          <View style={styles.challengeIcon}>
-            <Text style={styles.challengeEmoji}>
-              ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂªÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢
-            </Text>
+          <View style={styles.challengeTop}>
+            <View style={styles.challengeIcon}>
+              <Text style={styles.challengeEmoji}>🪙</Text>
+            </View>
+
+            <View style={styles.challengeTopText}>
+              <Text style={styles.challengeTitle}>
+                25,000 Step Challenge
+              </Text>
+              <Text style={styles.challengeText}>
+                Walk 25,000 steps this week and earn bonus Chalega Points.
+              </Text>
+            </View>
           </View>
 
-          <Text
-            style={styles.challengeTitle}
-          >
-            25,000 Step Challenge
-          </Text>
-
-          <Text style={styles.challengeText}>
-            Walk 25,000 steps this week and earn
-            bonus Chalega Points.
-          </Text>
-
-          <View
-            style={
-              styles.challengeProgressBackground
-            }
-          >
-            <View
-              style={
-                styles.challengeProgressFill
-              }
-            />
+          <View style={styles.challengeProgressBackground}>
+            <View style={styles.challengeProgressFill} />
           </View>
 
-          <View
-            style={styles.challengeNumbers}
-          >
-            <Text style={styles.challengeNumber}>
-              15,850 steps
-            </Text>
-
-            <Text style={styles.challengeNumber}>
-              25,000
-            </Text>
+          <View style={styles.challengeNumbers}>
+            <Text style={styles.challengeNumber}>15,850 steps</Text>
+            <Text style={styles.challengeNumber}>25,000</Text>
           </View>
 
           <TouchableOpacity
@@ -1321,69 +1137,49 @@ Your rewards have been added to your account.`,
                 'Keep walking and complete 25,000 steps this week!'
               )
             }
+            activeOpacity={0.88}
           >
-            <Text
-              style={styles.challengeButtonText}
-            >
-              KEEP WALKING
-            </Text>
+            <Text style={styles.challengeButtonText}>KEEP WALKING</Text>
           </TouchableOpacity>
         </View>
 
         {/* COMMUNITY */}
-
         <View style={styles.communityCard}>
-          <Text style={styles.communityEmoji}>
-            ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â
-          </Text>
+          <View style={styles.communityIcon}>
+            <Text style={styles.communityEmoji}>🌍</Text>
+          </View>
 
-          <View
-            style={styles.communityContent}
-          >
-            <Text
-              style={styles.communityEyebrow}
-            >
-              CHALEGA COMMUNITY
-            </Text>
-
-            <Text
-              style={styles.communityTitle}
-            >
+          <View style={styles.communityContent}>
+            <Text style={styles.communityEyebrow}>CHALEGA COMMUNITY</Text>
+            <Text style={styles.communityTitle}>
               You're not walking alone.
             </Text>
-
             <Text style={styles.communityText}>
-              Join people taking small steps toward
-              healthier lives.
+              Join people taking small steps toward healthier lives.
             </Text>
           </View>
         </View>
 
-        {/* COMPLETE BUTTON */}
-
+        {/* COMPLETE */}
         <TouchableOpacity
           style={[
             styles.completeButton,
-            todayComplete &&
-              styles.completeButtonActive,
-            walkMissionComplete &&
-              styles.completeButtonDone,
+            todayComplete && styles.completeButtonActive,
+            walkMissionComplete && styles.completeButtonDone,
           ]}
           onPress={completeMission}
+          activeOpacity={0.88}
         >
-          <Text
-            style={styles.completeButtonText}
-          >
+          <Text style={styles.completeButtonText}>
             {walkMissionComplete
-              ? 'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ WALKING MISSION COMPLETE'
+              ? '✓ WALKING MISSION COMPLETE'
               : steps >= WALK_MISSION_GOAL
               ? 'CLAIM +40 POINTS'
-              : 'KEEP WALKING ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢'}
+              : 'KEEP WALKING →'}
           </Text>
         </TouchableOpacity>
 
         {/* FOOTER */}
-
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
             CHALEGA
@@ -1406,7 +1202,7 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 60,
   },
 
@@ -1424,6 +1220,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E2D7',
   },
 
   backText: {
@@ -1441,7 +1239,7 @@ const styles = StyleSheet.create({
     color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 2.1,
   },
 
   headerTitle: {
@@ -1452,13 +1250,16 @@ const styles = StyleSheet.create({
   },
 
   pointsSmall: {
-    width: 58,
-    height: 46,
+    minWidth: 64,
+    height: 44,
+    paddingHorizontal: 9,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#E8E2D7',
   },
 
   pointsSmallEmoji: {
@@ -1481,9 +1282,15 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     shadowOffset: {
       width: 0,
-      height: 7,
+      height: 8,
     },
     elevation: 5,
+  },
+
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
 
   heroEyebrow: {
@@ -1493,17 +1300,57 @@ const styles = StyleSheet.create({
     letterSpacing: 1.7,
   },
 
-  heroMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 27,
+    lineHeight: 31,
+    fontWeight: '900',
     marginTop: 5,
+  },
+
+  heroSubtitle: {
+    color: '#B9C1C8',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 4,
+    maxWidth: 190,
+  },
+
+  heroGoalCircle: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: '#F47B20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+
+  heroGoalPercent: {
+    color: '#FFFFFF',
+    fontSize: 21,
+    fontWeight: '900',
+  },
+
+  heroGoalLabel: {
+    color: '#FFF1E6',
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+
+  heroStepsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 22,
   },
 
   stepNumber: {
     color: '#FFFFFF',
     fontSize: 51,
-    lineHeight: 58,
+    lineHeight: 57,
     fontWeight: '900',
   },
 
@@ -1511,16 +1358,15 @@ const styles = StyleSheet.create({
     color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.8,
   },
 
-  goalCircle: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  remainingPill: {
+    backgroundColor: '#1C2B34',
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginBottom: 4,
   },
 
   goalCircleNumber: {
@@ -1533,7 +1379,14 @@ const styles = StyleSheet.create({
     color: '#777777',
     fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.7,
+  },
+
+  remainingPillText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.7,
   },
 
   heroProgressBackground: {
@@ -1546,8 +1399,8 @@ const styles = StyleSheet.create({
 
   heroProgressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 6,
+    backgroundColor: '#F47B20',
+    borderRadius: 5,
   },
 
   heroProgressRow: {
@@ -1572,17 +1425,21 @@ const styles = StyleSheet.create({
     marginTop: 19,
   },
 
+  trackButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+
   trackButtonIcon: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#101820',
+    fontSize: 13,
     marginRight: 7,
   },
 
   trackButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: '#101820',
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 0.7,
+    letterSpacing: 0.8,
   },
 
   sensorStatus: {
@@ -1593,23 +1450,59 @@ const styles = StyleSheet.create({
     marginTop: 9,
   },
 
-  missionStatusCard: {
+  webTestCard: {
+    marginTop: 13,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: '#E8E2D7',
+  },
+
+  webTestTitle: {
+    color: '#101820',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+
+  webTestRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  webTestButton: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 11,
+    backgroundColor: '#101820',
+  },
+
+  webTestButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+
+  missionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 16,
-    marginTop: 12,
+    marginTop: 13,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: BRAND.line,
   },
 
-  missionStatusComplete: {
-    backgroundColor: '#EEF9F2',
-    borderColor: '#CDEAD7',
+  missionCardComplete: {
+    backgroundColor: '#F0F8F1',
+    borderColor: '#CFE3D1',
   },
 
-  missionStatusIcon: {
+  missionIcon: {
     width: 54,
     height: 54,
     borderRadius: 17,
@@ -1618,11 +1511,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  missionStatusEmoji: {
-    fontSize: 27,
+  missionIconComplete: {
+    backgroundColor: '#DCEEDD',
   },
 
-  missionStatusContent: {
+  missionEmoji: {
+    fontSize: 25,
+  },
+
+  missionContent: {
     flex: 1,
     paddingHorizontal: 13,
   },
@@ -1631,7 +1528,7 @@ const styles = StyleSheet.create({
     color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
   },
 
   missionStatusTitle: {
@@ -1641,7 +1538,21 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  missionStatusText: {
+  eyebrow: {
+    color: '#F47B20',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+
+  missionTitle: {
+    color: '#101820',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  missionText: {
     color: '#777777',
     fontSize: 10,
     marginTop: 3,
@@ -1650,6 +1561,12 @@ const styles = StyleSheet.create({
   missionStatusCheck: {
     color: BRAND.teal,
     fontSize: 14,
+    fontWeight: '900',
+  },
+
+  missionArrow: {
+    color: '#101820',
+    fontSize: 12,
     fontWeight: '900',
   },
 
@@ -1672,6 +1589,8 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     paddingVertical: 17,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5DED2',
   },
 
   statIcon: {
@@ -1704,7 +1623,7 @@ const styles = StyleSheet.create({
   },
 
   statIconEmoji: {
-    fontSize: 24,
+    fontSize: 23,
   },
 
   statNumber: {
@@ -1723,7 +1642,7 @@ const styles = StyleSheet.create({
   },
 
   disclaimer: {
-    color: '#AAAAAA',
+    color: '#999999',
     fontSize: 9,
     marginTop: 7,
     textAlign: 'center',
@@ -1733,6 +1652,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5DED2',
   },
 
   weekHeader: {
@@ -1751,6 +1672,13 @@ const styles = StyleSheet.create({
     color: '#888888',
     fontSize: 10,
     marginTop: 3,
+  },
+
+  weekStreakPill: {
+    backgroundColor: '#FFF3D9',
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
   },
 
   weekStreak: {
@@ -1812,7 +1740,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#EEF1F5',
+    borderTopColor: '#EEE9E0',
     paddingTop: 13,
     marginTop: 15,
   },
@@ -1829,12 +1757,14 @@ const styles = StyleSheet.create({
   },
 
   streakCard: {
-    backgroundColor: '#FFF8E8',
+    backgroundColor: '#FFF7E6',
     borderRadius: 22,
     padding: 18,
     marginTop: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1DFC0',
   },
 
   streakFire: {
@@ -1895,7 +1825,7 @@ const styles = StyleSheet.create({
   },
 
   levelEyebrow: {
-    color: '#AAAAAA',
+    color: '#9FAAB2',
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.4,
@@ -1912,7 +1842,7 @@ const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F47B20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1926,14 +1856,14 @@ const styles = StyleSheet.create({
   levelProgressBackground: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#333333',
+    backgroundColor: '#2D3A42',
     marginTop: 17,
     overflow: 'hidden',
   },
 
   levelProgressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F47B20',
     borderRadius: 4,
   },
 
@@ -1944,7 +1874,7 @@ const styles = StyleSheet.create({
   },
 
   levelText: {
-    color: '#AAAAAA',
+    color: '#9FAAB2',
     fontSize: 9,
     fontWeight: '700',
   },
@@ -1953,6 +1883,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 23,
     padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5DED2',
+  },
+
+  challengeTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
 
   challengeIcon: {
@@ -1968,11 +1905,15 @@ const styles = StyleSheet.create({
     fontSize: 27,
   },
 
+  challengeTopText: {
+    flex: 1,
+    paddingLeft: 13,
+  },
+
   challengeTitle: {
     color: BRAND.midnight,
     fontSize: 19,
     fontWeight: '900',
-    marginTop: 13,
   },
 
   challengeText: {
@@ -1984,7 +1925,7 @@ const styles = StyleSheet.create({
 
   challengeProgressBackground: {
     height: 9,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F0ECE4',
     borderRadius: 5,
     marginTop: 17,
     overflow: 'hidden',
@@ -2030,10 +1971,21 @@ const styles = StyleSheet.create({
     padding: 19,
     marginTop: 15,
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#D5E4D7',
+  },
+
+  communityIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   communityEmoji: {
-    fontSize: 30,
+    fontSize: 28,
   },
 
   communityContent: {
@@ -2056,7 +2008,7 @@ const styles = StyleSheet.create({
   },
 
   communityText: {
-    color: '#777777',
+    color: '#68736B',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 4,

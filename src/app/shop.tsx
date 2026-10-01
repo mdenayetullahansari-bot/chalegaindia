@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingBottom: 140,
+    paddingBottom: 220,
   },
 
   hero: {
@@ -1390,7 +1390,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     fontWeight: '700',
-    color: '#E5F4EB',
+    color: '#DCEBFA',
   },
 
   heroPromise: {
@@ -1499,7 +1499,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 20,
     fontWeight: '900',
-    color: '#152330',
+    color: '#13283D',
   },
 
   categoryRow: {
@@ -1543,7 +1543,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontSize: 10,
     lineHeight: 14,
-    color: '#71808D',
+    color: '#6B7C8C',
     fontWeight: '600',
   },
 
@@ -1606,7 +1606,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     marginTop: 3,
     fontSize: 12,
-    color: '#7A8793',
+    color: '#718292',
     fontWeight: '600',
   },
 
@@ -1649,7 +1649,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.7,
     fontWeight: '900',
-    color: '#71808D',
+    color: '#6B7C8C',
   },
 
   seasonBadge: {
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '900',
-    color: '#1A2732',
+    color: '#182B3D',
   },
 
   productDescription: {
@@ -1771,7 +1771,7 @@ const styles = StyleSheet.create({
   noResultsText: {
     marginTop: 4,
     fontSize: 13,
-    color: '#71808D',
+    color: '#6B7C8C',
   },
 
   footerCard: {
@@ -1869,13 +1869,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#152330',
+    color: '#13283D',
   },
 
   headerSubtitle: {
     marginTop: 2,
     fontSize: 10,
-    color: '#7A8793',
+    color: '#718292',
     fontWeight: '700',
   },
 
@@ -1962,7 +1962,7 @@ const styles = StyleSheet.create({
   cartItemName: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#1C2934',
+    color: '#20364A',
   },
 
   cartItemUnit: {
@@ -1986,7 +1986,7 @@ const styles = StyleSheet.create({
   cartItemTotal: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#173E2A',
+    color: '#18324A',
   },
 
   quantityRow: {
@@ -2016,7 +2016,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 13,
     fontWeight: '900',
-    color: '#1C2934',
+    color: '#20364A',
   },
 
   freeDeliveryCard: {
@@ -2066,7 +2066,7 @@ const styles = StyleSheet.create({
 
   summaryValue: {
     fontSize: 13,
-    color: '#1B2934',
+    color: '#20364A',
     fontWeight: '800',
   },
 
@@ -2083,7 +2083,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#1A2731',
+    color: '#182B3D',
   },
 
   totalValue: {
@@ -2136,7 +2136,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 22,
     fontWeight: '900',
-    color: '#152330',
+    color: '#13283D',
   },
 
   emptyCartText: {
