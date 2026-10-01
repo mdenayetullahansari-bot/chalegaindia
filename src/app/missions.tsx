@@ -1,12 +1,13 @@
+import { BRAND } from '@/lib/brand';
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,19 +15,64 @@ import {
   View,
 } from 'react-native';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
-  awardOnce,
+  useFocusEffect,
+  useRouter,
+} from 'expo-router';
+
+
+import {
   getPoints,
   hasTransaction,
 } from '../lib/points';
 
+import { supabase } from '../lib/supabase';
+import { qualifyMyReferral } from '@/services/referralService';
+
+async function hasServerTransaction(
+  transactionType: string,
+  transactionKey: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc(
+    'get_my_points_transactions'
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  const dateKey = transactionKey.startsWith(`${transactionType}_`)
+    ? transactionKey.slice(transactionType.length + 1)
+    : transactionKey;
+
+  return (data ?? []).some(
+    (transaction: {
+      transaction_type: string | null;
+      transaction_key: string | null;
+    }) => {
+      if (transaction.transaction_type !== transactionType) {
+        return false;
+      }
+
+      const serverKey = transaction.transaction_key;
+
+      return (
+        serverKey === transactionKey ||
+        (serverKey !== null &&
+          serverKey.startsWith(`${transactionType}:`) &&
+          serverKey.endsWith(`:${dateKey}`))
+      );
+    }
+  );
+}
+
 type Mission = {
   id: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   title: string;
   description: string;
   points: number;
@@ -37,7 +83,7 @@ type Mission = {
 const DEFAULT_MISSIONS: Mission[] = [
   {
     id: 'walk',
-    icon: '🚶',
+    icon: 'walk-outline',
     title: 'Walk 4,000 steps',
     description:
       'Move your body and complete your daily walking goal.',
@@ -47,7 +93,7 @@ const DEFAULT_MISSIONS: Mission[] = [
   },
   {
     id: 'water',
-    icon: '💧',
+    icon: 'water-outline',
     title: 'Drink 6 glasses of water',
     description:
       'Stay hydrated throughout your day.',
@@ -57,7 +103,7 @@ const DEFAULT_MISSIONS: Mission[] = [
   },
   {
     id: 'health',
-    icon: '❤️',
+    icon: 'heart-outline',
     title: 'Complete your health check-in',
     description:
       'Take a moment to check in with your health today.',
@@ -67,18 +113,16 @@ const DEFAULT_MISSIONS: Mission[] = [
   },
   {
     id: 'streak',
-    icon: '🔥',
+    icon: 'flame-outline',
     title: 'Keep your streak alive',
     description:
       "Complete today's walking goal to keep your streak alive.",
     points: 25,
-    action: 'MARK DONE',
+    action: 'CLAIM STREAK',
     completed: false,
   },
 ];
 
-const MISSIONS_KEY_PREFIX =
-  'chalega_daily_missions_';
 
 export default function MissionsScreen() {
   const router = useRouter();
@@ -97,554 +141,670 @@ export default function MissionsScreen() {
   const [completingMission, setCompletingMission] =
     useState<string | null>(null);
 
-  /*
-   * ----------------------------------------------------
-   * TODAY KEY
-   * ----------------------------------------------------
-   */
-  const getTodayKey = () => {
-    const today = new Date();
+/*
+ * ----------------------------------------------------
+ * TODAY
+ * ----------------------------------------------------
+ */
 
-    return (
-      today.getFullYear() +
-      '-' +
-      String(
-        today.getMonth() + 1
-      ).padStart(2, '0') +
-      '-' +
-      String(
-        today.getDate()
-      ).padStart(2, '0')
-    );
-  };
+const getTodayKey = useCallback(() => {
+  const today = new Date();
 
-  /*
-   * ----------------------------------------------------
-   * MISSIONS STORAGE KEY
-   * ----------------------------------------------------
-   */
-  const getMissionStorageKey = () => {
-    return (
-      MISSIONS_KEY_PREFIX +
-      getTodayKey()
-    );
-  };
-
-  /*
-   * ----------------------------------------------------
-   * LOAD MISSIONS
-   * ----------------------------------------------------
-   *
-   * IMPORTANT:
-   *
-   * Points come from the central points engine.
-   *
-   * We do NOT read chalega_points directly here.
-   */
-  const loadMissions = useCallback(
-    async () => {
-      try {
-        setLoading(true);
-
-        const todayKey =
-          getTodayKey();
-
-        const missionStorageKey =
-          `${MISSIONS_KEY_PREFIX}${todayKey}`;
-
-        /*
-         * Load today's visual mission state.
-         */
-        const savedMissions =
-          await AsyncStorage.getItem(
-            missionStorageKey
-          );
-
-        let loadedMissions =
-          DEFAULT_MISSIONS.map(
-            mission => ({
-              ...mission,
-            })
-          );
-
-        if (savedMissions) {
-          try {
-            const parsed =
-              JSON.parse(
-                savedMissions
-              );
-
-            if (
-              Array.isArray(parsed) &&
-              parsed.length > 0
-            ) {
-              loadedMissions =
-                parsed;
-            }
-          } catch {
-            loadedMissions =
-              DEFAULT_MISSIONS.map(
-                mission => ({
-                  ...mission,
-                })
-              );
-          }
-        }
-
-        /*
-         * ------------------------------------------------
-         * SYNC COMPLETION WITH POINTS HISTORY
-         * ------------------------------------------------
-         *
-         * This is important.
-         *
-         * Even if the mission JSON gets out of sync,
-         * Points Activity remains the source of truth.
-         */
-
-        const walkingCompleted =
-          await hasTransaction(
-            'walking_mission',
-            `walking_mission_${todayKey}`
-          );
-
-        const waterCompleted =
-          await hasTransaction(
-            'water_mission',
-            `water_mission_${todayKey}`
-          );
-
-        const healthCompleted =
-          await hasTransaction(
-            'health_mission',
-            `health_mission_${todayKey}`
-          );
-
-        const streakCompleted =
-          await hasTransaction(
-            'streak_mission',
-            `streak_mission_${todayKey}`
-          );
-
-        loadedMissions =
-          loadedMissions.map(
-            mission => {
-              if (
-                mission.id === 'walk' &&
-                walkingCompleted
-              ) {
-                return {
-                  ...mission,
-                  completed: true,
-                };
-              }
-
-              if (
-                mission.id === 'water' &&
-                waterCompleted
-              ) {
-                return {
-                  ...mission,
-                  completed: true,
-                };
-              }
-
-              if (
-                mission.id === 'health' &&
-                healthCompleted
-              ) {
-                return {
-                  ...mission,
-                  completed: true,
-                };
-              }
-
-              if (
-                mission.id === 'streak' &&
-                streakCompleted
-              ) {
-                return {
-                  ...mission,
-                  completed: true,
-                };
-              }
-
-              return mission;
-            }
-          );
-
-        setMissions(
-          loadedMissions
-        );
-
-        /*
-         * Central wallet.
-         */
-        const currentPoints =
-          await getPoints();
-
-        setPoints(
-          currentPoints
-        );
-
-        /*
-         * Save the corrected mission state.
-         */
-        await AsyncStorage.setItem(
-          missionStorageKey,
-          JSON.stringify(
-            loadedMissions
-          )
-        );
-      } catch (error) {
-        console.log(
-          'Could not load missions:',
-          error
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
+  return (
+    today.getFullYear() +
+    '-' +
+    String(today.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(today.getDate()).padStart(2, '0')
   );
+}, []);
 
-  /*
-   * ----------------------------------------------------
-   * INITIAL LOAD
-   * ----------------------------------------------------
-   */
+/*
+ * ----------------------------------------------------
+ * LOAD MISSIONS FROM SUPABASE
+ * ----------------------------------------------------
+ */
+
+const loadMissions = useCallback(async () => {
+  try {
+    setLoading(true);
+
+    const todayKey = getTodayKey();
+
+    const {
+      data: {
+        user,
+      },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { data: missionRows, error: missionError } =
+      await supabase
+        .from('missions')
+        .select(
+          'id, title, description, target_steps, reward_points, active'
+        )
+        .eq('active', true)
+        .in('id', [4, 5, 6, 7])
+        .order('id', { ascending: true });
+
+    if (missionError) {
+      throw missionError;
+    }
+
+    const { data: userMissionRows, error: userMissionError } =
+      await supabase
+        .from('user_missions')
+        .select('mission_id, progress, completed, completed_at')
+        .eq('user_id', user.id)
+        .eq('mission_date', todayKey);
+
+    if (userMissionError) {
+      throw userMissionError;
+    }
+
+    const userMissionMap = new Map(
+      (userMissionRows ?? []).map(row => [
+        Number(row.mission_id),
+        row,
+      ])
+    );
+
+    const backendMissions: Mission[] = (missionRows ?? []).map(row => {
+      const missionId = Number(row.id);
+      const userMission = userMissionMap.get(missionId);
+
+      let icon: keyof typeof Ionicons.glyphMap = 'flag-outline';
+      let action = 'MARK DONE';
+
+      if (missionId === 4) {
+        icon = 'walk-outline';
+        action = 'OPEN WALK';
+      } else if (missionId === 5) {
+        icon = 'water-outline';
+        action = 'MARK DONE';
+      } else if (missionId === 6) {
+        icon = 'heart-outline';
+        action = 'OPEN HEALTH';
+      } else if (missionId === 7) {
+        icon = 'flame-outline';
+        action = 'CLAIM STREAK';
+      }
+
+      return {
+        id: String(missionId),
+        icon,
+        title: row.title,
+        description: row.description,
+        points: Number(row.reward_points) || 0,
+        action,
+        completed: userMission?.completed === true,
+      };
+    });
+
+    /*
+     * Points history remains the source of truth for rewards while
+     * the user_missions table becomes the persistent daily state.
+     * This also lets the existing Walk and Health flows synchronize
+     * their completion into Supabase when this screen is opened.
+     */
+
+    const walkingCompleted = await hasServerTransaction(
+      'walking_mission',
+      `walking_mission_${todayKey}`
+    );
+
+    const waterCompleted = await hasServerTransaction(
+      'water_mission',
+      `water_mission_${todayKey}`
+    );
+
+    const healthCompleted = await hasServerTransaction(
+      'health_checkin',
+      `health_checkin_${todayKey}`
+    );
+
+    const streakCompleted = await hasServerTransaction(
+      'streak_mission',
+      `streak_mission_${todayKey}`
+    );
+
+    const completionByMissionId: Record<string, boolean> = {
+      '4': walkingCompleted,
+      '5': waterCompleted,
+      '6': healthCompleted,
+      '7': streakCompleted,
+    };
+
+    const loadedMissions = backendMissions.map(mission => ({
+      ...mission,
+      completed:
+        mission.completed ||
+        completionByMissionId[mission.id] === true,
+    }));
+
+    /*
+     * Synchronize completion detected from the existing reward
+     * transactions into the new daily backend state.
+     */
+    const rowsToSync = loadedMissions
+      .filter(mission => mission.completed)
+      .map(mission => ({
+        user_id: user.id,
+        mission_id: Number(mission.id),
+        mission_date: todayKey,
+        progress: 1,
+        completed: true,
+        completed_at:
+          userMissionMap.get(Number(mission.id))?.completed_at ??
+          new Date().toISOString(),
+      }));
+
+    if (rowsToSync.length > 0) {
+      const { error: syncError } = await supabase
+        .from('user_missions')
+        .upsert(rowsToSync, {
+          onConflict: 'user_id,mission_id,mission_date',
+        });
+
+      if (syncError) {
+        console.warn(
+          '[MISSIONS] Could not synchronize mission state:',
+          syncError
+        );
+      }
+    }
+
+    setMissions(loadedMissions);
+
+    const { data: walletProfile, error: walletError } = await supabase
+        .from('profiles')
+        .select('points')
+        .single();
+
+      if (walletError) {
+        throw walletError;
+      }
+
+      const currentPoints = Math.max(
+        0,
+        Math.round(Number(walletProfile?.points) || 0)
+      );
+
+    setPoints(
+      Number.isFinite(currentPoints)
+        ? Math.max(0, Math.round(currentPoints))
+        : 0
+    );
+  } catch (error) {
+    console.warn(
+      '[MISSIONS] Could not load missions:',
+      error
+    );
+  } finally {
+    setLoading(false);
+  }
+}, [getTodayKey]);
+
+/*
+ * ----------------------------------------------------
+ * INITIAL LOAD
+ * ----------------------------------------------------
+ */
+
   useEffect(() => {
     loadMissions();
   }, [loadMissions]);
 
   /*
    * ----------------------------------------------------
-   * REFRESH WHEN RETURNING TO PAGE
+   * REFRESH WHEN RETURNING
    * ----------------------------------------------------
-   *
-   * Example:
-   *
-   * Missions → Walking → complete → back to Missions
-   *
-   * Missions should immediately show the new state.
    */
+
   useFocusEffect(
     useCallback(() => {
       loadMissions();
     }, [loadMissions])
   );
 
-  /*
-   * ----------------------------------------------------
-   * SAVE MISSIONS
-   * ----------------------------------------------------
-   */
-  const saveMissions = async (
-    updatedMissions: Mission[]
-  ) => {
-    try {
-      await AsyncStorage.setItem(
-        getMissionStorageKey(),
-        JSON.stringify(
-          updatedMissions
-        )
-      );
-    } catch (error) {
-      console.log(
-        'Could not save missions:',
-        error
-      );
+/*
+ * ----------------------------------------------------
+ * SAVE MISSION STATE
+ * ----------------------------------------------------
+ */
+
+const saveMissionState = useCallback(
+  async (missionId: string, completed: boolean) => {
+    const {
+      data: {
+        user,
+      },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('No authenticated user');
     }
-  };
 
-  /*
-   * ----------------------------------------------------
-   * COMPLETE WATER / STREAK MISSION
+    const { error } = await supabase
+      .from('user_missions')
+      .upsert(
+        {
+          user_id: user.id,
+          mission_id: Number(missionId),
+          mission_date: getTodayKey(),
+          progress: completed ? 1 : 0,
+          completed,
+          completed_at: completed
+            ? new Date().toISOString()
+            : null,
+        },
+        {
+          onConflict:
+            'user_id,mission_id,mission_date',
+        }
+      );
+
+    if (error) {
+      throw error;
+    }
+  },
+  [getTodayKey]
+);
+
+/*
+ * ----------------------------------------------------
+ * COMPLETE DIRECT MISSION
    * ----------------------------------------------------
    *
-   * Walk and Health are opened separately.
+   * Only Water and Streak are completed here.
    *
-   * Water and Streak are completed directly here.
+   * Walking is completed by walking.tsx.
+   * Health is completed by the Health flow.
    */
+
   const completeDirectMission =
-    async (
-      missionId: string
-    ) => {
-      if (
-        completingMission !== null
-      ) {
-        return;
-      }
-
-      const mission =
-        missions.find(
-          item =>
-            item.id ===
-            missionId
-        );
-
-      if (!mission) {
-        return;
-      }
-
-      if (mission.completed) {
-        return;
-      }
-
-      /*
-       * Only these missions can be
-       * completed directly here.
-       */
-      if (
-        missionId !== 'water' &&
-        missionId !== 'streak'
-      ) {
-        return;
-      }
-
-      const todayKey = getTodayKey();
-
-      /*
-       * The streak mission is earned by actually
-       * completing today's walking mission.
-       *
-       * This prevents a user from simply pressing
-       * MARK DONE and receiving the streak reward
-       * without completing the walking goal.
-       */
-      if (missionId === 'streak') {
-        const walkingCompleted =
-          await hasTransaction(
-            'walking_mission',
-            `walking_mission_${todayKey}`
-          );
-
-        if (!walkingCompleted) {
-          Alert.alert(
-            'Keep Walking 🔥',
-            'Complete today’s walking goal first. Once your walking mission is complete, you can claim the streak mission.'
-          );
-
+    useCallback(
+      async (
+        missionId: string
+      ) => {
+        if (
+          completingMission !==
+          null
+        ) {
           return;
         }
-      }
 
-      setCompletingMission(
-        missionId
-      );
-
-      try {
-        let transactionType =
-          '';
-
-        let transactionKey =
-          '';
-
-        if (
-          missionId === 'water'
-        ) {
-          transactionType =
-            'water_mission';
-
-          transactionKey =
-            `water_mission_${todayKey}`;
-        }
-
-        if (
-          missionId === 'streak'
-        ) {
-          transactionType =
-            'streak_mission';
-
-          transactionKey =
-            `streak_mission_${todayKey}`;
-        }
-
-        /*
-         * Central points engine.
-         *
-         * awardOnce guarantees:
-         *
-         * same day + same mission
-         * = one reward only.
-         */
-        const result =
-          await awardOnce(
-            transactionType,
-            transactionKey,
-            mission.points,
-            mission.title,
-            transactionKey
-          );
-
-        /*
-         * Update local mission UI.
-         */
-        const updatedMissions =
-          missions.map(
+        const mission =
+          missions.find(
             item =>
               item.id ===
               missionId
-                ? {
-                    ...item,
-                    completed:
-                      true,
-                  }
-                : item
           );
 
-        setMissions(
-          updatedMissions
-        );
+        if (!mission) {
+          return;
+        }
 
-        setPoints(
-          result.balance
-        );
+        if (
+          mission.completed
+        ) {
+          return;
+        }
 
-        await saveMissions(
-          updatedMissions
-        );
+        if (
+          missionId !== '5' &&
+          missionId !== '7'
+        ) {
+          return;
+        }
+
+        const todayKey =
+          getTodayKey();
 
         /*
-         * If it was already awarded,
-         * don't give another alert claiming
-         * that fresh points were added.
+         * Streak can only be claimed
+         * after the walking mission
+         * has actually been completed.
          */
+
         if (
-          !result.awarded
+          missionId === '7'
         ) {
+          const walkingCompleted =
+            await hasServerTransaction(
+              'walking_mission',
+              `walking_mission_${todayKey}`
+            );
+
+          if (
+            !walkingCompleted
+          ) {
+            Alert.alert(
+              'Keep Walking',
+              "Complete today's 4,000-step walking mission first. Then come back here to claim your streak reward.",
+              [
+                {
+                  text: 'GO TO WALK',
+                  onPress: () =>
+                    router.push(
+                      '/walking'
+                    ),
+                },
+                {
+                  text: 'NOT NOW',
+                  style: 'cancel',
+                },
+              ]
+            );
+
+            return;
+          }
+        }
+
+        if (missionId === '5') {
+          const { data: healthCheckIn, error: healthCheckInError } =
+            await supabase
+              .from('daily_health_checkins')
+              .select('water')
+              .eq('checkin_date', todayKey)
+              .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+              .maybeSingle();
+
+          if (healthCheckInError) {
+            console.warn(
+              "[MISSIONS] Could not read today's Health Check-in:",
+              healthCheckInError
+            );
+            Alert.alert(
+              'Health Check-in Required',
+              "Please complete today's Health Check-in before claiming the water mission."
+            );
+            return;
+          }
+
+          const waterGlasses = Number(healthCheckIn?.water ?? 0);
+
+          if (waterGlasses < 6) {
+            Alert.alert(
+              'Complete Health Check-in',
+              "Please record at least 6 glasses of water in today's Health Check-in before claiming this mission.",
+              [
+                { text: 'OPEN HEALTH', onPress: () => router.push('/daily-health-checkin') },
+                { text: 'NOT NOW', style: 'cancel' },
+              ]
+            );
+            return;
+          }
+        }
+
+        setCompletingMission(
+          missionId
+        );
+
+        try {
+          /*
+           * First persist today's completion using the same
+           * device-local date used throughout the missions screen.
+           *
+           * The server reward RPC requires this completed row
+           * to exist before it will award points.
+           */
+          await saveMissionState(
+            missionId,
+            true
+          );
+
+          /*
+           * Secure daily mission reward.
+           *
+           * Points are awarded by the Supabase SECURITY DEFINER
+           * function, not by the client-side points system.
+           *
+           * The transaction key inside the RPC makes the reward
+           * idempotent, so a retry cannot award the same mission
+           * twice.
+           */
+          const {
+            data: rewardResult,
+            error: rewardError,
+          } = await supabase.rpc(
+            'award_daily_mission_reward',
+            {
+              p_mission_id:
+                Number(missionId),
+              p_mission_date:
+                todayKey,
+            }
+          );
+
+          if (rewardError) {
+            throw rewardError;
+          }
+
+          const result = {
+            awarded:
+              rewardResult?.already_awarded !==
+              true,
+            balance:
+              Number(
+                rewardResult?.balance ?? 0
+              ),
+          };
+          /*
+           * Referral qualification:
+           * Mission 1 = First 1,000 Steps.
+           * The secure backend function decides whether the
+           * referral qualifies and whether the referrer receives
+           * the one-time 25-point reward.
+           */
+          if (String(missionId) === '1') {
+            try {
+              const referralResult =
+                await qualifyMyReferral();
+
+              if (referralResult.qualified) {
+                console.log(
+                  '[REFERRAL] Qualified:',
+                  referralResult.referralId,
+                  'Points:',
+                  referralResult.referrerPointsAwarded
+                );
+              } else {
+                console.log(
+                  '[REFERRAL] Not qualified:',
+                  referralResult.reason
+                );
+              }
+            } catch (referralError) {
+              console.warn(
+                '[REFERRAL] Qualification check failed:',
+                referralError
+              );
+            }
+          }
+
+          setPoints(
+            result.balance
+          );
+
+          const updatedMissions =
+            missions.map(
+              item =>
+                item.id ===
+                missionId
+                  ? {
+                      ...item,
+                      completed:
+                        true,
+                    }
+                  : item
+            );
+
+          setMissions(
+            updatedMissions
+          );
+
+          if (
+            !result.awarded
+          ) {
+            Alert.alert(
+              'Already Completed',
+              `You've already earned today's +${mission.points} Chalega Points for this mission.`
+            );
+
+            return;
+          }
+
           Alert.alert(
-            'Already completed',
-            `You've already earned today's +${mission.points} points for this mission.`
+            'Mission Complete!',
+            `+${mission.points} Chalega Points\n\nYour total is now ${result.balance.toLocaleString(
+              'en-IN'
+            )} Chalega Points.`,
+            [
+              {
+                text: 'CONTINUE',
+              },
+            ]
+          );
+        } catch (error) {
+          console.warn(
+            '[MISSIONS] Could not complete mission:',
+            error
+          );
+
+          Alert.alert(
+            'Something went wrong',
+            'We could not record this mission. Please try again.'
+          );
+        } finally {
+          setCompletingMission(
+            null
+          );
+        }
+      },
+      [
+        completingMission,
+        getTodayKey,
+        missions,
+        router,
+        saveMissionState,
+      ]
+    );
+
+  /*
+   * ----------------------------------------------------
+   * MISSION ACTION
+   * ----------------------------------------------------
+   */
+
+  const handleMission =
+    useCallback(
+      (mission: Mission) => {
+        if (
+          completingMission !==
+          null
+        ) {
+          return;
+        }
+
+        if (
+          mission.completed
+        ) {
+          return;
+        }
+
+        if (
+          mission.id === '4'
+        ) {
+          router.push(
+            '/walking'
           );
 
           return;
         }
 
-        /*
-         * Success message.
-         */
-        Alert.alert(
-          '🎉 Mission Complete!',
-          `+${mission.points} Chalega Points\n\nYour total is now ${result.balance} Chalega Points.`,
-          [
-            {
-              text: 'CONTINUE',
-              style: 'default',
-            },
-          ]
+        if (
+          mission.id ===
+          '6'
+        ) {
+          router.push(
+            '/health-topic?mission=health'
+          );
+
+          return;
+        }
+
+        completeDirectMission(
+          mission.id
         );
-      } catch (error) {
-        console.log(
-          'Could not complete mission:',
-          error
-        );
-
-        Alert.alert(
-          'Something went wrong',
-          'We could not record this mission. Please try again.'
-        );
-      } finally {
-        setCompletingMission(
-          null
-        );
-      }
-    };
-
-  /*
-   * ----------------------------------------------------
-   * HANDLE MISSION
-   * ----------------------------------------------------
-   */
-  const handleMission = (
-    mission: Mission
-  ) => {
-    if (
-      completingMission !== null
-    ) {
-      return;
-    }
-
-    if (mission.completed) {
-      return;
-    }
-
-    /*
-     * WALK
-     *
-     * Walking page controls the
-     * 4,000-step mission.
-     */
-    if (
-      mission.id === 'walk'
-    ) {
-      router.push(
-        '/walking'
-      );
-
-      return;
-    }
-
-    /*
-     * HEALTH
-     *
-     * Health page controls the
-     * health check-in.
-     */
-    if (
-      mission.id === 'health'
-    ) {
-      router.push(
-        '/health-topic?mission=health'
-      );
-
-      return;
-    }
-
-    /*
-     * WATER / STREAK
-     */
-    completeDirectMission(
-      mission.id
+      },
+      [
+        completingMission,
+        completeDirectMission,
+        router,
+      ]
     );
-  };
 
   /*
    * ----------------------------------------------------
    * DERIVED VALUES
    * ----------------------------------------------------
    */
-  const completedCount =
-    missions.filter(
-      mission =>
-        mission.completed
-    ).length;
 
-  const earnedToday =
-    missions
-      .filter(
-        mission =>
-          mission.completed
-      )
-      .reduce(
-        (
-          total,
-          mission
-        ) =>
-          total +
-          mission.points,
-        0
-      );
+  const completedCount =
+    useMemo(
+      () =>
+        missions.filter(
+          mission =>
+            mission.completed
+        ).length,
+      [missions]
+    );
 
   const totalPossible =
-    missions.reduce(
-      (
-        total,
-        mission
-      ) =>
-        total +
-        mission.points,
-      0
+    useMemo(
+      () =>
+        missions.reduce(
+          (
+            total,
+            mission
+          ) =>
+            total +
+            mission.points,
+          0
+        ),
+      [missions]
+    );
+
+  const earnedToday =
+    useMemo(
+      () =>
+        missions
+          .filter(
+            mission =>
+              mission.completed
+          )
+          .reduce(
+            (
+              total,
+              mission
+            ) =>
+              total +
+              mission.points,
+            0
+          ),
+      [missions]
+    );
+
+  const remainingPoints =
+    Math.max(
+      0,
+      totalPossible -
+        earnedToday
     );
 
   const progress =
@@ -653,11 +813,22 @@ export default function MissionsScreen() {
         totalPossible
       : 0;
 
+  const progressPercent =
+    Math.round(
+      progress * 100
+    );
+
+  const allComplete =
+    missions.length > 0 &&
+    completedCount ===
+      missions.length;
+
   /*
    * ----------------------------------------------------
    * LOADING
    * ----------------------------------------------------
    */
+
   if (loading) {
     return (
       <SafeAreaView
@@ -670,12 +841,32 @@ export default function MissionsScreen() {
             styles.loading
           }
         >
+          <View
+            style={
+              styles.loadingIcon
+            }
+          >
+            <Ionicons
+              name="flag-outline"
+              size={30}
+              color={BRAND.blue}
+            />
+          </View>
+
+          <Text
+            style={
+              styles.loadingTitle
+            }
+          >
+            Loading your missions
+          </Text>
+
           <Text
             style={
               styles.loadingText
             }
           >
-            Loading your missions...
+            Getting today's challenges ready...
           </Text>
         </View>
       </SafeAreaView>
@@ -687,11 +878,17 @@ export default function MissionsScreen() {
    * UI
    * ----------------------------------------------------
    */
+
   return (
     <SafeAreaView
       style={
         styles.container
       }
+      edges={[
+        'top',
+        'left',
+        'right',
+      ]}
     >
       <ScrollView
         showsVerticalScrollIndicator={
@@ -701,7 +898,9 @@ export default function MissionsScreen() {
           styles.content
         }
       >
-        {/* HEADER */}
+        {/* ---------------------------------------------
+         * HEADER
+         * --------------------------------------------- */}
 
         <View
           style={
@@ -715,14 +914,13 @@ export default function MissionsScreen() {
             onPress={() =>
               router.back()
             }
+            activeOpacity={0.8}
           >
-            <Text
-              style={
-                styles.backText
-              }
-            >
-              ‹
-            </Text>
+            <Ionicons
+              name="chevron-back"
+              size={30}
+              color={BRAND.ink}
+            />
           </TouchableOpacity>
 
           <View
@@ -735,7 +933,7 @@ export default function MissionsScreen() {
                 styles.brand
               }
             >
-              C H A L E G A  I N D I A
+              CHALEGA KOLKATA
             </Text>
 
             <Text
@@ -748,20 +946,54 @@ export default function MissionsScreen() {
           </View>
         </View>
 
-        {/* HERO */}
+        {/* ---------------------------------------------
+         * DAILY HERO
+         * --------------------------------------------- */}
 
         <View
           style={
             styles.hero
           }
         >
-          <Text
+          <View
             style={
-              styles.heroIcon
+              styles.heroTop
             }
           >
-            🎯
-          </Text>
+            <View
+              style={
+                styles.heroIcon
+              }
+            >
+              <Ionicons
+                name={
+                  allComplete
+                    ? 'checkmark-circle'
+                    : 'flag'
+                }
+                size={30}
+                color={
+                  BRAND.white
+                }
+              />
+            </View>
+
+            <View
+              style={
+                styles.heroBadge
+              }
+            >
+              <Text
+                style={
+                  styles.heroBadgeText
+                }
+              >
+                {allComplete
+                  ? 'DAY COMPLETE'
+                  : 'TODAY'}
+              </Text>
+            </View>
+          </View>
 
           <Text
             style={
@@ -795,19 +1027,21 @@ export default function MissionsScreen() {
             Complete healthy actions today and earn Chalega Points.
           </Text>
 
+          {/* HERO STATS */}
+
           <View
             style={
-              styles.pointsRow
+              styles.heroStats
             }
           >
             <View
               style={
-                styles.pointsColumn
+                styles.heroStat
               }
             >
               <Text
                 style={
-                  styles.pointsNumber
+                  styles.heroStatNumber
                 }
               >
                 {earnedToday}
@@ -815,35 +1049,37 @@ export default function MissionsScreen() {
 
               <Text
                 style={
-                  styles.pointsLabel
+                  styles.heroStatLabel
                 }
               >
-                POINTS EARNED TODAY
+                EARNED TODAY
               </Text>
             </View>
 
             <View
               style={
-                styles.pointsDivider
+                styles.heroDivider
               }
             />
 
             <View
               style={
-                styles.pointsColumn
+                styles.heroStat
               }
             >
               <Text
                 style={
-                  styles.pointsNumber
+                  styles.heroStatNumber
                 }
               >
-                {points}
+                {points.toLocaleString(
+                  'en-IN'
+                )}
               </Text>
 
               <Text
                 style={
-                  styles.pointsLabel
+                  styles.heroStatLabel
                 }
               >
                 TOTAL POINTS
@@ -852,7 +1088,9 @@ export default function MissionsScreen() {
           </View>
         </View>
 
-        {/* PROGRESS */}
+        {/* ---------------------------------------------
+         * DAILY PROGRESS
+         * --------------------------------------------- */}
 
         <View
           style={
@@ -864,22 +1102,53 @@ export default function MissionsScreen() {
               styles.progressHeader
             }
           >
-            <Text
-              style={
-                styles.progressTitle
-              }
-            >
-              Daily progress
-            </Text>
+            <View>
+              <Text
+                style={
+                  styles.progressEyebrow
+                }
+              >
+                DAILY CHALLENGE
+              </Text>
 
-            <Text
+              <Text
+                style={
+                  styles.progressTitle
+                }
+              >
+                Your progress
+              </Text>
+            </View>
+
+            <View
               style={
-                styles.progressCount
+                styles.progressCountBox
               }
             >
-              {completedCount}/
-              {missions.length}
-            </Text>
+              <Text
+                style={
+                  styles.progressCount
+                }
+              >
+                {completedCount}
+              </Text>
+
+              <Text
+                style={
+                  styles.progressCountSlash
+                }
+              >
+                /
+              </Text>
+
+              <Text
+                style={
+                  styles.progressCountTotal
+                }
+              >
+                {missions.length}
+              </Text>
+            </View>
           </View>
 
           <View
@@ -891,173 +1160,299 @@ export default function MissionsScreen() {
               style={[
                 styles.progressFill,
                 {
-                  width: `${
+                  width: `${Math.min(
+                    100,
                     Math.max(
                       0,
-                      Math.min(
-                        100,
-                        progress *
-                          100
-                      )
+                      progressPercent
                     )
-                  }%`,
+                  )}%`,
                 },
               ]}
             />
           </View>
 
-          <Text
+          <View
             style={
-              styles.progressText
+              styles.progressBottom
             }
           >
-            {completedCount ===
-            missions.length
-              ? '🎉 All missions complete!'
-              : `${
-                  totalPossible -
-                  earnedToday
-                } points still available today.`}
-          </Text>
+            <Text
+              style={
+                styles.progressPercent
+              }
+            >
+              {progressPercent}% complete
+            </Text>
+
+            <Text
+              style={
+                styles.progressRemaining
+              }
+            >
+              {allComplete
+                ? 'All rewards unlocked'
+                : `${remainingPoints} points left`}
+            </Text>
+          </View>
         </View>
 
-        {/* MISSIONS */}
+        {/* ---------------------------------------------
+         * MISSION SECTION HEADER
+         * --------------------------------------------- */}
 
-        <Text
+        <View
           style={
-            styles.sectionTitle
+            styles.sectionHeader
           }
         >
-          TODAY'S MISSIONS
-        </Text>
+          <View>
+            <Text
+              style={
+                styles.sectionEyebrow
+              }
+            >
+              TODAY
+            </Text>
+
+            <Text
+              style={
+                styles.sectionTitle
+              }
+            >
+              Your missions
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.availableBadge
+            }
+          >
+            <Ionicons
+              name="star"
+              size={14}
+              color={BRAND.orange}
+            />
+
+            <Text
+              style={
+                styles.availableBadgeText
+              }
+            >
+              +{totalPossible}
+            </Text>
+          </View>
+        </View>
+
+        {/* ---------------------------------------------
+         * MISSION CARDS
+         * --------------------------------------------- */}
 
         {missions.map(
-          mission => (
-            <View
-              key={
-                mission.id
-              }
-              style={[
-                styles.missionCard,
-                mission.completed &&
-                  styles.missionCompleted,
-              ]}
-            >
+          mission => {
+            const isCompleting =
+              completingMission ===
+              mission.id;
+
+            return (
               <View
-                style={
-                  styles.missionTop
+                key={
+                  mission.id
                 }
+                style={[
+                  styles.missionCard,
+                  mission.completed &&
+                    styles.missionCardCompleted,
+                ]}
               >
                 <View
                   style={
-                    styles.iconBox
-                  }
-                >
-                  <Text
-                    style={
-                      styles.missionIcon
-                    }
-                  >
-                    {mission.icon}
-                  </Text>
-                </View>
-
-                <View
-                  style={
-                    styles.missionInfo
+                    styles.missionTop
                   }
                 >
                   <View
+                    style={[
+                      styles.iconBox,
+                      mission.completed &&
+                        styles.iconBoxCompleted,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        mission.icon
+                      }
+                      size={31}
+                      color={
+                        mission.completed
+                          ? BRAND.green
+                          : BRAND.blue
+                      }
+                    />
+                  </View>
+
+                  <View
                     style={
-                      styles.missionTitleRow
+                      styles.missionInfo
                     }
                   >
-                    <Text
+                    <View
                       style={
-                        styles.missionTitle
+                        styles.missionTitleRow
                       }
                     >
-                      {mission.title}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.missionTitle,
+                          mission.completed &&
+                            styles.missionTitleCompleted,
+                        ]}
+                      >
+                        {
+                          mission.title
+                        }
+                      </Text>
+
+                      <View
+                        style={
+                          styles.pointsBadge
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.pointsBadgeText
+                          }
+                        >
+                          +{mission.points}
+                        </Text>
+                      </View>
+                    </View>
 
                     <Text
                       style={
-                        styles.pointsBadge
+                        styles.missionDescription
                       }
                     >
-                      +
                       {
-                        mission.points
+                        mission.description
                       }
                     </Text>
                   </View>
-
-                  <Text
-                    style={
-                      styles.missionDescription
-                    }
-                  >
-                    {
-                      mission.description
-                    }
-                  </Text>
                 </View>
-              </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.missionButton,
-                  mission.completed &&
-                    styles.completedButton,
-                  completingMission ===
-                    mission.id &&
-                    styles.completingButton,
-                ]}
-                onPress={() =>
-                  handleMission(
-                    mission
-                  )
-                }
-                disabled={
-                  mission.completed ||
-                  completingMission !==
-                    null
-                }
-              >
-                <Text
+                <TouchableOpacity
                   style={[
-                    styles.missionButtonText,
+                    styles.missionButton,
                     mission.completed &&
-                      styles.completedButtonText,
+                      styles.completedButton,
+                    isCompleting &&
+                      styles.completingButton,
                   ]}
+                  onPress={() =>
+                    handleMission(
+                      mission
+                    )
+                  }
+                  disabled={
+                    mission.completed ||
+                    completingMission !==
+                      null
+                  }
+                  activeOpacity={0.85}
                 >
-                  {mission.completed
-                    ? '✓ COMPLETED'
-                    : completingMission ===
-                      mission.id
-                    ? 'SAVING...'
-                    : mission.action}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )
+                  {mission.completed ? (
+                    <>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={19}
+                        color={
+                          BRAND.green
+                        }
+                      />
+
+                      <Text
+                        style={
+                          styles.completedButtonText
+                        }
+                      >
+                        COMPLETED
+                      </Text>
+                    </>
+                  ) : isCompleting ? (
+                    <>
+                      <Ionicons
+                        name="sync-outline"
+                        size={18}
+                        color={
+                          BRAND.white
+                        }
+                      />
+
+                      <Text
+                        style={
+                          styles.missionButtonText
+                        }
+                      >
+                        SAVING...
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text
+                        style={
+                          styles.missionButtonText
+                        }
+                      >
+                        {
+                          mission.action
+                        }
+                      </Text>
+
+                      <Ionicons
+                        name="arrow-forward"
+                        size={18}
+                        color={
+                          BRAND.white
+                        }
+                      />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            );
+          }
         )}
 
-        {/* COMPLETE CARD */}
+        {/* ---------------------------------------------
+         * ALL COMPLETE
+         * --------------------------------------------- */}
 
-        {completedCount ===
-          missions.length && (
+        {allComplete && (
           <View
             style={
               styles.completeCard
             }
           >
-            <Text
+            <View
               style={
-                styles.completeEmoji
+                styles.completeIcon
               }
             >
-              🏆
+              <Ionicons
+                name="trophy"
+                size={38}
+                color={
+                  BRAND.gold
+                }
+              />
+            </View>
+
+            <Text
+              style={
+                styles.completeLabel
+              }
+            >
+              DAILY CHALLENGE COMPLETE
             </Text>
 
             <Text
@@ -1065,7 +1460,7 @@ export default function MissionsScreen() {
                 styles.completeTitle
               }
             >
-              You did it!
+              You did it.
             </Text>
 
             <Text
@@ -1073,8 +1468,30 @@ export default function MissionsScreen() {
                 styles.completeText
               }
             >
-              You completed every mission today. Your healthy streak is getting stronger.
+              You completed every mission today and earned all {totalPossible} available Chalega Points.
             </Text>
+
+            <View
+              style={
+                styles.completePoints
+              }
+            >
+              <Text
+                style={
+                  styles.completePointsNumber
+                }
+              >
+                +{totalPossible}
+              </Text>
+
+              <Text
+                style={
+                  styles.completePointsLabel
+                }
+              >
+                POINTS TODAY
+              </Text>
+            </View>
 
             <TouchableOpacity
               style={
@@ -1085,28 +1502,53 @@ export default function MissionsScreen() {
                   '/rewards'
                 )
               }
+              activeOpacity={0.85}
             >
               <Text
                 style={
                   styles.completeButtonText
                 }
               >
-                VIEW MY REWARDS →
+                VIEW MY REWARDS
               </Text>
+
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color={
+                  BRAND.ink
+                }
+              />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* SPONSOR */}
+        {/* ---------------------------------------------
+         * PARTNER CARD
+         * --------------------------------------------- */}
 
         <View
           style={
-            styles.sponsorCard
+            styles.partnerCard
           }
         >
+          <View
+            style={
+              styles.partnerIcon
+            }
+          >
+            <Ionicons
+              name="megaphone-outline"
+              size={25}
+              color={
+                BRAND.blue
+              }
+            />
+          </View>
+
           <Text
             style={
-              styles.sponsorLabel
+              styles.partnerEyebrow
             }
           >
             HEALTH PARTNER
@@ -1114,7 +1556,7 @@ export default function MissionsScreen() {
 
           <Text
             style={
-              styles.sponsorTitle
+              styles.partnerTitle
             }
           >
             Your brand could power tomorrow's healthy mission.
@@ -1122,7 +1564,7 @@ export default function MissionsScreen() {
 
           <Text
             style={
-              styles.sponsorText
+              styles.partnerText
             }
           >
             Local businesses can sponsor challenges, rewards and healthy community campaigns.
@@ -1130,7 +1572,7 @@ export default function MissionsScreen() {
 
           <TouchableOpacity
             style={
-              styles.sponsorButton
+              styles.partnerButton
             }
             onPress={() =>
               Alert.alert(
@@ -1138,31 +1580,48 @@ export default function MissionsScreen() {
                 'Partner opportunities will be available soon.'
               )
             }
+            activeOpacity={0.85}
           >
             <Text
               style={
-                styles.sponsorButtonText
+                styles.partnerButtonText
               }
             >
-              BECOME A PARTNER →
+              BECOME A PARTNER
             </Text>
+
+            <Ionicons
+              name="arrow-forward"
+              size={17}
+              color={
+                BRAND.white
+              }
+            />
           </TouchableOpacity>
         </View>
 
-        {/* MOTIVATION */}
+        {/* ---------------------------------------------
+         * MOTIVATION
+         * --------------------------------------------- */}
 
         <View
           style={
             styles.motivationCard
           }
         >
-          <Text
+          <View
             style={
               styles.motivationIcon
             }
           >
-            🔥
-          </Text>
+            <Ionicons
+              name="flame"
+              size={34}
+              color={
+                BRAND.orange
+              }
+            />
+          </View>
 
           <Text
             style={
@@ -1177,11 +1636,13 @@ export default function MissionsScreen() {
               styles.motivationText
             }
           >
-            Every healthy day builds your streak, your points and your progress.
+            Every healthy day builds your streak, your Points and your progress.
           </Text>
         </View>
 
-        {/* FOOTER */}
+        {/* ---------------------------------------------
+         * FOOTER
+         * --------------------------------------------- */}
 
         <View
           style={
@@ -1193,7 +1654,7 @@ export default function MissionsScreen() {
               styles.footerBrand
             }
           >
-            C H A L E G A  I N D I A
+            CHALEGA KOLKATA
           </Text>
 
           <Text
@@ -1201,7 +1662,7 @@ export default function MissionsScreen() {
               styles.footerText
             }
           >
-            Walk • Earn • Unlock • Repeat
+            WALK • EARN • IMPROVE • REPEAT
           </Text>
         </View>
       </ScrollView>
@@ -1220,54 +1681,77 @@ const styles =
     container: {
       flex: 1,
       backgroundColor:
-        '#F4F6FB',
+        BRAND.cream,
     },
 
     content: {
-      padding: 20,
-      paddingBottom: 60,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 70,
     },
 
     loading: {
       flex: 1,
-      alignItems:
-        'center',
+      alignItems: 'center',
       justifyContent:
         'center',
+      paddingHorizontal: 30,
+    },
+
+    loadingIcon: {
+      width: 66,
+      height: 66,
+      borderRadius: 22,
+      backgroundColor:
+        BRAND.blue + '14',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      marginBottom: 18,
+    },
+
+    loadingTitle: {
+      color: BRAND.ink,
+      fontSize: 21,
+      fontWeight: '900',
     },
 
     loadingText: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: '#777777',
+      color: BRAND.muted,
+      fontSize: 14,
+      fontWeight: '600',
+      marginTop: 7,
     },
 
+    /*
+     * HEADER
+     */
+
     header: {
-      flexDirection:
-        'row',
-      alignItems:
-        'center',
-      marginBottom: 24,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 22,
     },
 
     backButton: {
-      width: 68,
-      height: 68,
-      borderRadius: 34,
+      width: 62,
+      height: 62,
+      borderRadius: 31,
       backgroundColor:
-        '#FFFFFF',
-      alignItems:
-        'center',
+        BRAND.white,
+      alignItems: 'center',
       justifyContent:
         'center',
-      marginRight: 16,
-    },
-
-    backText: {
-      fontSize: 52,
-      lineHeight: 56,
-      color: '#111111',
-      marginTop: -5,
+      marginRight: 14,
+      shadowColor:
+        BRAND.shadow,
+      shadowOpacity: 0.06,
+      shadowRadius: 10,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      elevation: 2,
     },
 
     headerText: {
@@ -1275,405 +1759,639 @@ const styles =
     },
 
     brand: {
-      color: '#1976ED',
-      fontSize: 15,
+      color: BRAND.blue,
+      fontSize: 13,
       fontWeight: '900',
-      letterSpacing: 5,
+      letterSpacing: 4.5,
       marginBottom: 3,
     },
 
     title: {
-      fontSize: 36,
+      color: BRAND.ink,
+      fontSize: 34,
+      lineHeight: 38,
       fontWeight: '900',
-      color: '#111111',
+      letterSpacing: -1,
     },
+
+    /*
+     * HERO
+     */
 
     hero: {
       backgroundColor:
-        '#1976ED',
-      borderRadius: 34,
-      padding: 28,
-      marginBottom: 18,
+        BRAND.blue,
+      borderRadius: 32,
+      padding: 25,
+      marginBottom: 16,
+      overflow: 'hidden',
+    },
+
+    heroTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'space-between',
+      marginBottom: 19,
     },
 
     heroIcon: {
-      fontSize: 46,
-      marginBottom: 14,
+      width: 54,
+      height: 54,
+      borderRadius: 18,
+      backgroundColor:
+        'rgba(255,255,255,0.16)',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+    },
+
+    heroBadge: {
+      paddingHorizontal: 13,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor:
+        'rgba(255,255,255,0.14)',
+    },
+
+    heroBadgeText: {
+      color: BRAND.white,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 1.5,
     },
 
     heroLabel: {
       color: '#DCEAFF',
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '900',
-      letterSpacing: 4,
-      marginBottom: 10,
+      letterSpacing: 3.2,
+      marginBottom: 9,
     },
 
     heroTitle: {
-      color: '#FFFFFF',
-      fontSize: 38,
+      color: BRAND.white,
+      fontSize: 36,
+      lineHeight: 39,
       fontWeight: '900',
-      lineHeight: 42,
+      letterSpacing: -1.1,
     },
 
     heroSubtitle: {
-      color: '#FFFFFF',
-      fontSize: 17,
-      lineHeight: 25,
+      color: BRAND.white,
+      fontSize: 16,
+      lineHeight: 23,
       fontWeight: '600',
-      marginTop: 14,
+      marginTop: 13,
+      maxWidth: 330,
     },
 
-    pointsRow: {
-      flexDirection:
-        'row',
+    heroStats: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor:
         'rgba(255,255,255,0.13)',
       borderRadius: 22,
-      padding: 18,
-      marginTop: 24,
-      alignItems:
-        'center',
+      marginTop: 22,
+      paddingVertical: 17,
+      paddingHorizontal: 15,
     },
 
-    pointsColumn: {
+    heroStat: {
       flex: 1,
     },
 
-    pointsNumber: {
-      color: '#FFFFFF',
-      fontSize: 30,
+    heroStatNumber: {
+      color: BRAND.white,
+      fontSize: 28,
+      lineHeight: 32,
       fontWeight: '900',
     },
 
-    pointsLabel: {
+    heroStatLabel: {
       color: '#DCEAFF',
       fontSize: 9,
       fontWeight: '900',
       letterSpacing: 1.2,
-      marginTop: 3,
+      marginTop: 4,
     },
 
-    pointsDivider: {
+    heroDivider: {
       width: 1,
-      height: 45,
+      height: 44,
       backgroundColor:
-        'rgba(255,255,255,0.35)',
-      marginHorizontal: 18,
+        'rgba(255,255,255,0.32)',
+      marginHorizontal: 14,
     },
+
+    /*
+     * PROGRESS
+     */
 
     progressCard: {
       backgroundColor:
-        '#FFFFFF',
-      borderRadius: 28,
-      padding: 24,
-      marginBottom: 30,
+        BRAND.white,
+      borderRadius: 27,
+      padding: 22,
+      marginBottom: 28,
+      shadowColor:
+        BRAND.shadow,
+      shadowOpacity: 0.04,
+      shadowRadius: 10,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      elevation: 1,
     },
 
     progressHeader: {
-      flexDirection:
-        'row',
+      flexDirection: 'row',
       justifyContent:
         'space-between',
-      alignItems:
-        'center',
-      marginBottom: 14,
+      alignItems: 'center',
+      marginBottom: 17,
+    },
+
+    progressEyebrow: {
+      color: BRAND.blue,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 2.2,
+      marginBottom: 4,
     },
 
     progressTitle: {
-      fontSize: 20,
+      color: BRAND.ink,
+      fontSize: 22,
       fontWeight: '900',
-      color: '#111111',
+    },
+
+    progressCountBox: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
     },
 
     progressCount: {
-      fontSize: 18,
+      color: BRAND.blue,
+      fontSize: 29,
       fontWeight: '900',
-      color: '#1976ED',
+    },
+
+    progressCountSlash: {
+      color: BRAND.muted,
+      fontSize: 19,
+      fontWeight: '700',
+      marginHorizontal: 2,
+    },
+
+    progressCountTotal: {
+      color: BRAND.muted,
+      fontSize: 18,
+      fontWeight: '800',
     },
 
     progressTrack: {
-      height: 14,
-      backgroundColor:
-        '#E4E9F2',
+      height: 13,
       borderRadius: 10,
+      backgroundColor:
+        '#E5EAF1',
       overflow: 'hidden',
     },
 
     progressFill: {
       height: '100%',
-      backgroundColor:
-        '#1976ED',
       borderRadius: 10,
+      backgroundColor:
+        BRAND.blue,
     },
 
-    progressText: {
-      fontSize: 14,
+    progressBottom: {
+      flexDirection: 'row',
+      justifyContent:
+        'space-between',
+      alignItems: 'center',
+      marginTop: 11,
+    },
+
+    progressPercent: {
+      color: BRAND.ink,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+
+    progressRemaining: {
+      color: BRAND.muted,
+      fontSize: 13,
       fontWeight: '700',
-      color: '#777777',
-      marginTop: 12,
     },
 
-    sectionTitle: {
-      fontSize: 24,
-      fontWeight: '900',
-      color: '#111111',
+    /*
+     * SECTION
+     */
+
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent:
+        'space-between',
       marginBottom: 14,
     },
 
-    missionCard: {
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 28,
-      padding: 20,
-      marginBottom: 16,
+    sectionEyebrow: {
+      color: BRAND.blue,
+      fontSize: 11,
+      fontWeight: '900',
+      letterSpacing: 2.5,
+      marginBottom: 3,
     },
 
-    missionCompleted: {
-      opacity: 0.72,
+    sectionTitle: {
+      color: BRAND.ink,
+      fontSize: 28,
+      fontWeight: '900',
+      letterSpacing: -0.6,
+    },
+
+    availableBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor:
+        BRAND.orangeLight,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 18,
+      marginBottom: 3,
+    },
+
+    availableBadgeText: {
+      color: BRAND.orange,
+      fontSize: 14,
+      fontWeight: '900',
+      marginLeft: 4,
+    },
+
+    /*
+     * MISSION CARD
+     */
+
+    missionCard: {
+      backgroundColor:
+        BRAND.white,
+      borderRadius: 28,
+      padding: 19,
+      marginBottom: 14,
+      shadowColor:
+        BRAND.shadow,
+      shadowOpacity: 0.035,
+      shadowRadius: 9,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      elevation: 1,
+    },
+
+    missionCardCompleted: {
+      backgroundColor:
+        '#FBFDFB',
+      borderWidth: 1,
+      borderColor:
+        '#D9EFDF',
     },
 
     missionTop: {
-      flexDirection:
-        'row',
-      alignItems:
-        'flex-start',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
     },
 
     iconBox: {
-      width: 72,
-      height: 72,
+      width: 70,
+      height: 70,
       borderRadius: 22,
       backgroundColor:
         '#EDF4FF',
-      alignItems:
-        'center',
+      alignItems: 'center',
       justifyContent:
         'center',
-      marginRight: 16,
+      marginRight: 15,
     },
 
-    missionIcon: {
-      fontSize: 34,
+    iconBoxCompleted: {
+      backgroundColor:
+        BRAND.greenLight,
     },
 
     missionInfo: {
       flex: 1,
+      minWidth: 0,
     },
 
     missionTitleRow: {
-      flexDirection:
-        'row',
-      alignItems:
-        'flex-start',
-      justifyContent:
-        'space-between',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
     },
 
     missionTitle: {
       flex: 1,
+      color: BRAND.ink,
       fontSize: 19,
+      lineHeight: 23,
       fontWeight: '900',
-      color: '#111111',
-      lineHeight: 24,
-      paddingRight: 8,
+      paddingRight: 7,
+    },
+
+    missionTitleCompleted: {
+      color: '#31563B',
     },
 
     pointsBadge: {
-      color: '#1976ED',
-      fontSize: 17,
+      backgroundColor:
+        BRAND.orangeLight,
+      borderRadius: 14,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      marginLeft: 4,
+    },
+
+    pointsBadgeText: {
+      color: BRAND.orange,
+      fontSize: 14,
       fontWeight: '900',
     },
 
     missionDescription: {
-      color: '#777777',
+      color: BRAND.muted,
       fontSize: 14,
       lineHeight: 20,
       fontWeight: '600',
-      marginTop: 6,
+      marginTop: 7,
     },
 
     missionButton: {
-      backgroundColor:
-        '#111111',
       height: 52,
       borderRadius: 26,
-      alignItems:
-        'center',
+      backgroundColor:
+        BRAND.ink,
+      flexDirection: 'row',
+      alignItems: 'center',
       justifyContent:
         'center',
       marginTop: 18,
     },
 
-    completingButton: {
-      opacity: 0.65,
+    missionButtonText: {
+      color: BRAND.white,
+      fontSize: 13,
+      fontWeight: '900',
+      letterSpacing: 1.2,
+      marginRight: 8,
     },
 
-    missionButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '900',
-      letterSpacing: 1,
+    completingButton: {
+      opacity: 0.62,
     },
 
     completedButton: {
       backgroundColor:
-        '#EAF8EF',
+        BRAND.greenLight,
     },
 
     completedButtonText: {
-      color: '#228B45',
+      color: BRAND.green,
+      fontSize: 13,
+      fontWeight: '900',
+      letterSpacing: 1.2,
+      marginLeft: 7,
     },
+
+    /*
+     * COMPLETE CARD
+     */
 
     completeCard: {
       backgroundColor:
-        '#1976ED',
+        BRAND.navy,
       borderRadius: 30,
-      padding: 30,
-      alignItems:
-        'center',
-      marginTop: 10,
+      padding: 26,
+      marginTop: 4,
+      marginBottom: 18,
+      alignItems: 'center',
     },
 
-    completeEmoji: {
-      fontSize: 52,
-      marginBottom: 10,
+    completeIcon: {
+      width: 70,
+      height: 70,
+      borderRadius: 25,
+      backgroundColor:
+        'rgba(242,184,75,0.15)',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      marginBottom: 16,
+    },
+
+    completeLabel: {
+      color: BRAND.gold,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 2.1,
     },
 
     completeTitle: {
-      color: '#FFFFFF',
-      fontSize: 32,
+      color: BRAND.white,
+      fontSize: 34,
       fontWeight: '900',
-    },
-
-    completeText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      lineHeight: 24,
-      textAlign:
-        'center',
-      marginTop: 10,
-    },
-
-    completeButton: {
-      backgroundColor:
-        '#FFFFFF',
-      borderRadius: 26,
-      paddingHorizontal: 24,
-      height: 52,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-      marginTop: 22,
-    },
-
-    completeButtonText: {
-      color: '#111111',
-      fontSize: 13,
-      fontWeight: '900',
-      letterSpacing: 1,
-    },
-
-    sponsorCard: {
-      backgroundColor:
-        '#EAF2FF',
-      borderRadius: 30,
-      padding: 26,
-      marginTop: 20,
-    },
-
-    sponsorLabel: {
-      color: '#1976ED',
-      fontSize: 12,
-      fontWeight: '900',
-      letterSpacing: 3,
-      marginBottom: 10,
-    },
-
-    sponsorTitle: {
-      color: '#111111',
-      fontSize: 25,
-      lineHeight: 31,
-      fontWeight: '900',
-    },
-
-    sponsorText: {
-      color: '#666666',
-      fontSize: 15,
-      lineHeight: 22,
-      fontWeight: '600',
-      marginTop: 10,
-    },
-
-    sponsorButton: {
-      backgroundColor:
-        '#111111',
-      height: 52,
-      borderRadius: 26,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-      marginTop: 20,
-    },
-
-    sponsorButtonText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: '900',
-      letterSpacing: 1,
-    },
-
-    motivationCard: {
-      backgroundColor:
-        '#FFF7DF',
-      borderRadius: 28,
-      padding: 24,
-      marginTop: 20,
-      alignItems:
-        'center',
-    },
-
-    motivationIcon: {
-      fontSize: 38,
-      marginBottom: 8,
-    },
-
-    motivationTitle: {
-      fontSize: 22,
-      fontWeight: '900',
-      color: '#111111',
-    },
-
-    motivationText: {
-      fontSize: 15,
-      lineHeight: 22,
-      fontWeight: '600',
-      color: '#666666',
-      textAlign:
-        'center',
       marginTop: 7,
     },
 
-    footer: {
-      alignItems:
+    completeText: {
+      color: '#DCE5ED',
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginTop: 9,
+    },
+
+    completePoints: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor:
+        'rgba(255,255,255,0.08)',
+      borderRadius: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+      marginTop: 19,
+    },
+
+    completePointsNumber: {
+      color: BRAND.gold,
+      fontSize: 22,
+      fontWeight: '900',
+    },
+
+    completePointsLabel: {
+      color: '#DCE5ED',
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 1.2,
+      marginLeft: 8,
+    },
+
+    completeButton: {
+      width: '100%',
+      height: 52,
+      borderRadius: 26,
+      backgroundColor:
+        BRAND.white,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
         'center',
-      paddingTop: 38,
+      marginTop: 20,
+    },
+
+    completeButtonText: {
+      color: BRAND.ink,
+      fontSize: 12,
+      fontWeight: '900',
+      letterSpacing: 1.1,
+      marginRight: 8,
+    },
+
+    /*
+     * PARTNER
+     */
+
+    partnerCard: {
+      backgroundColor:
+        BRAND.greenLight,
+      borderRadius: 30,
+      padding: 25,
+      marginTop: 2,
+      marginBottom: 18,
+    },
+
+    partnerIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 18,
+      backgroundColor:
+        BRAND.white,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      marginBottom: 16,
+    },
+
+    partnerEyebrow: {
+      color: BRAND.blue,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 2.8,
+      marginBottom: 9,
+    },
+
+    partnerTitle: {
+      color: BRAND.ink,
+      fontSize: 25,
+      lineHeight: 30,
+      fontWeight: '900',
+    },
+
+    partnerText: {
+      color: BRAND.muted,
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: '600',
+      marginTop: 10,
+    },
+
+    partnerButton: {
+      height: 52,
+      borderRadius: 26,
+      backgroundColor:
+        BRAND.ink,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      marginTop: 20,
+    },
+
+    partnerButtonText: {
+      color: BRAND.white,
+      fontSize: 12,
+      fontWeight: '900',
+      letterSpacing: 1.1,
+      marginRight: 8,
+    },
+
+    /*
+     * MOTIVATION
+     */
+
+    motivationCard: {
+      backgroundColor:
+        BRAND.goldLight,
+      borderRadius: 29,
+      padding: 26,
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+
+    motivationIcon: {
+      width: 58,
+      height: 58,
+      borderRadius: 20,
+      backgroundColor:
+        BRAND.white,
+      alignItems: 'center',
+      justifyContent:
+        'center',
+      marginBottom: 12,
+    },
+
+    motivationTitle: {
+      color: BRAND.ink,
+      fontSize: 23,
+      fontWeight: '900',
+      textAlign: 'center',
+    },
+
+    motivationText: {
+      color: BRAND.muted,
+      fontSize: 15,
+      lineHeight: 22,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginTop: 7,
+      maxWidth: 330,
+    },
+
+    /*
+     * FOOTER
+     */
+
+    footer: {
+      alignItems: 'center',
+      paddingTop: 28,
       paddingBottom: 20,
     },
 
     footerBrand: {
-      color: '#1976ED',
-      fontSize: 18,
+      color: BRAND.blue,
+      fontSize: 17,
       fontWeight: '900',
-      letterSpacing: 6,
+      letterSpacing: 5.5,
     },
 
     footerText: {
-      color: '#999999',
-      fontSize: 14,
-      fontWeight: '600',
+      color: BRAND.muted,
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 1,
       marginTop: 8,
     },
   });

@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,8 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 type OrderProduct = {
   id: string;
@@ -64,20 +65,54 @@ export default function OrdersScreen() {
 
   const loadOrders = async () => {
     try {
-      const stored = await AsyncStorage.getItem('chalega_orders');
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!stored) {
+      if (userError) throw userError;
+
+      if (!user) {
         setOrders([]);
         return;
       }
 
-      const parsed = JSON.parse(stored);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(
+          'id, order_id, customer_name, customer_phone, address, area, pin, products, total, delivery, status, created_at'
+        )
+        .order('created_at', { ascending: false });
 
-      if (Array.isArray(parsed)) {
-        setOrders([...parsed].reverse());
-      } else {
-        setOrders([]);
-      }
+      if (error) throw error;
+
+      const mappedOrders: Order[] = (data || []).map((row: any) => ({
+        id: row.id,
+        orderId: row.order_id,
+        customer: {
+          name: row.customer_name,
+          phone: row.customer_phone,
+        },
+        address: {
+          address: row.address,
+          area: row.area,
+          pin: row.pin,
+        },
+        products: Array.isArray(row.products) ? row.products : [],
+        items: Array.isArray(row.products)
+          ? row.products.reduce(
+              (sum: number, product: any) =>
+                sum + Number(product?.quantity || 0),
+              0
+            )
+          : 0,
+        total: Number(row.total || 0),
+        delivery: row.delivery,
+        status: row.status || STATUS.RECEIVED,
+        createdAt: row.created_at,
+      }));
+
+      setOrders(mappedOrders);
     } catch (error) {
       console.log('Could not load orders:', error);
       setOrders([]);
@@ -86,7 +121,6 @@ export default function OrdersScreen() {
       setRefreshing(false);
     }
   };
-
   useFocusEffect(
     useCallback(() => {
       loadOrders();
@@ -130,33 +164,30 @@ export default function OrdersScreen() {
     newStatus: string
   ) => {
     try {
-      const stored =
-        await AsyncStorage.getItem('chalega_orders');
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!stored) return;
+      if (userError) throw userError;
 
-      const existingOrders = JSON.parse(stored);
+      if (!user) {
+        Alert.alert(
+          'Sign in required',
+          'Please sign in to manage this order.'
+        );
+        return;
+      }
 
-      const updatedOrders = existingOrders.map(
-        (order: Order) => {
-          const currentId =
-            order.orderId || order.id;
-
-          if (currentId === orderId) {
-            return {
-              ...order,
-              status: newStatus,
-            };
-          }
-
-          return order;
+      const { error } = await supabase.rpc(
+        'update_order_status',
+        {
+          p_order_id: orderId,
+          p_status: newStatus,
         }
       );
 
-      await AsyncStorage.setItem(
-        'chalega_orders',
-        JSON.stringify(updatedOrders)
-      );
+      if (error) throw error;
 
       await loadOrders();
 
@@ -173,7 +204,6 @@ export default function OrdersScreen() {
       );
     }
   };
-
   const moveToNextStatus = (order: Order) => {
     const orderId = getOrderId(order);
     const currentStatus = getStatus(order);
@@ -302,7 +332,7 @@ export default function OrdersScreen() {
 
           <View style={styles.headerText}>
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -336,7 +366,7 @@ export default function OrdersScreen() {
           <View style={styles.loading}>
             <ActivityIndicator
               size="large"
-              color="#1976F3"
+              color="#00D1A7"
             />
 
             <Text style={styles.loadingText}>
@@ -483,13 +513,13 @@ export default function OrdersScreen() {
                             </Text>
 
                             <Text style={styles.productPrice}>
-                              ₹{product.price.toLocaleString('en-IN')} each
+                              ₹{Number(product.price || 0).toLocaleString('en-IN')} each
                             </Text>
 
                           </View>
 
                           <Text style={styles.productTotal}>
-                            ₹{product.total.toLocaleString('en-IN')}
+                            ₹{(Number(product.price || 0) * Number(product.quantity || 0)).toLocaleString('en-IN')}
                           </Text>
 
                         </View>
@@ -674,7 +704,7 @@ export default function OrdersScreen() {
         )}
 
         <Text style={styles.footer}>
-          CHALEGA INDIA 🇮🇳
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
@@ -737,7 +767,7 @@ function TimelineStep({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -756,13 +786,13 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   backText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 44,
     lineHeight: 48,
   },
@@ -772,21 +802,21 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   title: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 38,
     fontWeight: '900',
     marginTop: 3,
   },
 
   banner: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 25,
     padding: 22,
     flexDirection: 'row',
@@ -804,7 +834,7 @@ const styles = StyleSheet.create({
   },
 
   bannerTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 22,
     fontWeight: '900',
   },
@@ -827,7 +857,7 @@ const styles = StyleSheet.create({
   },
 
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 25,
     padding: 40,
     alignItems: 'center',
@@ -838,7 +868,7 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 24,
     fontWeight: '900',
     marginTop: 12,
@@ -852,7 +882,7 @@ const styles = StyleSheet.create({
   },
 
   orderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 27,
     padding: 20,
     marginBottom: 25,
@@ -876,7 +906,7 @@ const styles = StyleSheet.create({
   },
 
   orderNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 27,
     fontWeight: '900',
     marginTop: 5,
@@ -889,7 +919,7 @@ const styles = StyleSheet.create({
   },
 
   statusBadge: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 14,
     paddingHorizontal: 11,
     paddingVertical: 8,
@@ -897,7 +927,7 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -918,7 +948,7 @@ const styles = StyleSheet.create({
   },
 
   customerName: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 22,
     fontWeight: '900',
   },
@@ -939,28 +969,28 @@ const styles = StyleSheet.create({
 
   callButton: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 14,
     paddingVertical: 13,
     alignItems: 'center',
   },
 
   callButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 10,
     fontWeight: '900',
   },
 
   whatsappButton: {
     flex: 1,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 14,
     paddingVertical: 13,
     alignItems: 'center',
   },
 
   whatsappButtonText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -983,7 +1013,7 @@ const styles = StyleSheet.create({
     width: 55,
     height: 55,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -998,7 +1028,7 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -1017,7 +1047,7 @@ const styles = StyleSheet.create({
   },
 
   productTotal: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1033,7 +1063,7 @@ const styles = StyleSheet.create({
   },
 
   totalCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 19,
     padding: 18,
     marginTop: 15,
@@ -1049,7 +1079,7 @@ const styles = StyleSheet.create({
   },
 
   totalLabel: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1,
@@ -1057,7 +1087,7 @@ const styles = StyleSheet.create({
   },
 
   totalAmount: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 25,
     fontWeight: '900',
   },
@@ -1087,7 +1117,7 @@ const styles = StyleSheet.create({
   },
 
   pinText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
     marginTop: 5,
@@ -1107,7 +1137,7 @@ const styles = StyleSheet.create({
   },
 
   deliveryTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1133,7 +1163,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1142,7 +1172,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 2,
     borderColor: '#D4D8DE',
     alignItems: 'center',
@@ -1150,7 +1180,7 @@ const styles = StyleSheet.create({
   },
 
   circleActiveText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1162,7 +1192,7 @@ const styles = StyleSheet.create({
   },
 
   timelineActive: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 14,
     fontWeight: '900',
     marginLeft: 13,
@@ -1184,7 +1214,7 @@ const styles = StyleSheet.create({
   },
 
   actionButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingVertical: 17,
     alignItems: 'center',
@@ -1192,7 +1222,7 @@ const styles = StyleSheet.create({
   },
 
   actionButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -1212,7 +1242,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 3,

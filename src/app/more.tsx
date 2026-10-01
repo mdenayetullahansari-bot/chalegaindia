@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -6,15 +6,104 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+
+import {
+  endGuestSession,
+  hydrateGuestMode,
+  subscribeToGuestMode,
+} from '@/lib/guest-session';
+
+import { BRAND } from '@/lib/brand';
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function MoreScreen() {
   const router = useRouter();
+  const [guestMode, setGuestMode] = useState(false);
+
+  useEffect(() => {
+    hydrateGuestMode().then(setGuestMode);
+
+    return subscribeToGuestMode(setGuestMode);
+  }, []);
 
   const goTo = (route: string) => {
     router.push(route as any);
   };
+
+  const openProfile = () => {
+    router.push('/profile');
+  };
+
+  const createAccount = async () => {
+    await endGuestSession();
+    router.replace('/auth');
+  };
+
+  const showComingSoon = (title: string) => {
+    Alert.alert(
+      title,
+      'This Chalega feature is being prepared for the next release.'
+    );
+  };
+
+  const MenuRow = ({
+    icon,
+    title,
+    subtitle,
+    onPress,
+    tone = 'blue',
+  }: {
+    icon: IconName;
+    title: string;
+    subtitle: string;
+    onPress: () => void;
+    tone?: 'blue' | 'green' | 'gold' | 'grey';
+  }) => (
+    <TouchableOpacity
+      style={styles.menuCard}
+      onPress={onPress}
+      activeOpacity={0.84}
+    >
+      <View
+        style={[
+          styles.menuIcon,
+          tone === 'green' && styles.menuIconGreen,
+          tone === 'gold' && styles.menuIconGold,
+          tone === 'grey' && styles.menuIconGrey,
+        ]}
+      >
+        <Ionicons
+          name={icon}
+          size={23}
+          color={
+            tone === 'green'
+              ? BRAND.green
+              : tone === 'gold'
+                ? '#C48700'
+                : tone === 'grey'
+                  ? BRAND.muted
+                  : BRAND.blue
+          }
+        />
+      </View>
+
+      <View style={styles.menuText}>
+        <Text style={styles.menuTitle}>{title}</Text>
+        <Text style={styles.menuSubtitle}>{subtitle}</Text>
+      </View>
+
+      <Ionicons
+        name="chevron-forward"
+        size={21}
+        color={BRAND.teal}
+      />
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -22,303 +111,361 @@ export default function MoreScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-
         {/* HEADER */}
-
         <View style={styles.header}>
-          <Text style={styles.brand}>
-            C H A L E G A  I N D I A
-          </Text>
+          <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
 
-          <Text style={styles.title}>
-            More
-          </Text>
+          <Text style={styles.title}>More</Text>
 
           <Text style={styles.subtitle}>
             Everything you need for your Chalega journey.
           </Text>
         </View>
 
-        {/* PROFILE / JOURNEY CARD */}
-
-        <View style={styles.journeyCard}>
-          <View style={styles.journeyIcon}>
-            <Text style={styles.journeyEmoji}>
-              🚶
-            </Text>
+        {/* PROFILE / JOURNEY */}
+        <TouchableOpacity
+          style={styles.profileCard}
+          onPress={openProfile}
+          activeOpacity={0.88}
+        >
+          <View style={styles.profileIcon}>
+            <Ionicons
+              name="person"
+              size={27}
+              color={BRAND.teal}
+            />
           </View>
 
-          <View style={styles.journeyText}>
-            <Text style={styles.journeyTitle}>
+          <View style={styles.profileText}>
+            <Text style={styles.profileTitle}>
               Your Healthy Journey
             </Text>
 
-            <Text style={styles.journeySubtitle}>
-              Walk • Earn • Improve • Repeat
+            <Text style={styles.profileSubtitle}>
+              Profile • Progress • KMC Ward
             </Text>
           </View>
 
-          <Text style={styles.arrow}>
-            ›
-          </Text>
-        </View>
+          <Ionicons
+            name="chevron-forward"
+            size={25}
+            color={BRAND.white}
+          />
+        </TouchableOpacity>
 
-        {/* REWARDS */}
+        {/* GUEST */}
+        {guestMode && (
+          <View style={styles.guestCard}>
+            <View style={styles.guestIcon}>
+              <Ionicons
+                name="person-add"
+                size={22}
+                color="#A06C00"
+              />
+            </View>
 
+            <View style={styles.guestContent}>
+              <Text style={styles.guestEyebrow}>
+                EXPLORING AS A GUEST
+              </Text>
+
+              <Text style={styles.guestTitle}>
+                Make your journey yours
+              </Text>
+
+              <Text style={styles.guestText}>
+                Create a free account when you are ready.
+                Your current progress stays on this device.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.guestButton}
+                onPress={createAccount}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.guestButtonText}>
+                  CREATE FREE ACCOUNT
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* YOUR PROGRESS */}
         <Text style={styles.sectionTitle}>
           YOUR PROGRESS
         </Text>
 
-        <TouchableOpacity
-          style={styles.menuCard}
+        <MenuRow
+          icon="trophy-outline"
+          title="Rewards"
+          subtitle="View your Chalega Points and unlock rewards."
           onPress={() => goTo('/rewards')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.iconBlue}>
-            <Text style={styles.iconText}>
-              🏆
-            </Text>
-          </View>
+        />
 
-          <View style={styles.menuText}>
-            <Text style={styles.menuTitle}>
-              Rewards
-            </Text>
-
-            <Text style={styles.menuSubtitle}>
-              View your Chalega Points and unlock rewards.
-            </Text>
-          </View>
-
-          <Text style={styles.menuArrow}>
-            ›
-          </Text>
-        </TouchableOpacity>
-
-        {/* MISSIONS */}
-
-        <TouchableOpacity
-          style={styles.menuCard}
+        <MenuRow
+          icon="flag-outline"
+          title="Daily Missions"
+          subtitle="Complete healthy actions and earn points."
           onPress={() => goTo('/missions')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.iconBlue}>
-            <Text style={styles.iconText}>
-              🎯
-            </Text>
-          </View>
+        />
 
-          <View style={styles.menuText}>
-            <Text style={styles.menuTitle}>
-              Daily Missions
-            </Text>
+        <MenuRow
+          icon="time-outline"
+          title="Points Activity"
+          subtitle="See everything you have earned and spent."
+          onPress={() => goTo('/points-activity')}
+          tone="green"
+        />
 
-            <Text style={styles.menuSubtitle}>
-              Complete healthy actions and earn points.
-            </Text>
-          </View>
-
-          <Text style={styles.menuArrow}>
-            ›
-          </Text>
-        </TouchableOpacity>
-
-        {/* ORDERS */}
-
+        {/* SHOPPING */}
         <Text style={styles.sectionTitle}>
           SHOPPING
         </Text>
 
-        <TouchableOpacity
-          style={styles.menuCard}
-          onPress={() => goTo('/orders')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.iconGrey}>
-            <Text style={styles.iconText}>
-              📦
-            </Text>
-          </View>
+        <MenuRow
+          icon="receipt-outline"
+          title="My Orders"
+          subtitle="View and track your Chalega orders."
+          onPress={() => goTo('/customer-orders')}
+          tone="grey"
+        />
 
-          <View style={styles.menuText}>
-            <Text style={styles.menuTitle}>
-              My Orders
-            </Text>
-
-            <Text style={styles.menuSubtitle}>
-              View and track your Chalega India orders.
-            </Text>
-          </View>
-
-          <Text style={styles.menuArrow}>
-            ›
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuCard}
+        <MenuRow
+          icon="cart-outline"
+          title="Health Shop"
+          subtitle="Discover products for a healthier lifestyle."
           onPress={() => goTo('/shop')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.iconGrey}>
-            <Text style={styles.iconText}>
-              🛒
-            </Text>
-          </View>
-
-          <View style={styles.menuText}>
-            <Text style={styles.menuTitle}>
-              Health Shop
-            </Text>
-
-            <Text style={styles.menuSubtitle}>
-              Discover products for a healthier lifestyle.
-            </Text>
-          </View>
-
-          <Text style={styles.menuArrow}>
-            ›
-          </Text>
-        </TouchableOpacity>
+          tone="grey"
+        />
 
         {/* COMMUNITY */}
-
         <Text style={styles.sectionTitle}>
           COMMUNITY
         </Text>
 
-        <View style={styles.communityCard}>
+        <TouchableOpacity
+          style={styles.communityCard}
+          onPress={() =>
+            showComingSoon('Chalega Community')
+          }
+          activeOpacity={0.86}
+        >
           <View style={styles.communityIcon}>
-            <Text style={styles.communityEmoji}>
-              🇮🇳
-            </Text>
+            <Ionicons
+              name="people"
+              size={27}
+              color={BRAND.green}
+            />
           </View>
 
           <View style={styles.communityText}>
             <Text style={styles.communityTitle}>
-              Chalega India
+              Chalega Circle
             </Text>
 
             <Text style={styles.communitySubtitle}>
-              A healthier India starts with small
-              actions by all of us.
+              Connect, walk and improve together.
+            </Text>
+
+            <Text style={styles.communityStatus}>
+              COMING NEXT
             </Text>
           </View>
-        </View>
 
-        {/* SPONSOR */}
+          <Ionicons
+            name="chevron-forward"
+            size={22}
+            color={BRAND.white}
+          />
+        </TouchableOpacity>
 
-        <View style={styles.sponsorCard}>
+        <TouchableOpacity
+          style={styles.wardCard}
+          onPress={() => showComingSoon('My KMC Ward')}
+          activeOpacity={0.86}
+        >
+          <View style={styles.wardIcon}>
+            <Ionicons
+              name="location"
+              size={24}
+              color={BRAND.orange}
+            />
+          </View>
 
-          <Text style={styles.sponsorLabel}>
-            HEALTH PARTNER PROGRAM
-          </Text>
+          <View style={styles.wardText}>
+            <Text style={styles.wardTitle}>
+              My KMC Ward
+            </Text>
 
-          <Text style={styles.sponsorTitle}>
-            Want to support healthy people?
-          </Text>
+            <Text style={styles.wardSubtitle}>
+              Find your ward and see local community activity.
+            </Text>
+          </View>
 
-          <Text style={styles.sponsorText}>
-            Businesses can sponsor missions,
-            challenges and community rewards.
-          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={21}
+            color={BRAND.orange}
+          />
+        </TouchableOpacity>
+
+        {/* REFERRALS */}
+        <Text style={styles.sectionTitle}>
+          GROW WITH CHALEGA
+        </Text>
+
+        <MenuRow
+          icon="people-outline"
+          title="Refer & Grow"
+          subtitle="Invite friends and family to join Chalega."
+          onPress={() => goTo('/referral')}
+          tone="green"
+        />
+        {/* HEALTH PARTNERS */}
+        <Text style={styles.sectionTitle}>
+          PARTNERSHIPS
+        </Text>
+
+        <View style={styles.partnerCard}>
+          <View style={styles.partnerTop}>
+            <View style={styles.partnerIcon}>
+              <Ionicons
+                name="heart"
+                size={23}
+                color={BRAND.teal}
+              />
+            </View>
+
+            <View style={styles.partnerText}>
+              <Text style={styles.partnerLabel}>
+                HEALTH PARTNER PROGRAM
+              </Text>
+
+              <Text style={styles.partnerTitle}>
+                Support healthier communities.
+              </Text>
+
+              <Text style={styles.partnerBody}>
+                Businesses can sponsor missions,
+                challenges and community rewards.
+              </Text>
+            </View>
+          </View>
 
           <TouchableOpacity
-            style={styles.sponsorButton}
-            onPress={() => goTo('/missions')}
+            style={styles.partnerButton}
+            onPress={() =>
+              goTo('/partner')
+            }
             activeOpacity={0.85}
           >
-            <Text style={styles.sponsorButtonText}>
-              BECOME A HEALTH PARTNER →
+            <Text style={styles.partnerButtonText}>
+              LEARN ABOUT PARTNERSHIPS
             </Text>
+            <Ionicons
+              name="arrow-forward"
+              size={17}
+              color={BRAND.white}
+            />
           </TouchableOpacity>
-
         </View>
 
-        {/* FUTURE FEATURES */}
-
+        {/* MORE FROM CHALEGA */}
         <Text style={styles.sectionTitle}>
           MORE FROM CHALEGA
         </Text>
 
         <View style={styles.smallGrid}>
-
-          <View style={styles.smallCard}>
-            <Text style={styles.smallEmoji}>
-              ❤️
-            </Text>
-
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => goTo('/explore')}
+            activeOpacity={0.84}
+          >
+            <Ionicons
+              name="heart-outline"
+              size={24}
+              color={BRAND.green}
+            />
             <Text style={styles.smallTitle}>
               Health
             </Text>
-
             <Text style={styles.smallText}>
               Learn better habits
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.smallCard}>
-            <Text style={styles.smallEmoji}>
-              👥
-            </Text>
-
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() =>
+              showComingSoon('Chalega Circle')
+            }
+            activeOpacity={0.84}
+          >
+            <Ionicons
+              name="people-outline"
+              size={24}
+              color={BRAND.teal}
+            />
             <Text style={styles.smallTitle}>
               Community
             </Text>
-
             <Text style={styles.smallText}>
               Move together
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.smallCard}>
-            <Text style={styles.smallEmoji}>
-              🔥
-            </Text>
-
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => goTo('/missions')}
+            activeOpacity={0.84}
+          >
+            <Ionicons
+              name="flame-outline"
+              size={24}
+              color={BRAND.orange}
+            />
             <Text style={styles.smallTitle}>
               Streaks
             </Text>
-
             <Text style={styles.smallText}>
               Never break the chain
             </Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.smallCard}>
-            <Text style={styles.smallEmoji}>
-              🌟
-            </Text>
-
+          <TouchableOpacity
+            style={styles.smallCard}
+            onPress={() => goTo('/competitions?from=more')}
+            activeOpacity={0.84}
+          >
+            <Ionicons
+              name="flag-outline"
+              size={24}
+              color={BRAND.gold}
+            />
             <Text style={styles.smallTitle}>
               Challenges
             </Text>
-
             <Text style={styles.smallText}>
               Push yourself further
             </Text>
-          </View>
-
+          </TouchableOpacity>
         </View>
 
         {/* FOOTER */}
-
         <View style={styles.footer}>
-
           <Text style={styles.footerBrand}>
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>
-            Chalo Health Banaye 🇮🇳
+            MOVE PEOPLE • HEALTHY COMMUNITIES
           </Text>
 
           <Text style={styles.footerText}>
-            Walk • Earn • Unlock • Repeat
+            WALK • EARN • IMPROVE • REPEAT
           </Text>
-
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -327,43 +474,43 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
     paddingHorizontal: 20,
     paddingTop: 22,
-    paddingBottom: 50,
+    paddingBottom: 55,
   },
 
   header: {
     marginBottom: 20,
   },
 
-  brand: {
-    color: '#1976F3',
+  eyebrow: {
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 2.5,
+    letterSpacing: 2.2,
   },
 
   title: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 34,
     fontWeight: '900',
     marginTop: 5,
   },
 
   subtitle: {
-    color: '#777777',
+    color: BRAND.muted,
     fontSize: 13,
     fontWeight: '600',
     marginTop: 5,
     lineHeight: 19,
   },
 
-  journeyCard: {
-    backgroundColor: '#1976F3',
+  profileCard: {
+    backgroundColor: BRAND.teal,
     borderRadius: 23,
     padding: 18,
     flexDirection: 'row',
@@ -371,44 +518,94 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 
-  journeyIcon: {
+  profileIcon: {
     width: 55,
     height: 55,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  journeyEmoji: {
-    fontSize: 28,
-  },
-
-  journeyText: {
+  profileText: {
     flex: 1,
     paddingLeft: 14,
   },
 
-  journeyTitle: {
-    color: '#FFFFFF',
+  profileTitle: {
+    color: BRAND.white,
     fontSize: 16,
     fontWeight: '900',
   },
 
-  journeySubtitle: {
-    color: '#DCEAFF',
+  profileSubtitle: {
+    color: '#D7F7F1',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 4,
   },
 
-  arrow: {
-    color: '#FFFFFF',
-    fontSize: 30,
+  guestCard: {
+    backgroundColor: BRAND.goldLight,
+    borderRadius: 22,
+    padding: 17,
+    marginBottom: 24,
+    flexDirection: 'row',
+  },
+
+  guestIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: BRAND.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  guestContent: {
+    flex: 1,
+    paddingLeft: 13,
+  },
+
+  guestEyebrow: {
+    color: '#A06C00',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  guestTitle: {
+    color: BRAND.ink,
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  guestText: {
+    color: '#665B42',
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+
+  guestButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: BRAND.ink,
+    borderRadius: 11,
+    marginTop: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+
+  guestButtonText: {
+    color: BRAND.white,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
 
   sectionTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 0.7,
@@ -417,7 +614,7 @@ const styles = StyleSheet.create({
   },
 
   menuCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 19,
     padding: 15,
     marginBottom: 10,
@@ -425,26 +622,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  iconBlue: {
+  menuIcon: {
     width: 50,
     height: 50,
     borderRadius: 16,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  iconGrey: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
+  menuIconGreen: {
+    backgroundColor: BRAND.greenLight,
+  },
+
+  menuIconGold: {
+    backgroundColor: BRAND.goldLight,
+  },
+
+  menuIconGrey: {
     backgroundColor: '#F0F2F5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  iconText: {
-    fontSize: 24,
   },
 
   menuText: {
@@ -453,43 +649,34 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
   },
 
   menuSubtitle: {
-    color: '#888888',
+    color: BRAND.muted,
     fontSize: 10,
     lineHeight: 15,
     marginTop: 3,
   },
 
-  menuArrow: {
-    color: '#1976F3',
-    fontSize: 29,
-  },
-
   communityCard: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.navy,
     borderRadius: 21,
     padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
 
   communityIcon: {
     width: 53,
     height: 53,
     borderRadius: 17,
-    backgroundColor: '#222222',
+    backgroundColor: '#12395A',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  communityEmoji: {
-    fontSize: 25,
   },
 
   communityText: {
@@ -498,57 +685,122 @@ const styles = StyleSheet.create({
   },
 
   communityTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 16,
     fontWeight: '900',
   },
 
   communitySubtitle: {
-    color: '#BBBBBB',
+    color: '#C8D2DC',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 4,
   },
 
-  sponsorCard: {
-    backgroundColor: '#EAF2FF',
-    borderRadius: 22,
-    padding: 20,
-    marginTop: 5,
-    marginBottom: 25,
-  },
-
-  sponsorLabel: {
-    color: '#1976F3',
-    fontSize: 9,
+  communityStatus: {
+    color: '#75D98D',
+    fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1.2,
-  },
-
-  sponsorTitle: {
-    color: '#111111',
-    fontSize: 20,
-    fontWeight: '900',
+    letterSpacing: 1,
     marginTop: 7,
   },
 
-  sponsorText: {
-    color: '#666666',
+  wardCard: {
+    backgroundColor: BRAND.white,
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+
+  wardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: BRAND.orangeLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  wardText: {
+    flex: 1,
+    paddingHorizontal: 13,
+  },
+
+  wardTitle: {
+    color: BRAND.midnight,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  wardSubtitle: {
+    color: BRAND.muted,
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 3,
+  },
+
+  partnerCard: {
+    backgroundColor: BRAND.greenLight,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 25,
+  },
+
+  partnerTop: {
+    flexDirection: 'row',
+  },
+
+  partnerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: BRAND.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  partnerText: {
+    flex: 1,
+    paddingLeft: 13,
+  },
+
+  partnerLabel: {
+    color: BRAND.teal,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.1,
+  },
+
+  partnerTitle: {
+    color: BRAND.midnight,
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 5,
+  },
+
+  partnerBody: {
+    color: BRAND.muted,
     fontSize: 11,
     lineHeight: 17,
-    marginTop: 6,
+    marginTop: 5,
   },
 
-  sponsorButton: {
-    backgroundColor: '#111111',
+  partnerButton: {
+    backgroundColor: BRAND.navy,
     borderRadius: 12,
     paddingVertical: 13,
+    paddingHorizontal: 14,
     alignItems: 'center',
-    marginTop: 15,
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
   },
 
-  sponsorButtonText: {
-    color: '#FFFFFF',
+  partnerButtonText: {
+    color: BRAND.white,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
@@ -562,26 +814,22 @@ const styles = StyleSheet.create({
 
   smallCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 18,
     padding: 16,
     marginBottom: 10,
-    minHeight: 105,
-  },
-
-  smallEmoji: {
-    fontSize: 23,
+    minHeight: 110,
   },
 
   smallTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 13,
     fontWeight: '900',
-    marginTop: 8,
+    marginTop: 9,
   },
 
   smallText: {
-    color: '#888888',
+    color: BRAND.muted,
     fontSize: 9,
     lineHeight: 13,
     marginTop: 3,
@@ -594,22 +842,23 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 2.5,
   },
 
   footerTagline: {
-    color: '#555555',
+    color: BRAND.muted,
     fontSize: 11,
     fontWeight: '700',
     marginTop: 5,
   },
 
   footerText: {
-    color: '#AAAAAA',
+    color: '#9AA4AE',
     fontSize: 9,
     marginTop: 4,
+    letterSpacing: 0.4,
   },
 });

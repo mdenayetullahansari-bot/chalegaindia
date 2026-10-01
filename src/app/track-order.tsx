@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,12 +10,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useFocusEffect,
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 type OrderProduct = {
   id: string;
@@ -22,7 +23,7 @@ type OrderProduct = {
   price: number;
   emoji: string;
   quantity: number;
-  total: number;
+  total?: number;
 };
 
 type Order = {
@@ -65,30 +66,69 @@ export default function TrackOrderScreen() {
 
   const loadOrder = async () => {
     try {
-      const stored =
-        await AsyncStorage.getItem('chalega_orders');
-
-      if (!stored) {
+      if (!orderId) {
         setOrder(null);
         return;
       }
 
-      const orders = JSON.parse(stored);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!Array.isArray(orders)) {
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
         setOrder(null);
         return;
       }
 
-      const found = orders.find(
-        (item: Order) =>
-          (item.orderId || item.id) === orderId
+      const { data, error } = await supabase
+        .from('orders')
+        .select(
+          'id, order_id, customer_name, products, total, delivery, status, created_at'
+        )
+        .eq('user_id', user.id)
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        setOrder(null);
+        return;
+      }
+
+      const products = Array.isArray(data.products)
+        ? data.products
+        : [];
+
+      const items = products.reduce(
+        (sum: number, product: any) =>
+          sum + Number(product?.quantity || 0),
+        0
       );
 
-      setOrder(found || null);
+      setOrder({
+        id: data.id,
+        orderId: data.order_id || data.id,
+        customer: {
+          name: data.customer_name || '',
+        },
+        products,
+        items,
+        total: Number(data.total || 0),
+        delivery: data.delivery || 'Standard',
+        status: data.status || STATUS.RECEIVED,
+        createdAt: data.created_at,
+      });
     } catch (error) {
       console.log(
-        'Could not load order:',
+        'Could not load order from Supabase:',
         error
       );
 
@@ -155,7 +195,7 @@ export default function TrackOrderScreen() {
         <View style={styles.loading}>
           <ActivityIndicator
             size="large"
-            color="#1976F3"
+            color="#00D1A7"
           />
 
           <Text style={styles.loadingText}>
@@ -210,14 +250,13 @@ export default function TrackOrderScreen() {
         }
         contentContainerStyle={styles.content}
       >
-
         {/* HEADER */}
 
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() =>
-              router.replace('/order-confirmed')
+              router.replace('/customer-orders')
             }
           >
             <Text style={styles.backText}>
@@ -227,7 +266,7 @@ export default function TrackOrderScreen() {
 
           <View>
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -239,7 +278,6 @@ export default function TrackOrderScreen() {
         {/* CURRENT STATUS */}
 
         <View style={styles.heroCard}>
-
           <View style={styles.heroCircle}>
             <Text style={styles.heroIcon}>
               {statusNumber >= 5
@@ -277,13 +315,11 @@ export default function TrackOrderScreen() {
               ? 'Your order is being prepared.'
               : 'We have received your order.'}
           </Text>
-
         </View>
 
         {/* ORDER NUMBER */}
 
         <View style={styles.orderCard}>
-
           <Text style={styles.orderLabel}>
             ORDER NUMBER
           </Text>
@@ -301,7 +337,6 @@ export default function TrackOrderScreen() {
               Placed {formatDate(order.createdAt)}
             </Text>
           ) : null}
-
         </View>
 
         {/* STATUS TIMELINE */}
@@ -311,11 +346,9 @@ export default function TrackOrderScreen() {
         </Text>
 
         <View style={styles.timeline}>
-
           {/* ORDER RECEIVED */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 1
@@ -337,7 +370,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 1
@@ -351,9 +383,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order has been received.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -367,7 +397,6 @@ export default function TrackOrderScreen() {
           {/* PREPARING */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 2
@@ -389,7 +418,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 2
@@ -403,9 +431,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your products are being prepared.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -419,7 +445,6 @@ export default function TrackOrderScreen() {
           {/* OUT FOR DELIVERY */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 3
@@ -441,7 +466,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 3
@@ -455,9 +479,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order is on the way.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -471,7 +493,6 @@ export default function TrackOrderScreen() {
           {/* DELIVERED */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 4
@@ -493,7 +514,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 4
@@ -507,9 +527,7 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order has been delivered.
               </Text>
-
             </View>
-
           </View>
 
           <View
@@ -523,7 +541,6 @@ export default function TrackOrderScreen() {
           {/* COMPLETED */}
 
           <View style={styles.timelineRow}>
-
             <View
               style={
                 statusNumber >= 5
@@ -545,7 +562,6 @@ export default function TrackOrderScreen() {
             </View>
 
             <View style={styles.timelineInfo}>
-
               <Text
                 style={
                   statusNumber >= 5
@@ -559,11 +575,8 @@ export default function TrackOrderScreen() {
               <Text style={styles.timelineDescription}>
                 Your order is complete.
               </Text>
-
             </View>
-
           </View>
-
         </View>
 
         {/* ORDER SUMMARY */}
@@ -573,60 +586,56 @@ export default function TrackOrderScreen() {
         </Text>
 
         <View style={styles.summaryCard}>
-
           {order.products &&
           order.products.length > 0 ? (
-
             order.products.map(
-              (product) => (
-                <View
-                  key={product.id}
-                  style={styles.productRow}
-                >
+              (product) => {
+                const productTotal =
+                  Number(product.price || 0) *
+                  Number(product.quantity || 0);
 
+                return (
                   <View
-                    style={styles.productEmojiBox}
+                    key={product.id}
+                    style={styles.productRow}
                   >
-                    <Text style={styles.productEmoji}>
-                      {product.emoji}
+                    <View
+                      style={styles.productEmojiBox}
+                    >
+                      <Text style={styles.productEmoji}>
+                        {product.emoji}
+                      </Text>
+                    </View>
+
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>
+                        {product.name}
+                      </Text>
+
+                      <Text style={styles.productQuantity}>
+                        Quantity: {product.quantity}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.productTotal}>
+                      ₹
+                      {productTotal.toLocaleString(
+                        'en-IN'
+                      )}
                     </Text>
                   </View>
-
-                  <View style={styles.productInfo}>
-
-                    <Text style={styles.productName}>
-                      {product.name}
-                    </Text>
-
-                    <Text style={styles.productQuantity}>
-                      Quantity: {product.quantity}
-                    </Text>
-
-                  </View>
-
-                  <Text style={styles.productTotal}>
-                    ₹
-                    {Number(
-                      product.total || 0
-                    ).toLocaleString('en-IN')}
-                  </Text>
-
-                </View>
-              )
+                );
+              }
             )
-
           ) : (
-
             <Text style={styles.noProducts}>
               Product details unavailable.
             </Text>
-
           )}
 
           <View style={styles.summaryDivider} />
 
           <View style={styles.totalRow}>
-
             <Text style={styles.totalLabel}>
               TOTAL
             </Text>
@@ -637,31 +646,25 @@ export default function TrackOrderScreen() {
                 order.total || 0
               ).toLocaleString('en-IN')}
             </Text>
-
           </View>
-
         </View>
 
         {/* DELIVERY */}
 
         <View style={styles.deliveryCard}>
-
           <Text style={styles.deliveryEmoji}>
             🛵
           </Text>
 
           <View style={styles.deliveryInfo}>
-
             <Text style={styles.deliveryTitle}>
               {order.delivery || 'Standard'} Delivery
             </Text>
 
             <Text style={styles.deliveryText}>
-              Chalega India delivery
+              Chalega delivery
             </Text>
-
           </View>
-
         </View>
 
         {/* REFRESH */}
@@ -689,13 +692,12 @@ export default function TrackOrderScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footer}>
-          CHALEGA INDIA 🇮🇳
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
-          Chalo Health Banaye
+          MOVE PEOPLE • HEALTHY COMMUNITIES
         </Text>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -704,7 +706,7 @@ export default function TrackOrderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -736,7 +738,7 @@ const styles = StyleSheet.create({
   },
 
   notFoundTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 28,
     fontWeight: '900',
     marginTop: 15,
@@ -750,7 +752,7 @@ const styles = StyleSheet.create({
   },
 
   backToShopButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingHorizontal: 30,
     paddingVertical: 16,
@@ -758,7 +760,7 @@ const styles = StyleSheet.create({
   },
 
   backToShopText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -773,34 +775,34 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
   },
 
   backText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 42,
     lineHeight: 46,
   },
 
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   title: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 34,
     fontWeight: '900',
     marginTop: 2,
   },
 
   heroCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 27,
     padding: 25,
     alignItems: 'center',
@@ -810,7 +812,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -820,7 +822,7 @@ const styles = StyleSheet.create({
   },
 
   heroTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 25,
     fontWeight: '900',
     textAlign: 'center',
@@ -836,7 +838,7 @@ const styles = StyleSheet.create({
   },
 
   orderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     padding: 21,
     alignItems: 'center',
@@ -851,7 +853,7 @@ const styles = StyleSheet.create({
   },
 
   orderNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 27,
     fontWeight: '900',
     marginTop: 6,
@@ -865,7 +867,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 22,
     fontWeight: '900',
     marginTop: 25,
@@ -873,7 +875,7 @@ const styles = StyleSheet.create({
   },
 
   timeline: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 20,
   },
@@ -887,7 +889,7 @@ const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 22,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -896,7 +898,7 @@ const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderWidth: 2,
     borderColor: '#D6DADF',
     alignItems: 'center',
@@ -904,7 +906,7 @@ const styles = StyleSheet.create({
   },
 
   circleActiveText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -921,7 +923,7 @@ const styles = StyleSheet.create({
   },
 
   timelineTitleActive: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -950,13 +952,13 @@ const styles = StyleSheet.create({
   lineActive: {
     width: 2,
     height: 25,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     marginLeft: 20,
     marginVertical: 3,
   },
 
   summaryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 17,
   },
@@ -971,7 +973,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 14,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -986,7 +988,7 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -998,7 +1000,7 @@ const styles = StyleSheet.create({
   },
 
   productTotal: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1022,19 +1024,19 @@ const styles = StyleSheet.create({
   },
 
   totalLabel: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 13,
     fontWeight: '900',
   },
 
   totalAmount: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 24,
     fontWeight: '900',
   },
 
   deliveryCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 21,
     padding: 18,
     flexDirection: 'row',
@@ -1052,7 +1054,7 @@ const styles = StyleSheet.create({
   },
 
   deliveryTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1064,7 +1066,7 @@ const styles = StyleSheet.create({
   },
 
   refreshButton: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 17,
     paddingVertical: 16,
     alignItems: 'center',
@@ -1072,13 +1074,13 @@ const styles = StyleSheet.create({
   },
 
   refreshButtonText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
   },
 
   shopButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingVertical: 17,
     alignItems: 'center',
@@ -1086,13 +1088,13 @@ const styles = StyleSheet.create({
   },
 
   shopButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
 
   footer: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 3,

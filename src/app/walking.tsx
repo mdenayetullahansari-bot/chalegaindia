@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pedometer } from 'expo-sensors';
 import {
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -11,10 +12,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import {
-  awardOnce,
-  getPoints,
-} from '../lib/points';
+import { getPoints } from '../lib/points';
+import { BRAND } from '@/lib/brand';
+import { supabase } from '../lib/supabase';
+import { completeStreakDay } from '../lib/streak';
+import { syncDailySteps } from '../services/dailyStepsService';
 
 type DayData = {
   day: string;
@@ -24,12 +26,7 @@ type DayData = {
 
 const DAILY_GOAL = 4000;
 const WALK_MISSION_POINTS = 40;
-const STREAK_MISSION_POINTS = 25;
-
-const STREAK_COUNT_KEY = 'chalega_streak_count';
-const STREAK_LAST_COMPLETED_KEY = 'chalega_streak_last_completed_date';
-const BEST_STREAK_KEY = 'chalega_best_streak';
-const STREAK_RECOVERY_KEY = 'chalega_streak_legacy_recovery_v1';
+const WALK_MISSION_GOAL = 4000;
 
 const initialWeek: DayData[] = [
   { day: 'M', steps: 4200, active: true },
@@ -53,18 +50,14 @@ export default function WalkingScreen() {
   const [walkMissionComplete, setWalkMissionComplete] =
     useState(false);
 
-  // Prevent duplicate rewards if the step counter and button
-  // both try to complete the mission at the same time.
-  const completionInProgress = useRef(false);
-  const streakCompletionInProgress = useRef(false);
-  const walkingDataLoaded = useRef(false);
-
   const [pedometerAvailable, setPedometerAvailable] =
     useState<boolean | null>(null);
   const [pedometerPermission, setPedometerPermission] =
     useState(false);
   const [sensorBaseSteps, setSensorBaseSteps] =
     useState<number | null>(null);
+  const lastDailyStepsSyncAt = useRef(0);
+  const lastDailyStepsSyncedValue = useRef<number | null>(null);
 
   const progress = Math.min(steps / goal, 1);
 
@@ -106,257 +99,186 @@ export default function WalkingScreen() {
     );
   };
 
-  useEffect(() => {
-    loadWalkingData();
-  }, []);
-
-  useEffect(() => {
-    if (!walkingDataLoaded.current) {
-      return;
-    }
-
-    if (steps >= goal) {
-      completeWalkMissionIfNeeded();
-    }
-  }, [steps, goal]);
-
+  /*
+   * -------------------------------------------------------
+   * LOAD WALKING DATA
+   * -------------------------------------------------------
+   *
+   * Walking progress is stored separately from the central
+   * Chalega Points wallet.
+   *
+   * IMPORTANT:
+   * data.points is intentionally NOT used as the wallet.
+   * The wallet always comes from the server profile.
+   */
   const loadWalkingData = async () => {
     try {
       const todayKey = getTodayKey();
+
       const saved = await AsyncStorage.getItem(
         'chalega_walking_data'
       );
 
-      let savedData: any = null;
-
-      if (saved) {
-        try {
-          savedData = JSON.parse(saved);
-        } catch {
-          savedData = null;
-        }
-      }
-
-      const savedDate =
-        typeof savedData?.date === 'string'
-          ? savedData.date
-          : null;
-
-      const isNewDay =
-        savedDate !== null && savedDate !== todayKey;
-
-      // New day: reset only today's step count and walking mission.
-      // Lifetime points, streak history and best streak stay intact.
-      if (isNewDay) {
-        setSteps(0);
-        setWalkMissionComplete(false);
-        setTracking(false);
-        setSensorBaseSteps(null);
-
-        await AsyncStorage.removeItem(
-          `chalega_walk_mission_${todayKey}`
+      if (!saved) {
+        await AsyncStorage.setItem(
+          'chalega_walking_data',
+          JSON.stringify({
+            steps: 2450,
+            goal: DAILY_GOAL,
+            streak: 6,
+            week: initialWeek,
+            date: todayKey,
+          })
         );
-      } else if (savedData) {
-        if (typeof savedData.steps === 'number') {
-          setSteps(savedData.steps);
-        }
+      } else {
+        const data = JSON.parse(saved);
 
-        if (typeof savedData.goal === 'number') {
-          setGoal(savedData.goal);
-        }
+        const savedDate =
+          typeof data.date === 'string'
+            ? data.date
+            : null;
 
-        if (typeof savedData.streak === 'number') {
-          setStreak(savedData.streak);
-        }
-
-        if (Array.isArray(savedData.week)) {
-          setWeek(savedData.week);
-        }
-      }
-
-      // Chalega Points have one shared source of truth.
-      // Never restore the wallet from walking data.
-      const currentPoints = await getPoints();
-      setPoints(currentPoints);
-
-      const missionKey =
-        `chalega_walk_mission_${todayKey}`;
-
-      const missionComplete =
-        await AsyncStorage.getItem(missionKey);
-
-      if (!isNewDay && missionComplete === 'true') {
-        setWalkMissionComplete(true);
-
-        // Migration for users who completed today's goal before the
-        // automatic streak engine existed. Do not change their streak
-        // or award another +25; simply mark today as completed.
-        const existingLastDate = await AsyncStorage.getItem(
-          STREAK_LAST_COMPLETED_KEY
-        );
-
-        if (!existingLastDate) {
-          // Legacy users may already have a valid streak count but no
-          // saved completion date. Preserve that streak instead of
-          // allowing the migration to turn it into a 1-day streak.
-          const legacyStreakRaw = await AsyncStorage.getItem(
-            STREAK_COUNT_KEY
-          );
-          const legacyStreak = legacyStreakRaw
-            ? Number(legacyStreakRaw)
-            : typeof savedData?.streak === 'number'
-            ? savedData.streak
-            : 0;
-
-          if (Number.isFinite(legacyStreak) && legacyStreak > 0) {
-            await AsyncStorage.setItem(
-              STREAK_COUNT_KEY,
-              String(Math.max(0, legacyStreak))
-            );
-          }
-
-          await AsyncStorage.setItem(
-            STREAK_LAST_COMPLETED_KEY,
-            todayKey
-          );
-        }
-      }
-
-      // One-time recovery for the original test account. Before the
-      // automatic streak migration was installed, this account had a
-      // verified 6-day streak which was accidentally reduced to 1 during
-      // migration. Restore it once, then permanently mark the recovery
-      // complete so normal users are never affected.
-      const streakRecoveryDone = await AsyncStorage.getItem(
-        STREAK_RECOVERY_KEY
-      );
-
-      if (streakRecoveryDone !== 'true') {
-        const recoveryPoints = await getPoints();
-        const currentSavedStreak = await AsyncStorage.getItem(
-          STREAK_COUNT_KEY
-        );
-        const currentSavedStreakNumber = currentSavedStreak
-          ? Number(currentSavedStreak)
-          : 0;
+        const isNewDay =
+          savedDate !== null &&
+          savedDate !== todayKey;
 
         if (
-          recoveryPoints >= 525 &&
-          Number.isFinite(currentSavedStreakNumber) &&
-          currentSavedStreakNumber === 1
+          !isNewDay &&
+          typeof data.steps === 'number'
         ) {
-          await AsyncStorage.multiSet([
-            [STREAK_COUNT_KEY, '6'],
-            [BEST_STREAK_KEY, '6'],
-            [STREAK_LAST_COMPLETED_KEY, todayKey],
-            [STREAK_RECOVERY_KEY, 'true'],
-          ]);
+          setSteps(data.steps);
+        }
 
-          setStreak(6);
-        } else {
+        if (typeof data.goal === 'number') {
+          setGoal(data.goal);
+        }
+
+        if (typeof data.streak === 'number') {
+          setStreak(data.streak);
+        }
+
+        if (Array.isArray(data.week)) {
+          setWeek(data.week);
+        }
+
+        if (isNewDay) {
+          setSteps(0);
+          setWalkMissionComplete(false);
+
           await AsyncStorage.setItem(
-            STREAK_RECOVERY_KEY,
-            'true'
+            'chalega_walking_data',
+            JSON.stringify({
+              steps: 0,
+              goal:
+                typeof data.goal === 'number'
+                  ? data.goal
+                  : DAILY_GOAL,
+              streak:
+                typeof data.streak === 'number'
+                  ? data.streak
+                  : 0,
+              week:
+                Array.isArray(data.week)
+                  ? data.week
+                  : initialWeek,
+              date: todayKey,
+            })
+          );
+        } else if (savedDate === null) {
+          await AsyncStorage.setItem(
+            'chalega_walking_data',
+            JSON.stringify({
+              steps:
+                typeof data.steps === 'number'
+                  ? data.steps
+                  : 0,
+              goal:
+                typeof data.goal === 'number'
+                  ? data.goal
+                  : DAILY_GOAL,
+              streak:
+                typeof data.streak === 'number'
+                  ? data.streak
+                  : 0,
+              week:
+                Array.isArray(data.week)
+                  ? data.week
+                  : initialWeek,
+              date: todayKey,
+            })
           );
         }
       }
 
-      const savedStreak = await AsyncStorage.getItem(
-        STREAK_COUNT_KEY
-      );
-
-      if (savedStreak !== null) {
-        const parsedStreak = Number(savedStreak);
-        if (Number.isFinite(parsedStreak)) {
-          setStreak(Math.max(0, parsedStreak));
-        }
-      } else if (typeof savedData?.streak === 'number') {
-        await AsyncStorage.setItem(
-          STREAK_COUNT_KEY,
-          String(Math.max(0, savedData.streak))
-        );
+      const { data: walletProfile, error: walletError } = await supabase.from('profiles').select('points').single();
+      if (!walletError) {
+        setPoints(Math.max(0, Number(walletProfile?.points ?? 0)));
       }
-
-      // If a full day has been missed, the current streak is broken.
-      // The best streak remains untouched.
-      const lastCompletedDate = await AsyncStorage.getItem(
-        STREAK_LAST_COMPLETED_KEY
-      );
-
-      if (lastCompletedDate && lastCompletedDate !== todayKey) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayKey =
-          yesterday.getFullYear() +
-          '-' +
-          String(yesterday.getMonth() + 1).padStart(2, '0') +
-          '-' +
-          String(yesterday.getDate()).padStart(2, '0');
-
-        if (lastCompletedDate !== yesterdayKey) {
-          // Only break a streak when we can positively identify that a
-          // full day was missed. Never replace an existing saved streak
-          // with zero during migration/recovery when the completion date
-          // is unavailable or incomplete.
-          const storedCountRaw = await AsyncStorage.getItem(
-            STREAK_COUNT_KEY
-          );
-          const storedCount = storedCountRaw
-            ? Number(storedCountRaw)
-            : 0;
-
-          if (Number.isFinite(storedCount) && storedCount > 0) {
-            // Keep the existing streak value for now. The next completed
-            // walking day will establish the new consecutive date.
-            setStreak(storedCount);
-          } else {
-            setStreak(0);
-            await AsyncStorage.setItem(STREAK_COUNT_KEY, '0');
-          }
-        }
-      }
-
-      // Stamp today's date so tomorrow can be detected even if the
-      // user never opens the app again today.
-      const persistedStreakValue =
-        await AsyncStorage.getItem(STREAK_COUNT_KEY);
-      const persistedStreak = persistedStreakValue
-        ? Number(persistedStreakValue)
-        : typeof savedData?.streak === 'number'
-        ? savedData.streak
-        : streak;
-
-      await AsyncStorage.setItem(
-        'chalega_walking_data',
-        JSON.stringify({
-          steps: isNewDay
-            ? 0
-            : typeof savedData?.steps === 'number'
-            ? savedData.steps
-            : steps,
-          goal:
-            typeof savedData?.goal === 'number'
-              ? savedData.goal
-              : goal,
-          streak: Number.isFinite(persistedStreak)
-            ? persistedStreak
-            : 0,
-          week: Array.isArray(savedData?.week)
-            ? savedData.week
-            : week,
-          date: todayKey,
-        })
-      );
     } catch (error) {
       console.log(
         'Could not load walking data:',
         error
       );
-    } finally {
-      walkingDataLoaded.current = true;
     }
   };
 
+  useEffect(() => {
+    loadWalkingData();
+  }, []);
+
+  /*
+   * Keep checking the central wallet while this screen
+   * is focused and alive. No local walking value is allowed
+   * to overwrite it.
+   */
+  useEffect(() => {
+    const refreshPoints = async () => {
+      try {
+        const { data: walletProfile, error: walletError } = await supabase.from('profiles').select('points').single();
+        if (!walletError) {
+          setPoints(Math.max(0, Number(walletProfile?.points ?? 0)));
+        }
+      } catch (error) {
+        console.log(
+          'Could not refresh Chalega Points:',
+          error
+        );
+      }
+    };
+
+    refreshPoints();
+
+    const interval = setInterval(
+      refreshPoints,
+      2000
+    );
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /*
+   * Automatic walking mission completion when the goal
+   * is reached.
+   */
+  useEffect(() => {
+    if (steps >= WALK_MISSION_GOAL && !walkMissionComplete) {
+      completeWalkMissionIfNeeded();
+    }
+  }, [steps, goal, walkMissionComplete]);
+
+  /*
+   * -------------------------------------------------------
+   * SAVE WALKING DATA
+   * -------------------------------------------------------
+   *
+   * This function stores walking state only.
+   *
+   * It DOES NOT write to:
+   * chalega_points
+   *
+   * That prevents stale walking state from overwriting
+   * mission, health, streak, or reward points.
+   */
   const saveWalkingData = async (
     nextSteps: number,
     nextWeek = week,
@@ -374,10 +296,6 @@ export default function WalkingScreen() {
           date: getTodayKey(),
         })
       );
-
-      // IMPORTANT:
-      // Do not write chalega_points from walking data.
-      // The shared points engine owns the wallet balance.
     } catch (error) {
       console.log(
         'Could not save walking data:',
@@ -386,151 +304,103 @@ export default function WalkingScreen() {
     }
   };
 
-  const advanceStreakAutomatically = async (todayKey: string) => {
-    if (streakCompletionInProgress.current) {
-      return;
-    }
-
-    streakCompletionInProgress.current = true;
-
+  /*
+   * -------------------------------------------------------
+   * WALKING MISSION
+   * -------------------------------------------------------
+   */
+  const completeWalkMissionIfNeeded = async () => {
     try {
-      const lastCompletedDate = await AsyncStorage.getItem(
-        STREAK_LAST_COMPLETED_KEY
-      );
-
-      const savedCount = await AsyncStorage.getItem(STREAK_COUNT_KEY);
-      const storedStreak = savedCount ? Number(savedCount) : streak;
-      let currentStreak = Number.isFinite(storedStreak) ? Math.max(0, storedStreak) : Math.max(0, streak);
-
-      // If today's goal was already completed, never advance the
-      // streak a second time. This also makes the migration safe
-      // for users who already completed today's mission.
-      if (lastCompletedDate === todayKey) {
-        await AsyncStorage.setItem(
-          STREAK_COUNT_KEY,
-          String(currentStreak)
-        );
+      if (steps < WALK_MISSION_GOAL) {
         return;
       }
 
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey =
-        yesterday.getFullYear() +
-        '-' +
-        String(yesterday.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(yesterday.getDate()).padStart(2, '0');
-
-      // Consecutive day = continue the streak. Any missed day
-      // starts a fresh streak at 1.
-      currentStreak =
-        lastCompletedDate === yesterdayKey
-          ? Math.max(currentStreak, 0) + 1
-          : 1;
-
-      const savedBest = await AsyncStorage.getItem(BEST_STREAK_KEY);
-      const previousBest = savedBest ? Number(savedBest) : 0;
-      const bestStreak = Math.max(
-        Number.isFinite(previousBest) ? previousBest : 0,
-        currentStreak
-      );
-
-      await AsyncStorage.multiSet([
-        [STREAK_COUNT_KEY, String(currentStreak)],
-        [STREAK_LAST_COMPLETED_KEY, todayKey],
-        [BEST_STREAK_KEY, String(bestStreak)],
-      ]);
-
-      setStreak(currentStreak);
-
-      await saveWalkingData(
-        steps,
-        week,
-        goal,
-        currentStreak
-      );
-
-      // The points engine makes this idempotent. If the user already
-      // claimed today's streak reward manually, no second +25 is added.
-      const streakReward = await awardOnce(
-        'streak_mission',
-        `streak_mission_${todayKey}`,
-        STREAK_MISSION_POINTS,
-        'Keep your streak alive',
-        `streak_mission_${todayKey}`
-      );
-
-      setPoints(streakReward.balance);
-
-      // Keep Daily Missions in sync so the streak mission becomes
-      // completed automatically when the walking goal is reached.
-      const dailyMissionKey =
-        `chalega_daily_missions_${todayKey}`;
-      const savedMissions = await AsyncStorage.getItem(
-        dailyMissionKey
-      );
-
-      if (savedMissions) {
-        try {
-          const missions = JSON.parse(savedMissions);
-          if (Array.isArray(missions)) {
-            const updatedMissions = missions.map((mission: any) =>
-              mission.id === 'streak'
-                ? { ...mission, completed: true }
-                : mission
-            );
-
-            await AsyncStorage.setItem(
-              dailyMissionKey,
-              JSON.stringify(updatedMissions)
-            );
-          }
-        } catch {
-          // Daily Missions will recover from its own defaults.
-        }
-      }
-
-      if (streakReward.awarded) {
-        Alert.alert(
-          '🔥 Streak Extended!',
-          `You're now on a ${currentStreak}-day Chalega streak.\n\n+${STREAK_MISSION_POINTS} Chalega Points\n\nKeep your healthy routine going tomorrow!`
-        );
-      }
-    } catch (error) {
-      console.log('Could not update automatic streak:', error);
-    } finally {
-      streakCompletionInProgress.current = false;
-    }
-  };
-
-  const completeWalkMissionIfNeeded = async () => {
-    if (steps < goal) {
-      return;
-    }
-
-    if (walkMissionComplete || completionInProgress.current) {
-      return;
-    }
-
-    completionInProgress.current = true;
-
-    try {
       const todayKey = getTodayKey();
 
-      // awardOnce checks the transaction history first, so the
-      // same walking mission can never pay +40 twice for one day.
-      const result = await awardOnce(
-        'walking_mission',
-        `walking_mission_${todayKey}`,
-        WALK_MISSION_POINTS,
-        'Walking Mission',
-        `walking_mission_${todayKey}`
+      /*
+       * Persist the completed Walking mission first.
+       * The secure reward RPC requires this backend record.
+       */
+      const {
+        data: {
+          user,
+        },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('No authenticated user');
+      }
+
+      const { error: dailyStepsError } = await supabase
+        .from('daily_steps')
+        .upsert(
+          {
+            user_id: user.id,
+            step_date: todayKey,
+            steps: Math.floor(steps),
+            distance_km: Number(
+              (steps * 0.00072).toFixed(3)
+            ),
+            calories: Math.round(steps * 0.04),
+          },
+          {
+            onConflict: 'user_id,step_date',
+          }
+        );
+
+      if (dailyStepsError) {
+        throw dailyStepsError;
+      }
+
+      const { error: missionSaveError } = await supabase
+        .from('user_missions')
+        .upsert(
+          {
+            user_id: user.id,
+            mission_id: 4,
+            mission_date: todayKey,
+            progress: 1,
+            completed: true,
+            completed_at: new Date().toISOString(),
+          },
+          {
+            onConflict:
+              'user_id,mission_id,mission_date',
+          }
+        );
+
+      if (missionSaveError) {
+        throw missionSaveError;
+      }
+
+
+      const {
+        data: missionRewardResult,
+        error: missionRewardError,
+      } = await supabase.rpc(
+        'award_daily_mission_reward',
+        {
+          p_mission_id: 4,
+          p_mission_date: todayKey,
+        }
       );
 
-      const newPoints = result.balance;
+      if (missionRewardError) {
+        throw missionRewardError;
+      }
 
-      setPoints(newPoints);
+      const missionResult = {
+        awarded:
+          missionRewardResult?.already_awarded !== true,
+        balance:
+          Number(
+            missionRewardResult?.balance ?? 0
+          ),
+      };
+
+      setPoints(
+        missionResult.balance
+      );
       setWalkMissionComplete(true);
 
       await AsyncStorage.setItem(
@@ -538,98 +408,59 @@ export default function WalkingScreen() {
         'true'
       );
 
-      // Also mark the Walk mission complete on Daily Missions.
-      const dailyMissionKey =
-        `chalega_daily_missions_${todayKey}`;
-
-      const savedMissions =
-        await AsyncStorage.getItem(dailyMissionKey);
-
-      const defaultMissions = [
-        {
-          id: 'walk',
-          icon: '🚶',
-          title: 'Walk 4,000 steps',
-          description:
-            'Move your body and complete your daily walking goal.',
-          points: 40,
-          action: 'OPEN WALK',
-          completed: false,
-        },
-        {
-          id: 'water',
-          icon: '💧',
-          title: 'Drink 6 glasses of water',
-          description:
-            'Stay hydrated throughout your day.',
-          points: 18,
-          action: 'MARK DONE',
-          completed: false,
-        },
-        {
-          id: 'health',
-          icon: '❤️',
-          title: 'Complete your health check-in',
-          description:
-            'Take a moment to check in with your health today.',
-          points: 10,
-          action: 'OPEN HEALTH',
-          completed: false,
-        },
-        {
-          id: 'streak',
-          icon: '🔥',
-          title: 'Keep your streak alive',
-          description:
-            "Complete today's healthy activity and keep going.",
-          points: 25,
-          action: 'MARK DONE',
-          completed: false,
-        },
-      ];
-
-      let missions = defaultMissions;
-
-      if (savedMissions) {
-        try {
-          const parsed = JSON.parse(savedMissions);
-          if (Array.isArray(parsed)) {
-            missions = parsed;
-          }
-        } catch {
-          missions = defaultMissions;
-        }
-      }
-
-      const updatedMissions = missions.map(
-        (mission: any) =>
-          mission.id === 'walk'
-            ? { ...mission, completed: true }
-            : mission
+      /*
+       * Daily streak engine.
+       *
+       * The existing local streak is passed in so the first
+       * migration preserves the user's current 6-day streak.
+       * completeStreakDay itself prevents duplicate completion
+       * for the same date.
+       */
+      const nextStreak = await completeStreakDay(
+        todayKey,
+        streak
       );
 
-      await AsyncStorage.setItem(
-        dailyMissionKey,
-        JSON.stringify(updatedMissions)
-      );
+      setStreak(nextStreak);
+
+      /*
+       * The streak reward is also idempotent.
+       * It can therefore safely run every time the goal-completion
+       * check fires without awarding +25 twice.
+       */
+      /* Persist the completed Streak mission first. The secure reward RPC requires this backend record. */
+      const { data: { user: streakUser } } = await supabase.auth.getUser();
+      if (!streakUser) throw new Error('No authenticated streakUser');
+      const { error: streakMissionSaveError } = await supabase.from('user_missions').upsert({ user_id:streakUser.id, mission_id:7, mission_date:todayKey, progress:1, completed:true, completed_at:new Date().toISOString() }, { onConflict:'user_id,mission_id,mission_date' });
+      if (streakMissionSaveError) throw streakMissionSaveError;
+      const { data: streakRewardResult, error: streakRewardError } = await supabase.rpc('award_daily_mission_reward',{ p_mission_id:7, p_mission_date:todayKey });
+      if (streakRewardError) throw streakRewardError;
+      setPoints(Number(streakRewardResult?.balance ?? 0));
 
       await saveWalkingData(
         steps,
         week,
         goal,
-        streak
+        nextStreak
       );
 
-      // Reaching the daily walking goal automatically advances the
-      // streak and handles today's +25 streak reward.
-      await advanceStreakAutomatically(todayKey);
 
-      if (result.awarded) {
+      /*
+       * Only show the mission-complete alert when the +40 mission
+       * reward was actually newly awarded. The streak engine and
+       * streak reward remain silent on repeat checks.
+       */
+      if (missionResult.awarded) {
         Alert.alert(
           '🎉 Walking Mission Complete!',
-          `You reached ${goal.toLocaleString(
+          `You reached ${WALK_MISSION_GOAL.toLocaleString(
             'en-IN'
-          )} steps today.\n\n+${WALK_MISSION_POINTS} Chalega Points\n\nYour points have been added to your account.`,
+          )} steps today.
+
++${WALK_MISSION_POINTS} Chalega Points
++25 Streak Points
+
+Your rewards have been added to your account.`,
           [
             {
               text: 'VIEW MISSIONS',
@@ -647,25 +478,68 @@ export default function WalkingScreen() {
         'Could not complete walking mission:',
         error
       );
-    } finally {
-      completionInProgress.current = false;
     }
   };
+
+  /*
+   * -------------------------------------------------------
+   * OPTIONAL TEST / DEMO STEP ADDER
+   * -------------------------------------------------------
+   *
+   * This changes walking progress only.
+   *
+   * It no longer awards arbitrary points per 100 steps.
+   * Points are awarded through the central points engine.
+   */
+  const addSteps = (amount: number) => {
+    const nextSteps = Math.min(
+      steps + amount,
+      20000
+    );
+
+    const nextWeek = [...week];
+
+    nextWeek[3] = {
+      ...nextWeek[3],
+      steps: nextSteps,
+      active: true,
+    };
+
+    setSteps(nextSteps);
+    setWeek(nextWeek);
+
+    saveWalkingData(
+      nextSteps,
+      nextWeek,
+      goal,
+      streak
+    );
+  };
+
+  /*
+   * -------------------------------------------------------
+   * START / STOP PHONE TRACKING
+   * -------------------------------------------------------
+   */
+  const WEB_TEST_CONTROLS = Platform.OS === 'web';
 
   const startTracking = async () => {
     if (tracking) {
       setTracking(false);
+      setSensorBaseSteps(null);
       return;
     }
 
     try {
-      const available = await Pedometer.isAvailableAsync();
+      const available =
+        await Pedometer.isAvailableAsync();
+
       setPedometerAvailable(available);
 
       if (!available) {
         Alert.alert(
           'Step Tracking Unavailable',
-          'Your phone does not currently provide pedometer data to Chalega India.'
+          'Your phone does not currently provide pedometer data to Chalega.'
         );
         return;
       }
@@ -675,35 +549,30 @@ export default function WalkingScreen() {
 
       if (!permission.granted) {
         setPedometerPermission(false);
+
         Alert.alert(
           'Permission Needed',
-          'Please allow physical activity access so Chalega India can count your steps.'
+          'Please allow physical activity access so Chalega can count your steps.'
         );
+
         return;
       }
 
       setPedometerPermission(true);
 
-      const now = new Date();
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-      );
+      /*
+       * Expo Android live step listener reports steps
+       * since the subscription began.
+       *
+       * We preserve the steps already shown on screen.
+       */
+      const baseSteps = steps;
 
-      const history = await Pedometer.getStepCountAsync(
-        startOfDay,
-        now
-      );
-
-      const realSteps = history?.steps ?? 0;
-
-      setSensorBaseSteps(realSteps);
-      setSteps(realSteps);
+      setSensorBaseSteps(baseSteps);
       setTracking(true);
 
       await saveWalkingData(
-        realSteps,
+        baseSteps,
         week,
         goal,
         streak
@@ -711,12 +580,16 @@ export default function WalkingScreen() {
 
       Alert.alert(
         'Walking Tracking Started 🚶',
-        `Chalega India found ${realSteps.toLocaleString(
+        `Live phone step tracking is now on. You currently have ${baseSteps.toLocaleString(
           'en-IN'
-        )} steps for today. Keep walking!`
+        )} steps. Keep walking!`
       );
     } catch (error) {
-      console.log('Pedometer error:', error);
+      console.log(
+        'Pedometer error:',
+        error
+      );
+
       Alert.alert(
         'Step Tracking Error',
         'Chalega could not access your step data right now. Please try again.'
@@ -724,6 +597,11 @@ export default function WalkingScreen() {
     }
   };
 
+  /*
+   * -------------------------------------------------------
+   * CHANGE GOAL
+   * -------------------------------------------------------
+   */
   const changeGoal = () => {
     Alert.alert(
       'Daily Walking Goal',
@@ -753,13 +631,18 @@ export default function WalkingScreen() {
     );
   };
 
-  const completeMission = () => {
-    if (!todayComplete) {
+  /*
+   * -------------------------------------------------------
+   * COMPLETE BUTTON
+   * -------------------------------------------------------
+   */
+  const completeMission = async () => {
+    if (steps < WALK_MISSION_GOAL) {
       Alert.alert(
         'Keep going! 🚶',
-        `You still have ${remainingSteps.toLocaleString(
+        `You still need ${(WALK_MISSION_GOAL - steps).toLocaleString(
           'en-IN'
-        )} steps to reach today's goal.`
+        )} more steps to complete today's walking mission.`
       );
 
       return;
@@ -774,37 +657,61 @@ export default function WalkingScreen() {
       return;
     }
 
-    completeWalkMissionIfNeeded();
+    await completeWalkMissionIfNeeded();
   };
 
+  /*
+   * -------------------------------------------------------
+   * LIVE PEDOMETER
+   * -------------------------------------------------------
+   */
   useEffect(() => {
     if (!tracking) {
       return;
     }
 
-    let subscription: { remove: () => void } | null = null;
+    let subscription: {
+      remove: () => void;
+    } | null = null;
+
     let cancelled = false;
 
     const startLiveTracking = async () => {
       try {
-        const available = await Pedometer.isAvailableAsync();
+        const available =
+          await Pedometer.isAvailableAsync();
 
         if (!available || cancelled) {
           return;
         }
 
-        subscription = Pedometer.watchStepCount(result => {
-          if (cancelled) {
-            return;
-          }
+        subscription =
+          Pedometer.watchStepCount(
+            result => {
+              if (cancelled) {
+                return;
+              }
 
-          setSteps(currentSteps =>
-            Math.max(
-              currentSteps,
-              result.steps + (sensorBaseSteps ?? 0)
-            )
+              const nextSteps = Math.max(
+                steps,
+                result.steps +
+                  (sensorBaseSteps ?? 0)
+              );
+
+              setSteps(nextSteps);
+
+              /*
+               * Only save walking data.
+               * Never touch the central points wallet here.
+               */
+              saveWalkingData(
+                nextSteps,
+                week,
+                goal,
+                streak
+              );syncDailySteps(nextSteps);
+            }
           );
-        });
       } catch (error) {
         console.log(
           'Could not start live pedometer:',
@@ -819,30 +726,30 @@ export default function WalkingScreen() {
       cancelled = true;
       subscription?.remove();
     };
-  }, [tracking, sensorBaseSteps]);
+  }, [
+    tracking,
+    sensorBaseSteps,
+  ]);
 
-  return (
+    return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-
         {/* HEADER */}
-
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            activeOpacity={0.8}
           >
-            <Text style={styles.backText}>
-              ‹
-            </Text>
+            <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerBrand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.headerTitle}>
@@ -858,42 +765,45 @@ export default function WalkingScreen() {
                 `You currently have ${points} points.`
               )
             }
+            activeOpacity={0.8}
           >
-            <Text style={styles.pointsSmallEmoji}>
-              🏆
-            </Text>
-
-            <Text style={styles.pointsSmallNumber}>
-              {points}
-            </Text>
+            <Text style={styles.pointsSmallEmoji}>🪙</Text>
+            <Text style={styles.pointsSmallNumber}>{points}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* MAIN WALKING CARD */}
-
+        {/* HERO */}
         <View style={styles.heroCard}>
-          <Text style={styles.heroEyebrow}>
-            TODAY'S WALK
-          </Text>
+          <View style={styles.heroTopRow}>
+            <View>
+              <Text style={styles.heroEyebrow}>TODAY'S MOVEMENT</Text>
+              <Text style={styles.heroTitle}>Keep moving.</Text>
+              <Text style={styles.heroSubtitle}>
+                Every step counts toward a healthier you.
+              </Text>
+            </View>
 
-          <View style={styles.heroMain}>
+            <View style={styles.heroGoalCircle}>
+              <Text style={styles.heroGoalPercent}>
+                {Math.round(progress * 100)}%
+              </Text>
+              <Text style={styles.heroGoalLabel}>GOAL</Text>
+            </View>
+          </View>
+
+          <View style={styles.heroStepsRow}>
             <View>
               <Text style={styles.stepNumber}>
                 {steps.toLocaleString('en-IN')}
               </Text>
-
-              <Text style={styles.stepLabel}>
-                STEPS
-              </Text>
+              <Text style={styles.stepLabel}>STEPS TODAY</Text>
             </View>
 
-            <View style={styles.goalCircle}>
-              <Text style={styles.goalCircleNumber}>
-                {Math.round(progress * 100)}%
-              </Text>
-
-              <Text style={styles.goalCircleText}>
-                GOAL
+            <View style={styles.remainingPill}>
+              <Text style={styles.remainingPillText}>
+                {todayComplete
+                  ? 'GOAL COMPLETE'
+                  : `${remainingSteps.toLocaleString('en-IN')} TO GO`}
               </Text>
             </View>
           </View>
@@ -902,39 +812,33 @@ export default function WalkingScreen() {
             <View
               style={[
                 styles.heroProgressFill,
-                {
-                  width: `${progress * 100}%`,
-                },
+                { width: `${progress * 100}%` },
               ]}
             />
           </View>
 
           <View style={styles.heroProgressRow}>
             <Text style={styles.heroProgressText}>
-              {todayComplete
-                ? 'Goal completed! 🎉'
-                : `${remainingSteps.toLocaleString(
-                    'en-IN'
-                  )} steps to go`}
+              Daily target
             </Text>
-
             <Text style={styles.heroProgressText}>
-              {goal.toLocaleString('en-IN')}
+              {goal.toLocaleString('en-IN')} steps
             </Text>
           </View>
 
           <TouchableOpacity
-            style={styles.trackButton}
+            style={[
+              styles.trackButton,
+              tracking && styles.trackButtonActive,
+            ]}
             onPress={startTracking}
+            activeOpacity={0.88}
           >
             <Text style={styles.trackButtonIcon}>
               {tracking ? '⏹' : '▶'}
             </Text>
-
             <Text style={styles.trackButtonText}>
-              {tracking
-                ? 'TRACKING WALK'
-                : 'START WALKING'}
+              {tracking ? 'TRACKING WALK' : 'START WALKING'}
             </Text>
           </TouchableOpacity>
 
@@ -947,100 +851,135 @@ export default function WalkingScreen() {
           </Text>
         </View>
 
-        {/* WALKING MISSION STATUS */}
+        {/* WEB TEST CONTROLS */}
+        {WEB_TEST_CONTROLS && (
+          <View
+            style={{
+              marginTop: 16,
+              padding: 16,
+              borderRadius: 16,
+              backgroundColor: '#D7F7F1',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '900',
+                marginBottom: 10,
+              }}
+            >
+              WEB TEST - SIMULATE STEPS
+            </Text>
 
-        <View
+            <View style={styles.webTestRow}>
+              <TouchableOpacity
+                onPress={() => addSteps(1000)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: BRAND.teal,
+                }}
+              >
+                <Text style={styles.webTestButtonText}>+1,000</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => addSteps(4000)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: BRAND.teal,
+                }}
+              >
+                <Text style={styles.webTestButtonText}>+4,000</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => addSteps(8000)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 10,
+                  backgroundColor: BRAND.teal,
+                }}
+              >
+                <Text style={styles.webTestButtonText}>+8,000</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* MISSION */}
+        <TouchableOpacity
           style={[
-            styles.missionStatusCard,
-            walkMissionComplete &&
-              styles.missionStatusComplete,
+            styles.missionCard,
+            walkMissionComplete && styles.missionCardComplete,
           ]}
+          activeOpacity={0.88}
+          onPress={() => router.push('/missions')}
         >
-          <View style={styles.missionStatusIcon}>
-            <Text style={styles.missionStatusEmoji}>
-              {walkMissionComplete
-                ? '🏆'
-                : '🎯'}
+          <View
+            style={[
+              styles.missionIcon,
+              walkMissionComplete && styles.missionIconComplete,
+            ]}
+          >
+            <Text style={styles.missionEmoji}>
+              {walkMissionComplete ? '✓' : '🚶'}
             </Text>
           </View>
 
-          <View style={styles.missionStatusContent}>
-            <Text style={styles.missionStatusLabel}>
+          <View style={styles.missionContent}>
+            <Text style={styles.eyebrow}>
               TODAY'S WALKING MISSION
             </Text>
-
-            <Text style={styles.missionStatusTitle}>
+            <Text style={styles.missionTitle}>
               {walkMissionComplete
                 ? 'Mission complete!'
-                : `Reach ${goal.toLocaleString(
-                    'en-IN'
-                  )} steps`}
+                : `Reach ${WALK_MISSION_GOAL.toLocaleString('en-IN')} steps`}
             </Text>
-
-            <Text style={styles.missionStatusText}>
+            <Text style={styles.missionText}>
               {walkMissionComplete
                 ? `+${WALK_MISSION_POINTS} points earned today`
                 : `Earn +${WALK_MISSION_POINTS} Chalega Points`}
             </Text>
           </View>
 
-          <Text style={styles.missionStatusCheck}>
+          <Text style={styles.missionArrow}>
             {walkMissionComplete
               ? '✓'
-              : `${Math.max(
-                  remainingSteps,
-                  0
-                ).toLocaleString('en-IN')}`}
+              : `${Math.max(remainingSteps, 0).toLocaleString('en-IN')}`}
           </Text>
-        </View>
+        </TouchableOpacity>
 
-        {/* DAILY STATS */}
-
-        <Text style={styles.sectionTitle}>
-          TODAY'S ACTIVITY
-        </Text>
+        {/* STATS */}
+        <Text style={styles.sectionTitle}>TODAY'S ACTIVITY</Text>
 
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>
-              📍
-            </Text>
-
-            <Text style={styles.statNumber}>
-              {distanceKm}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              KM
-            </Text>
+            <View style={[styles.statIcon, styles.statIconBlue]}>
+              <Text style={styles.statIconEmoji}>📍</Text>
+            </View>
+            <Text style={styles.statNumber}>{distanceKm}</Text>
+            <Text style={styles.statLabel}>KM</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>
-              🔥
-            </Text>
-
-            <Text style={styles.statNumber}>
-              {calories}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              CALORIES*
-            </Text>
+            <View style={[styles.statIcon, styles.statIconOrange]}>
+              <Text style={styles.statIconEmoji}>🔥</Text>
+            </View>
+            <Text style={styles.statNumber}>{calories}</Text>
+            <Text style={styles.statLabel}>CALORIES*</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.statEmoji}>
-              ⏱️
-            </Text>
-
-            <Text style={styles.statNumber}>
-              {Math.round(steps / 100)}
-            </Text>
-
-            <Text style={styles.statLabel}>
-              MINUTES*
-            </Text>
+            <View style={[styles.statIcon, styles.statIconGreen]}>
+              <Text style={styles.statIconEmoji}>⏱️</Text>
+            </View>
+            <Text style={styles.statNumber}>{Math.round(steps / 100)}</Text>
+            <Text style={styles.statLabel}>MINUTES*</Text>
           </View>
         </View>
 
@@ -1048,36 +987,26 @@ export default function WalkingScreen() {
           *Estimated values. Actual results vary by person.
         </Text>
 
-        {/* WEEKLY ACTIVITY */}
-
-        <Text style={styles.sectionTitle}>
-          YOUR WEEK
-        </Text>
+        {/* WEEK */}
+        <Text style={styles.sectionTitle}>YOUR WEEK</Text>
 
         <View style={styles.weekCard}>
           <View style={styles.weekHeader}>
             <View>
-              <Text style={styles.weekTitle}>
-                Walking activity
-              </Text>
-
+              <Text style={styles.weekTitle}>Walking activity</Text>
               <Text style={styles.weekSubtitle}>
                 Keep your momentum going.
               </Text>
             </View>
 
-            <Text style={styles.weekStreak}>
-              🔥 {streak}
-            </Text>
+            <View style={styles.weekStreakPill}>
+              <Text style={styles.weekStreak}>🔥 {streak}</Text>
+            </View>
           </View>
 
           <View style={styles.weekRow}>
             {week.map((item, index) => {
-              const percentage = Math.min(
-                item.steps / goal,
-                1
-              );
-
+              const percentage = Math.min(item.steps / goal, 1);
               const isToday = index === 3;
 
               return (
@@ -1085,9 +1014,7 @@ export default function WalkingScreen() {
                   key={`${item.day}-${index}`}
                   style={styles.dayColumn}
                 >
-                  <View
-                    style={styles.dayBarBackground}
-                  >
+                  <View style={styles.dayBarBackground}>
                     <View
                       style={[
                         styles.dayBarFill,
@@ -1095,9 +1022,7 @@ export default function WalkingScreen() {
                           height: `${
                             Math.max(
                               percentage * 100,
-                              item.steps > 0
-                                ? 10
-                                : 3
+                              item.steps > 0 ? 10 : 3
                             )
                           }%`,
                         },
@@ -1108,18 +1033,13 @@ export default function WalkingScreen() {
                   <Text
                     style={[
                       styles.dayLabel,
-                      isToday &&
-                        styles.dayLabelToday,
+                      isToday && styles.dayLabelToday,
                     ]}
                   >
                     {item.day}
                   </Text>
 
-                  {isToday && (
-                    <View
-                      style={styles.todayDot}
-                    />
-                  )}
+                  {isToday && <View style={styles.todayDot} />}
                 </View>
               );
             })}
@@ -1130,63 +1050,39 @@ export default function WalkingScreen() {
               Goal: {goal.toLocaleString('en-IN')} steps/day
             </Text>
 
-            <TouchableOpacity
-              onPress={changeGoal}
-            >
-              <Text style={styles.changeGoal}>
-                CHANGE
-              </Text>
+            <TouchableOpacity onPress={changeGoal} activeOpacity={0.8}>
+              <Text style={styles.changeGoal}>CHANGE</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* STREAK */}
-
         <View style={styles.streakCard}>
           <View style={styles.streakFire}>
-            <Text style={styles.streakFireText}>
-              🔥
-            </Text>
+            <Text style={styles.streakFireText}>🔥</Text>
           </View>
 
           <View style={styles.streakContent}>
-            <Text style={styles.streakEyebrow}>
-              WALKING STREAK
-            </Text>
-
-            <Text style={styles.streakNumber}>
-              {streak} DAYS
-            </Text>
-
+            <Text style={styles.streakEyebrow}>WALKING STREAK</Text>
+            <Text style={styles.streakNumber}>{streak} DAYS</Text>
             <Text style={styles.streakDescription}>
-              You're building a healthy habit. Keep
-              today's walk going!
+              You're building a healthy habit. Keep today's walk going!
             </Text>
           </View>
 
-          <Text style={styles.streakArrow}>
-            ›
-          </Text>
+          <Text style={styles.streakArrow}>›</Text>
         </View>
 
         {/* LEVEL */}
-
         <View style={styles.levelCard}>
           <View style={styles.levelTop}>
             <View>
-              <Text style={styles.levelEyebrow}>
-                CHALEGA LEVEL
-              </Text>
-
-              <Text style={styles.levelTitle}>
-                Walker Level {level}
-              </Text>
+              <Text style={styles.levelEyebrow}>CHALEGA LEVEL</Text>
+              <Text style={styles.levelTitle}>Walker Level {level}</Text>
             </View>
 
             <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeText}>
-                {level}
-              </Text>
+              <Text style={styles.levelBadgeText}>{level}</Text>
             </View>
           </View>
 
@@ -1194,62 +1090,43 @@ export default function WalkingScreen() {
             <View
               style={[
                 styles.levelProgressFill,
-                {
-                  width: `${levelProgress}%`,
-                },
+                { width: `${levelProgress}%` },
               ]}
             />
           </View>
 
           <View style={styles.levelBottom}>
-            <Text style={styles.levelText}>
-              {points} points
-            </Text>
-
-            <Text style={styles.levelText}>
-              {level * 250} points
-            </Text>
+            <Text style={styles.levelText}>{points} points</Text>
+            <Text style={styles.levelText}>{level * 250} points</Text>
           </View>
         </View>
 
         {/* CHALLENGE */}
-
-        <Text style={styles.sectionTitle}>
-          THIS WEEK'S CHALLENGE
-        </Text>
+        <Text style={styles.sectionTitle}>THIS WEEK'S CHALLENGE</Text>
 
         <View style={styles.challengeCard}>
-          <View style={styles.challengeIcon}>
-            <Text style={styles.challengeEmoji}>
-              🏆
-            </Text>
+          <View style={styles.challengeTop}>
+            <View style={styles.challengeIcon}>
+              <Text style={styles.challengeEmoji}>🪙</Text>
+            </View>
+
+            <View style={styles.challengeTopText}>
+              <Text style={styles.challengeTitle}>
+                25,000 Step Challenge
+              </Text>
+              <Text style={styles.challengeText}>
+                Walk 25,000 steps this week and earn bonus Chalega Points.
+              </Text>
+            </View>
           </View>
 
-          <Text style={styles.challengeTitle}>
-            25,000 Step Challenge
-          </Text>
-
-          <Text style={styles.challengeText}>
-            Walk 25,000 steps this week and earn
-            bonus Chalega Points.
-          </Text>
-
-          <View
-            style={styles.challengeProgressBackground}
-          >
-            <View
-              style={styles.challengeProgressFill}
-            />
+          <View style={styles.challengeProgressBackground}>
+            <View style={styles.challengeProgressFill} />
           </View>
 
           <View style={styles.challengeNumbers}>
-            <Text style={styles.challengeNumber}>
-              15,850 steps
-            </Text>
-
-            <Text style={styles.challengeNumber}>
-              25,000
-            </Text>
+            <Text style={styles.challengeNumber}>15,850 steps</Text>
+            <Text style={styles.challengeNumber}>25,000</Text>
           </View>
 
           <TouchableOpacity
@@ -1260,69 +1137,58 @@ export default function WalkingScreen() {
                 'Keep walking and complete 25,000 steps this week!'
               )
             }
+            activeOpacity={0.88}
           >
-            <Text style={styles.challengeButtonText}>
-              KEEP WALKING
-            </Text>
+            <Text style={styles.challengeButtonText}>KEEP WALKING</Text>
           </TouchableOpacity>
         </View>
 
         {/* COMMUNITY */}
-
         <View style={styles.communityCard}>
-          <Text style={styles.communityEmoji}>
-            🌆
-          </Text>
+          <View style={styles.communityIcon}>
+            <Text style={styles.communityEmoji}>🌍</Text>
+          </View>
 
           <View style={styles.communityContent}>
-            <Text style={styles.communityEyebrow}>
-              CHALEGA COMMUNITY
-            </Text>
-
+            <Text style={styles.communityEyebrow}>CHALEGA COMMUNITY</Text>
             <Text style={styles.communityTitle}>
               You're not walking alone.
             </Text>
-
             <Text style={styles.communityText}>
-              Join people taking small steps toward
-              healthier lives.
+              Join people taking small steps toward healthier lives.
             </Text>
           </View>
         </View>
 
-        {/* COMPLETE BUTTON */}
-
+        {/* COMPLETE */}
         <TouchableOpacity
           style={[
             styles.completeButton,
-            todayComplete &&
-              styles.completeButtonActive,
-            walkMissionComplete &&
-              styles.completeButtonDone,
+            todayComplete && styles.completeButtonActive,
+            walkMissionComplete && styles.completeButtonDone,
           ]}
           onPress={completeMission}
+          activeOpacity={0.88}
         >
           <Text style={styles.completeButtonText}>
             {walkMissionComplete
               ? '✓ WALKING MISSION COMPLETE'
-              : todayComplete
+              : steps >= WALK_MISSION_GOAL
               ? 'CLAIM +40 POINTS'
               : 'KEEP WALKING →'}
           </Text>
         </TouchableOpacity>
 
         {/* FOOTER */}
-
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>
-            Walk more • Live better • Stay healthy
+            MOVE PEOPLE • LIVE HEALTHIER
           </Text>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -1331,12 +1197,12 @@ export default function WalkingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 60,
   },
 
@@ -1354,10 +1220,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E2D7',
   },
 
   backText: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 31,
     lineHeight: 34,
     fontWeight: '300',
@@ -1368,27 +1236,30 @@ const styles = StyleSheet.create({
   },
 
   headerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 2.1,
   },
 
   headerTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 21,
     fontWeight: '900',
     marginTop: 2,
   },
 
   pointsSmall: {
-    width: 58,
-    height: 46,
+    minWidth: 64,
+    height: 44,
+    paddingHorizontal: 9,
     borderRadius: 14,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#E8E2D7',
   },
 
   pointsSmallEmoji: {
@@ -1396,65 +1267,110 @@ const styles = StyleSheet.create({
   },
 
   pointsSmallNumber: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 3,
   },
 
   heroCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 27,
     padding: 23,
-    shadowColor: '#1976F3',
+    shadowColor: BRAND.teal,
     shadowOpacity: 0.2,
     shadowRadius: 15,
     shadowOffset: {
       width: 0,
-      height: 7,
+      height: 8,
     },
     elevation: 5,
   },
 
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+
   heroEyebrow: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.7,
   },
 
-  heroMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 27,
+    lineHeight: 31,
+    fontWeight: '900',
     marginTop: 5,
+  },
+
+  heroSubtitle: {
+    color: '#B9C1C8',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 4,
+    maxWidth: 190,
+  },
+
+  heroGoalCircle: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: '#F47B20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+
+  heroGoalPercent: {
+    color: '#FFFFFF',
+    fontSize: 21,
+    fontWeight: '900',
+  },
+
+  heroGoalLabel: {
+    color: '#FFF1E6',
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 1,
+  },
+
+  heroStepsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 22,
   },
 
   stepNumber: {
     color: '#FFFFFF',
     fontSize: 51,
-    lineHeight: 58,
+    lineHeight: 57,
     fontWeight: '900',
   },
 
   stepLabel: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.8,
   },
 
-  goalCircle: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+  remainingPill: {
+    backgroundColor: '#1C2B34',
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginBottom: 4,
   },
 
   goalCircleNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 23,
     fontWeight: '900',
   },
@@ -1463,21 +1379,28 @@ const styles = StyleSheet.create({
     color: '#777777',
     fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.7,
+  },
+
+  remainingPillText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.7,
   },
 
   heroProgressBackground: {
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#4D93F6',
+    backgroundColor: '#25DDBB',
     marginTop: 18,
     overflow: 'hidden',
   },
 
   heroProgressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 6,
+    backgroundColor: '#F47B20',
+    borderRadius: 5,
   },
 
   heroProgressRow: {
@@ -1487,7 +1410,7 @@ const styles = StyleSheet.create({
   },
 
   heroProgressText: {
-    color: '#EAF2FF',
+    color: '#D7F7F1',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1495,102 +1418,160 @@ const styles = StyleSheet.create({
   trackButton: {
     height: 51,
     borderRadius: 15,
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     marginTop: 19,
   },
 
+  trackButtonActive: {
+    backgroundColor: '#FFFFFF',
+  },
+
   trackButtonIcon: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: '#101820',
+    fontSize: 13,
     marginRight: 7,
   },
 
   trackButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: '#101820',
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 0.7,
+    letterSpacing: 0.8,
   },
 
   sensorStatus: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 9,
     fontWeight: '800',
     textAlign: 'center',
     marginTop: 9,
   },
 
-  missionStatusCard: {
+  webTestCard: {
+    marginTop: 13,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 1,
+    borderColor: '#E8E2D7',
+  },
+
+  webTestTitle: {
+    color: '#101820',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+
+  webTestRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  webTestButton: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 11,
+    backgroundColor: '#101820',
+  },
+
+  webTestButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+
+  missionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 16,
-    marginTop: 12,
+    marginTop: 13,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E6EBF2',
+    borderColor: BRAND.line,
   },
 
-  missionStatusComplete: {
-    backgroundColor: '#EEF9F2',
-    borderColor: '#CDEAD7',
+  missionCardComplete: {
+    backgroundColor: '#F0F8F1',
+    borderColor: '#CFE3D1',
   },
 
-  missionStatusIcon: {
+  missionIcon: {
     width: 54,
     height: 54,
     borderRadius: 17,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#D7F7F1',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  missionStatusEmoji: {
-    fontSize: 27,
+  missionIconComplete: {
+    backgroundColor: '#DCEEDD',
   },
 
-  missionStatusContent: {
+  missionEmoji: {
+    fontSize: 25,
+  },
+
+  missionContent: {
     flex: 1,
     paddingHorizontal: 13,
   },
 
   missionStatusLabel: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
   },
 
   missionStatusTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
     marginTop: 3,
   },
 
-  missionStatusText: {
+  eyebrow: {
+    color: '#F47B20',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+
+  missionTitle: {
+    color: '#101820',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  missionText: {
     color: '#777777',
     fontSize: 10,
     marginTop: 3,
   },
 
   missionStatusCheck: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
   },
 
-
-
-
-
-
+  missionArrow: {
+    color: '#101820',
+    fontSize: 12,
+    fontWeight: '900',
+  },
 
   sectionTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 18,
     fontWeight: '900',
     marginTop: 25,
@@ -1608,14 +1589,45 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     paddingVertical: 17,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5DED2',
   },
 
-  statEmoji: {
-    fontSize: 22,
+  statIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 4,
+  },
+
+  statIconBlue: {
+    backgroundColor: BRAND.teal,
+  },
+
+  statIconOrange: {
+    backgroundColor: BRAND.orange,
+  },
+
+  statIconGreen: {
+    backgroundColor: BRAND.green,
+  },
+
+  statIconEmoji: {
+    fontSize: 23,
   },
 
   statNumber: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 20,
     fontWeight: '900',
     marginTop: 7,
@@ -1630,7 +1642,7 @@ const styles = StyleSheet.create({
   },
 
   disclaimer: {
-    color: '#AAAAAA',
+    color: '#999999',
     fontSize: 9,
     marginTop: 7,
     textAlign: 'center',
@@ -1640,6 +1652,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5DED2',
   },
 
   weekHeader: {
@@ -1649,7 +1663,7 @@ const styles = StyleSheet.create({
   },
 
   weekTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -1660,8 +1674,15 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  weekStreakPill: {
+    backgroundColor: '#FFF3D9',
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+
   weekStreak: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -1685,14 +1706,14 @@ const styles = StyleSheet.create({
     width: 18,
     height: 100,
     borderRadius: 9,
-    backgroundColor: '#EEF2F7',
+    backgroundColor: '#EAF0F2',
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
 
   dayBarFill: {
     width: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 9,
   },
 
@@ -1704,14 +1725,14 @@ const styles = StyleSheet.create({
   },
 
   dayLabelToday: {
-    color: '#1976F3',
+    color: BRAND.teal,
   },
 
   todayDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     marginTop: 3,
   },
 
@@ -1719,7 +1740,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#EEF1F5',
+    borderTopColor: '#EEE9E0',
     paddingTop: 13,
     marginTop: 15,
   },
@@ -1730,18 +1751,20 @@ const styles = StyleSheet.create({
   },
 
   changeGoal: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
   },
 
   streakCard: {
-    backgroundColor: '#FFF8E8',
+    backgroundColor: '#FFF7E6',
     borderRadius: 22,
     padding: 18,
     marginTop: 15,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1DFC0',
   },
 
   streakFire: {
@@ -1770,7 +1793,7 @@ const styles = StyleSheet.create({
   },
 
   streakNumber: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 21,
     fontWeight: '900',
     marginTop: 2,
@@ -1789,7 +1812,7 @@ const styles = StyleSheet.create({
   },
 
   levelCard: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 22,
     padding: 20,
     marginTop: 15,
@@ -1802,7 +1825,7 @@ const styles = StyleSheet.create({
   },
 
   levelEyebrow: {
-    color: '#AAAAAA',
+    color: '#9FAAB2',
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.4,
@@ -1819,13 +1842,13 @@ const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F47B20',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   levelBadgeText: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 20,
     fontWeight: '900',
   },
@@ -1833,14 +1856,14 @@ const styles = StyleSheet.create({
   levelProgressBackground: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#333333',
+    backgroundColor: '#2D3A42',
     marginTop: 17,
     overflow: 'hidden',
   },
 
   levelProgressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F47B20',
     borderRadius: 4,
   },
 
@@ -1851,7 +1874,7 @@ const styles = StyleSheet.create({
   },
 
   levelText: {
-    color: '#AAAAAA',
+    color: '#9FAAB2',
     fontSize: 9,
     fontWeight: '700',
   },
@@ -1860,13 +1883,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 23,
     padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5DED2',
+  },
+
+  challengeTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
 
   challengeIcon: {
     width: 53,
     height: 53,
     borderRadius: 17,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1875,11 +1905,15 @@ const styles = StyleSheet.create({
     fontSize: 27,
   },
 
+  challengeTopText: {
+    flex: 1,
+    paddingLeft: 13,
+  },
+
   challengeTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 19,
     fontWeight: '900',
-    marginTop: 13,
   },
 
   challengeText: {
@@ -1891,7 +1925,7 @@ const styles = StyleSheet.create({
 
   challengeProgressBackground: {
     height: 9,
-    backgroundColor: '#E9EEF5',
+    backgroundColor: '#F0ECE4',
     borderRadius: 5,
     marginTop: 17,
     overflow: 'hidden',
@@ -1900,7 +1934,7 @@ const styles = StyleSheet.create({
   challengeProgressFill: {
     width: '63%',
     height: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 5,
   },
 
@@ -1917,7 +1951,7 @@ const styles = StyleSheet.create({
   },
 
   challengeButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 13,
     paddingVertical: 13,
     alignItems: 'center',
@@ -1932,15 +1966,26 @@ const styles = StyleSheet.create({
   },
 
   communityCard: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: '#D7F7F1',
     borderRadius: 22,
     padding: 19,
     marginTop: 15,
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#D5E4D7',
+  },
+
+  communityIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   communityEmoji: {
-    fontSize: 30,
+    fontSize: 28,
   },
 
   communityContent: {
@@ -1949,28 +1994,28 @@ const styles = StyleSheet.create({
   },
 
   communityEyebrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1.3,
   },
 
   communityTitle: {
-    color: '#111111',
+    color: BRAND.midnight,
     fontSize: 16,
     fontWeight: '900',
     marginTop: 3,
   },
 
   communityText: {
-    color: '#777777',
+    color: '#68736B',
     fontSize: 10,
     lineHeight: 15,
     marginTop: 4,
   },
 
   completeButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 17,
     height: 54,
     alignItems: 'center',
@@ -1979,11 +2024,11 @@ const styles = StyleSheet.create({
   },
 
   completeButtonActive: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
   },
 
   completeButtonDone: {
-    backgroundColor: '#228B45',
+    backgroundColor: BRAND.green,
   },
 
   completeButtonText: {
@@ -1999,7 +2044,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 3,

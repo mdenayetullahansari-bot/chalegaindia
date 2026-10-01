@@ -1,0 +1,6 @@
+-- Historical baseline marker for Chalega India.
+-- The application baseline schema already existed before the recovered
+-- KMC/Assembly migrations. This migration intentionally performs no
+-- production schema changes; it only restores the missing migration
+-- history entry.
+-- No SQL changes are required here.

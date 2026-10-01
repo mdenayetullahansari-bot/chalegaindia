@@ -1,6 +1,8 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -8,18 +10,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 
-import {
-  getPoints,
-  getPointsHistory,
-  subtractPoints,
-  type PointsTransaction,
-} from '../lib/points';
-import { formatLocalDateTime } from '../lib/date';
+import { supabase } from '../lib/supabase';
 
-const CLAIMED_REWARDS_KEY = 'chalega_claimed_rewards';
+type PointsTransaction = {
+  id: string;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  transaction_key: string;
+  description: string;
+  created_at: string;
+  title: string;
+  type: string;
+  timestamp: string;
+};
+import { formatLocalDateTime } from '../lib/date';
 
 type Reward = {
   id: string;
@@ -79,29 +86,59 @@ export default function RewardsScreen() {
       setLoading(true);
 
       const [
-        currentPoints,
-        currentHistory,
-        savedClaims,
+        { data: profileData, error: profileError },
+        { data: transactionData, error: transactionError },
+        { data: redemptionData, error: redemptionError },
       ] = await Promise.all([
-        getPoints(),
-        getPointsHistory(),
-        AsyncStorage.getItem(CLAIMED_REWARDS_KEY),
+        supabase
+          .from('profiles')
+          .select('points')
+          .single(),
+        supabase.rpc('get_my_points_transactions'),
+        supabase.rpc('get_my_reward_redemptions'),
       ]);
 
-      setPoints(currentPoints);
-      setHistory(currentHistory);
+      if (profileError) throw profileError;
+      if (transactionError) throw transactionError;
+      if (redemptionError) throw redemptionError;
 
-      if (savedClaims) {
-        try {
-          const parsed = JSON.parse(savedClaims);
+      setPoints(
+        Math.max(
+          0,
+          Math.round(Number(profileData?.points) || 0)
+        )
+      );
 
-          if (Array.isArray(parsed)) {
-            setClaimed(parsed);
-          }
-        } catch {
-          setClaimed([]);
-        }
-      }
+      setHistory(
+        (transactionData ?? []).map(
+          (transaction: {
+            id: string;
+            amount: number;
+            balance_after: number;
+            transaction_type: string;
+            transaction_key: string;
+            description: string;
+            created_at: string;
+          }) => ({
+            ...transaction,
+            title: transaction.description,
+            type: transaction.transaction_type,
+            timestamp: transaction.created_at,
+          })
+        )
+      );
+
+      setClaimed(
+        (redemptionData ?? [])
+          .map(
+            (redemption: { reward_id: string | null }) =>
+              redemption.reward_id
+          )
+          .filter(
+            (rewardId: string | null): rewardId is string =>
+              Boolean(rewardId)
+          )
+      );
     } catch (error) {
       console.log(
         'Could not load Chalega wallet:',
@@ -195,11 +232,87 @@ export default function RewardsScreen() {
       return;
     }
 
-    Alert.alert(
-      'Redeem Reward?',
+    const redeem = async () => {
+      try {
+        const {
+          data: redemptionResult,
+          error: redemptionError,
+        } = await supabase.rpc(
+          'redeem_chalega_reward',
+          {
+            p_reward_id: reward.id,
+          }
+        );
+
+        if (redemptionError) {
+          throw redemptionError;
+        }
+
+        const newBalance = Math.max(
+          0,
+          Math.round(
+            Number(redemptionResult?.balance) || 0
+          )
+        );
+
+        setPoints(newBalance);
+
+        await loadWallet();
+
+        if (Platform.OS === 'web') {
+          window.alert(
+            `${reward.title} has been redeemed successfully!`
+          );
+        } else {
+          Alert.alert(
+            '🎉 Reward Redeemed!',
+            `${reward.title} has been added to your Chalega rewards history.`,
+            [
+              {
+                text: 'KEEP GOING',
+              },
+            ]
+          );
+        }
+      } catch (error) {
+        console.log(
+          'Reward redemption failed:',
+          error
+        );
+
+        if (Platform.OS === 'web') {
+          window.alert(
+            'We could not complete the redemption.'
+          );
+        } else {
+          Alert.alert(
+            'Something went wrong',
+            'We could not complete the redemption.'
+          );
+        }
+      }
+    };
+
+    const message =
       `Use ${reward.cost.toLocaleString(
         'en-IN'
-      )} Chalega Points for ${reward.title}?`,
+      )} Chalega Points for ${reward.title}?`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Redeem Reward?\n\n${message}`
+      );
+
+      if (confirmed) {
+        await redeem();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      'Redeem Reward?',
+      message,
       [
         {
           text: 'CANCEL',
@@ -207,69 +320,14 @@ export default function RewardsScreen() {
         },
         {
           text: 'REDEEM',
-          onPress: async () => {
-            try {
-              const newBalance =
-                await subtractPoints(
-                  reward.cost,
-                  'reward_redemption',
-                  reward.title,
-                  `redeemed_${reward.id}_${Date.now()}`
-                );
-
-              if (newBalance === null) {
-                Alert.alert(
-                  'Not enough points',
-                  'Your available balance has changed. Please try again.'
-                );
-
-                await loadWallet();
-                return;
-              }
-
-              const updatedClaims = [
-                ...claimed,
-                reward.id,
-              ];
-
-              await AsyncStorage.setItem(
-                CLAIMED_REWARDS_KEY,
-                JSON.stringify(updatedClaims)
-              );
-
-              setClaimed(updatedClaims);
-              setPoints(newBalance);
-
-              await loadWallet();
-
-              Alert.alert(
-                '🎉 Reward Redeemed!',
-                `${reward.title} has been added to your Chalega rewards history.`,
-                [
-                  {
-                    text: 'KEEP GOING',
-                  },
-                ]
-              );
-            } catch (error) {
-              console.log(
-                'Reward redemption failed:',
-                error
-              );
-
-              Alert.alert(
-                'Something went wrong',
-                'We could not complete the redemption.'
-              );
-            }
-          },
+          onPress: redeem,
         },
       ]
     );
   };
 
   const showAllHistory = () => {
-    router.push('./points-activity');
+    router.push('/points-activity');
   };
 
   if (loading) {
@@ -308,7 +366,7 @@ export default function RewardsScreen() {
 
           <View style={styles.headerCenter}>
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.headerTitle}>
@@ -721,12 +779,7 @@ export default function RewardsScreen() {
 
           <TouchableOpacity
             style={styles.sponsorButton}
-            onPress={() =>
-              Alert.alert(
-                'Chalega Partners',
-                'The partner marketplace is coming next.'
-              )
-            }
+            onPress={() => router.push('/partner')}
           >
             <Text style={styles.sponsorButtonText}>
               PARTNER WITH CHALEGA
@@ -738,7 +791,7 @@ export default function RewardsScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA INDIA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.footerText}>
@@ -753,7 +806,7 @@ export default function RewardsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -810,7 +863,7 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 2,
@@ -824,7 +877,7 @@ const styles = StyleSheet.create({
   },
 
   hero: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 28,
     padding: 25,
     alignItems: 'center',
@@ -908,7 +961,7 @@ const styles = StyleSheet.create({
   },
 
   percent: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 16,
     fontWeight: '900',
   },
@@ -923,7 +976,7 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 5,
   },
 
@@ -962,7 +1015,7 @@ const styles = StyleSheet.create({
   },
 
   viewAll: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 0.8,
@@ -1105,7 +1158,7 @@ const styles = StyleSheet.create({
   },
 
   rewardIconActive: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
   },
 
   rewardEmoji: {
@@ -1130,7 +1183,7 @@ const styles = StyleSheet.create({
   },
 
   claimed: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 7,
     fontWeight: '900',
   },
@@ -1159,7 +1212,7 @@ const styles = StyleSheet.create({
 
   rewardFill: {
     height: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 4,
   },
 
@@ -1198,7 +1251,7 @@ const styles = StyleSheet.create({
   },
 
   shopCard: {
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 22,
     padding: 18,
     marginTop: 15,
@@ -1216,7 +1269,7 @@ const styles = StyleSheet.create({
   },
 
   shopEyebrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 7,
     fontWeight: '900',
     letterSpacing: 1.1,
@@ -1237,7 +1290,7 @@ const styles = StyleSheet.create({
   },
 
   shopArrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 28,
   },
 
@@ -1290,7 +1343,7 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 2.5,

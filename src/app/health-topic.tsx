@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { awardOnce } from '@/lib/points';
+
 
 type HealthTopic = {
   emoji: string;
@@ -193,192 +193,14 @@ export default function HealthTopicScreen() {
    *
    * IMPORTANT:
    *
-   * awardOnce() is now responsible for:
+
    *
    * 1. Adding the points to the wallet.
    * 2. Recording the transaction in Points Activity.
    * 3. Preventing the same daily reward twice.
    */
-  const completeHealthMission = async () => {
-    if (completing || completed) {
-      return;
-    }
-
-    setCompleting(true);
-
-    try {
-      const todayKey = getTodayKey();
-
-      const missionKey =
-        `chalega_daily_missions_${todayKey}`;
-
-      const savedMissions =
-        await AsyncStorage.getItem(
-          missionKey
-        );
-
-      const missions = savedMissions
-        ? JSON.parse(savedMissions)
-        : [
-            {
-              id: 'walk',
-              icon: '🚶',
-              title: 'Walk 4,000 steps',
-              description:
-                'Move your body and complete your daily walking goal.',
-              points: 40,
-              action: 'OPEN WALK',
-              completed: false,
-            },
-            {
-              id: 'water',
-              icon: '💧',
-              title: 'Drink 6 glasses of water',
-              description:
-                'Stay hydrated throughout your day.',
-              points: 18,
-              action: 'MARK DONE',
-              completed: false,
-            },
-            {
-              id: 'health',
-              icon: '❤️',
-              title: 'Complete your health check-in',
-              description:
-                'Take a moment to check in with your health today.',
-              points: 10,
-              action: 'OPEN HEALTH',
-              completed: false,
-            },
-            {
-              id: 'streak',
-              icon: '🔥',
-              title: 'Keep your streak alive',
-              description:
-                "Complete today's healthy activity and keep going.",
-              points: 25,
-              action: 'MARK DONE',
-              completed: false,
-            },
-          ];
-
-      const healthMission = missions.find(
-        (mission: any) =>
-          mission.id === 'health'
-      );
-
-      if (!healthMission) {
-        Alert.alert(
-          'Something went wrong',
-          'The health mission could not be found.'
-        );
-
-        setCompleting(false);
-        return;
-      }
-
-      /*
-       * Extra protection against duplicate
-       * completion from the mission data.
-       */
-      if (healthMission.completed) {
-        setCompleted(true);
-        setCompleting(false);
-
-        Alert.alert(
-          'Already completed',
-          "You have already completed today's health check-in."
-        );
-
-        return;
-      }
-
-      /*
-       * Award the points through the central
-       * Chalega Points system.
-       *
-       * This creates BOTH:
-       *
-       * - wallet balance
-       * - Points Activity transaction
-       */
-      const result = await awardOnce(
-        'health_checkin',
-        `health_checkin_${todayKey}`,
-        healthMission.points,
-        'Health Check-in',
-        `health_checkin_${todayKey}`
-      );
-
-      /*
-       * Mark today's health mission completed.
-       */
-      const updatedMissions =
-        missions.map(
-          (mission: any) =>
-            mission.id === 'health'
-              ? {
-                  ...mission,
-                  completed: true,
-                }
-              : mission
-        );
-
-      await AsyncStorage.setItem(
-        missionKey,
-        JSON.stringify(updatedMissions)
-      );
-
-      setCompleted(true);
-      setCompleting(false);
-
-      /*
-       * If the points were already awarded,
-       * do not award them again.
-       */
-      if (!result.awarded) {
-        Alert.alert(
-          'Already completed',
-          "Today's health check-in has already been rewarded.",
-          [
-            {
-              text: 'BACK TO MISSIONS',
-              onPress: () =>
-                router.replace('/missions'),
-            },
-          ]
-        );
-
-        return;
-      }
-
-      /*
-       * Successful completion.
-       */
-      Alert.alert(
-        '❤️ Health Check-in Complete!',
-        `+${healthMission.points} Chalega Points\n\nYour total is now ${result.balance} Chalega Points.`,
-        [
-          {
-            text: 'BACK TO MISSIONS',
-            onPress: () =>
-              router.replace('/missions'),
-          },
-        ]
-      );
-    } catch (error) {
-      console.log(
-        'Could not complete health mission:',
-        error
-      );
-
-      setCompleting(false);
-
-      Alert.alert(
-        'Something went wrong',
-        'We could not save your health check-in. Please try again.'
-      );
-    }
+  const completeHealthMission = () => {
+    router.push('/daily-health-checkin');
   };
 
   return (

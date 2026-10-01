@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { BRAND } from '@/lib/brand';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -11,163 +12,470 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
 
-type Product = {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  emoji: string;
-  description: string;
+import { products } from '@/data/products';
+import { supabase } from '@/lib/supabase';
+import { clearCart } from '@/lib/cart';
+
+type Cart = Record<string, number>;
+
+type DeliveryType = 'Chalega 24-Hour';
+
+type PaymentMethod = 'cod' | 'online';
+
+type RazorpayPaymentResult = {
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
 };
 
-const products: Product[] = [
-  {
-    id: '1',
-    name: 'Chalega India Water Bottle',
-    price: 399,
-    category: 'Hydration',
-    emoji: '💧',
-    description: 'Reusable bottle for everyday hydration.',
-  },
-  {
-    id: '2',
-    name: 'Chalega India Walking T-Shirt',
-    price: 699,
-    category: 'Fitness',
-    emoji: '👕',
-    description: 'Comfortable T-shirt for walking and exercise.',
-  },
-  {
-    id: '3',
-    name: 'Healthy Snack Pack',
-    price: 249,
-    category: 'Healthy Food',
-    emoji: '🥜',
-    description: 'A convenient everyday healthy snack option.',
-  },
-  {
-    id: '4',
-    name: 'Fresh Fruit Box',
-    price: 499,
-    category: 'Fruits',
-    emoji: '🍎',
-    description: 'Seasonal fresh fruits packed for your home.',
-  },
-  {
-    id: '5',
-    name: 'Dry Fruits Wellness Pack',
-    price: 599,
-    category: 'Healthy Food',
-    emoji: '🥜',
-    description: 'A selection of dry fruits for everyday snacking.',
-  },
-  {
-    id: '6',
-    name: 'Morning Fruit Basket',
-    price: 699,
-    category: 'Fruits',
-    emoji: '🍇',
-    description: 'A family-friendly selection of fresh fruits.',
-  },
-  {
-    id: '7',
-    name: 'Walking Cap',
-    price: 299,
-    category: 'Fitness',
-    emoji: '🧢',
-    description: 'Lightweight cap for outdoor walks.',
-  },
-  {
-    id: '8',
-    name: 'Healthy Home Kit',
-    price: 899,
-    category: 'Home Health',
-    emoji: '🏠',
-    description: 'Simple essentials for a healthier home.',
-  },
-  {
-    id: '9',
-    name: 'Family Health Combo',
-    price: 999,
-    category: 'Health Combos',
-    emoji: '🎁',
-    description: 'A useful combination of everyday wellness products.',
-  },
-  {
-    id: '10',
-    name: 'Walking Starter Combo',
-    price: 1199,
-    category: 'Health Combos',
-    emoji: '🚶',
-    description: 'Everything you need to get started with walking.',
-  },
-];
+type RazorpayOrderResponse = {
+  success?: boolean;
+  id?: string;
+  entity?: string;
+  amount?: number;
+  amount_paid?: number;
+  amount_due?: number;
+  currency?: string;
+  receipt?: string;
+  status?: string;
+  key_id?: string;
+  keyId?: string;
+  chalega_order_id?: string;
+};
+
+type SupabaseOrder = {
+  id: string;
+  order_id: string;
+  delivery_deadline: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+};
+const FREE_DELIVERY_THRESHOLD = 499;
+
+const getDeliveryFee = (subtotal: number) => {
+  if (subtotal >= FREE_DELIVERY_THRESHOLD) {
+    return 0;
+  }
+
+  if (subtotal >= 299) {
+    return 29;
+  }
+
+  return 49;
+};
+const getDeliveryDeadline = (createdAt: string) => {
+  const created = new Date(createdAt);
+
+  const deadline = new Date(
+    created.getTime() + 24 * 60 * 60 * 1000,
+  );
+
+  return deadline.toISOString();
+};
+
+const generatePublicOrderId = () => {
+  const year = new Date().getFullYear();
+  const timestamp = String(Date.now()).slice(-8);
+  const random = Math.floor(Math.random() * 100)
+    .toString()
+    .padStart(2, '0');
+
+  return `CI-${year}-${timestamp}${random}`;
+};
 
 export default function CheckoutScreen() {
   const router = useRouter();
 
   const {
-    total,
-    items,
-    cart,
+    cart: cartParam,
+    items: itemsParam,
   } = useLocalSearchParams<{
-    total?: string;
-    items?: string;
     cart?: string;
+    items?: string;
   }>();
 
-  const orderTotal = Number(total || 0);
-  const itemCount = Number(items || 0);
-
-  let cartQuantities: Record<string, number> = {};
-
-  try {
-    if (cart) {
-      cartQuantities = JSON.parse(cart);
+  const cart = useMemo<Cart>(() => {
+    if (!cartParam) {
+      return {};
     }
-  } catch {
-    cartQuantities = {};
-  }
 
-  const selectedProducts = products
-    .filter((product) => (cartQuantities[product.id] || 0) > 0)
-    .map((product) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      emoji: product.emoji,
-      quantity: cartQuantities[product.id],
-      total:
-        product.price * cartQuantities[product.id],
-    }));
+    try {
+      const parsed = JSON.parse(cartParam);
+
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed)
+      ) {
+        return {};
+      }
+
+      const safeCart: Cart = {};
+
+      for (const [productId, quantity] of Object.entries(parsed)) {
+        if (
+          typeof quantity === 'number' &&
+          Number.isFinite(quantity) &&
+          quantity > 0
+        ) {
+          safeCart[productId] = Math.floor(quantity);
+        }
+      }
+
+      return safeCart;
+    } catch {
+      return {};
+    }
+  }, [cartParam]);
+
+  const selectedProducts = useMemo(() => {
+    return products
+      .filter((product) => (cart[product.id] || 0) > 0)
+      .map((product) => ({
+        ...product,
+        quantity: cart[product.id],
+      }));
+  }, [cart]);
+
+  const itemCount = selectedProducts.reduce(
+    (sum, product) => sum + (product.quantity || 0),
+    0,
+  );
+
+  const subtotal = selectedProducts.reduce(
+    (sum, product) =>
+      sum + product.price * (product.quantity || 0),
+    0,
+  );
+
+  const deliveryFee = getDeliveryFee(subtotal);
+  const orderTotal = subtotal + deliveryFee;
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [area, setArea] = useState('');
   const [pin, setPin] = useState('');
-  const [delivery, setDelivery] = useState('Standard');
+
+  const [delivery, setDelivery] =
+    useState<DeliveryType>('Chalega 24-Hour');
+
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>('cod');
+
   const [saving, setSaving] = useState(false);
 
+  const finishOrder = async ({
+    orderId,
+    total,
+    deliveryDeadline,
+  }: {
+    orderId: string;
+    total: number;
+    deliveryDeadline: string;
+  }) => {
+    await clearCart();
+
+    router.replace({
+      pathname: '/order-confirmed',
+      params: {
+        orderId,
+        name: name.trim(),
+        total: total.toString(),
+        deliveryDeadline,
+      },
+    });
+  };
+
+  const createSupabaseOrder = async ({
+    publicOrderId,
+  }: {
+    publicOrderId: string;
+  }): Promise<SupabaseOrder> => {
+    const cartItems = selectedProducts.map((product) => ({
+      id: product.id,
+      quantity: product.quantity || 1,
+    }));
+
+    const {
+      data,
+      error,
+    } = await supabase.rpc(
+      'create_chalega_order',
+      {
+        p_order_id: publicOrderId,
+        p_customer_name: name.trim(),
+        p_customer_phone: phone.trim(),
+        p_address: address.trim(),
+        p_area: area.trim(),
+        p_pin: pin.trim(),
+        p_items: cartItems,
+        p_delivery: delivery,
+        p_payment_method:
+          paymentMethod === 'online'
+            ? 'Razorpay'
+            : 'COD',
+      },
+    );
+
+    if (error) {
+      console.error(
+        'Secure order creation error:',
+        error,
+      );
+
+      if (
+        error.code === '23505' ||
+        error.message?.toLowerCase().includes('duplicate')
+      ) {
+        throw new Error(
+          'We could not create a unique order number. Please try again.',
+        );
+      }
+
+      throw new Error(
+        error.message ||
+          'We could not save your order. Please try again.',
+      );
+    }
+
+    const createdOrder = Array.isArray(data)
+      ? data[0]
+      : data;
+
+    if (
+      !createdOrder?.id ||
+      !createdOrder?.order_id
+    ) {
+      throw new Error(
+        'The order was created but its database ID was missing.',
+      );
+    }
+
+    return createdOrder as SupabaseOrder;
+  };
+  const startOnlinePayment = async ({
+    chalegaOrderId,
+    publicOrderId,
+  }: {
+    chalegaOrderId: string;
+    publicOrderId: string;
+  }) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      throw new Error(
+        'Your session has expired. Please sign in again.',
+      );
+    }
+
+    const {
+      data: razorpayOrder,
+      error: createOrderError,
+    } = await supabase.functions.invoke(
+      'create-razorpay-order',
+      {
+        body: {
+          order_id: chalegaOrderId,
+        },
+      },
+    );
+
+    if (createOrderError) {
+      console.error(
+        'Razorpay order creation error:',
+        createOrderError,
+      );
+
+      throw new Error(
+        'We could not start the online payment. Please try again.',
+      );
+    }
+
+    const order =
+      razorpayOrder as RazorpayOrderResponse;
+
+    if (!order?.id) {
+      console.error(
+        'Invalid Razorpay order response:',
+        order,
+      );
+
+      throw new Error(
+        'Payment order could not be created.',
+      );
+    }
+
+    const razorpayKey =
+      order.key_id || order.keyId;
+
+    if (!razorpayKey) {
+      console.error(
+        'Razorpay key ID missing from Edge Function response.',
+      );
+
+      throw new Error(
+        'Payment configuration is incomplete. Please try again later.',
+      );
+    }
+
+    const serverAmount = Number(order.amount);
+
+    if (
+      !Number.isFinite(serverAmount) ||
+      serverAmount <= 0
+    ) {
+      console.error(
+        'Invalid server-side Razorpay amount:',
+        order.amount,
+      );
+
+      throw new Error(
+        'Payment amount could not be confirmed.',
+      );
+    }
+
+    let RazorpayCheckout: any;
+
+    try {
+      const RazorpayModule =
+        require('react-native-razorpay');
+
+      RazorpayCheckout =
+        RazorpayModule?.default ||
+        RazorpayModule;
+    } catch (error) {
+      console.error(
+        'Razorpay native module unavailable:',
+        error,
+      );
+
+      throw new Error(
+        'Online payment is available only in the Chalega development build, not Expo Go.',
+      );
+    }
+
+    if (
+      !RazorpayCheckout ||
+      typeof RazorpayCheckout.open !== 'function'
+    ) {
+      throw new Error(
+        'Razorpay payment module is not available in this app build.',
+      );
+    }
+
+    const payment =
+      (await RazorpayCheckout.open({
+        key: razorpayKey,
+        amount: serverAmount,
+        currency: order.currency || 'INR',
+        order_id: order.id,
+        name: 'Chalega',
+        description: 'Chalega Fresh order',
+        prefill: {
+          name: name.trim(),
+          contact: phone.trim(),
+        },
+        notes: {
+          chalega_order_id: publicOrderId,
+          chalega_order_uuid: chalegaOrderId,
+        },
+        theme: {
+          color: BRAND.teal,
+        },
+      })) as RazorpayPaymentResult;
+
+    if (
+      !payment?.razorpay_order_id ||
+      !payment?.razorpay_payment_id ||
+      !payment?.razorpay_signature
+    ) {
+      throw new Error(
+        'Razorpay returned an incomplete payment response.',
+      );
+    }
+
+    const {
+      data: verification,
+      error: verificationError,
+    } = await supabase.functions.invoke(
+      'verify-razorpay-payment',
+      {
+        body: {
+          chalega_order_id: chalegaOrderId,
+          razorpay_order_id:
+            payment.razorpay_order_id,
+          razorpay_payment_id:
+            payment.razorpay_payment_id,
+          razorpay_signature:
+            payment.razorpay_signature,
+        },
+      },
+    );
+
+    if (verificationError) {
+      console.error(
+        'Payment verification error:',
+        verificationError,
+      );
+
+      throw new Error(
+        'Payment was received but could not be verified. Please do not place another order until we confirm the payment.',
+      );
+    }
+
+    if (
+      !verification ||
+      verification.verified !== true
+    ) {
+      console.error(
+        'Payment verification failed:',
+        verification,
+      );
+
+      throw new Error(
+        verification?.error ||
+          'Payment verification failed. Please contact Chalega support before trying again.',
+      );
+    }
+
+    return {
+      razorpayOrderId:
+        payment.razorpay_order_id,
+      razorpayPaymentId:
+        payment.razorpay_payment_id,
+    };
+  };
+
   const placeOrder = async () => {
-    if (!name.trim()) {
+    if (selectedProducts.length === 0) {
       Alert.alert(
-        'Missing information',
-        'Please enter your name.'
+        'Your cart is empty',
+        'Please return to Shop to Feed and add a product.',
       );
       return;
     }
 
-    if (phone.length !== 10) {
+    if (!name.trim()) {
+      Alert.alert(
+        'Missing information',
+        'Please enter your name.',
+      );
+      return;
+    }
+
+    if (phone.trim().length !== 10) {
       Alert.alert(
         'Invalid mobile number',
-        'Please enter a valid 10-digit mobile number.'
+        'Please enter a valid 10-digit mobile number.',
       );
       return;
     }
@@ -175,7 +483,7 @@ export default function CheckoutScreen() {
     if (!address.trim()) {
       Alert.alert(
         'Missing address',
-        'Please enter your delivery address.'
+        'Please enter your delivery address.',
       );
       return;
     }
@@ -183,15 +491,15 @@ export default function CheckoutScreen() {
     if (!area.trim()) {
       Alert.alert(
         'Missing area',
-        'Please enter your area or locality.'
+        'Please enter your area or locality.',
       );
       return;
     }
 
-    if (pin.length !== 6) {
+    if (pin.trim().length !== 6) {
       Alert.alert(
         'Invalid PIN code',
-        'Please enter your 6-digit PIN code.'
+        'Please enter your 6-digit PIN code.',
       );
       return;
     }
@@ -199,80 +507,73 @@ export default function CheckoutScreen() {
     try {
       setSaving(true);
 
-      const existingOrdersText =
-        await AsyncStorage.getItem('chalega_orders');
+      const createdAt =
+        new Date().toISOString();
 
-      const existingOrders = existingOrdersText
-        ? JSON.parse(existingOrdersText)
-        : [];
-
-      const orderNumber =
-        existingOrders.length + 1;
+      const deliveryDeadline =
+        getDeliveryDeadline(createdAt);
 
       const orderId =
-        `CI-${new Date().getFullYear()}-${String(
-          orderNumber
-        ).padStart(4, '0')}`;
+        generatePublicOrderId();
 
-      const newOrder = {
-        id: orderId,
+    const dbOrder =
+  await createSupabaseOrder({
+    publicOrderId: orderId,
+  });
 
-        customer: {
-          name: name.trim(),
-          phone: phone.trim(),
-        },
+      if (paymentMethod === 'online') {
+        const payment =
+          await startOnlinePayment({
+            chalegaOrderId: dbOrder.id,
+            publicOrderId: dbOrder.order_id,
+          });
 
-        address: {
-          address: address.trim(),
-          area: area.trim(),
-          pin: pin.trim(),
-        },
+        await finishOrder({
+          orderId: dbOrder.order_id,
+          total: dbOrder.total,
+          deliveryDeadline: dbOrder.delivery_deadline,
+        });
 
-        products: selectedProducts,
+      }
 
-        items: itemCount,
-
-        total: orderTotal,
-
-        delivery,
-
-        status: 'Order Received',
-
-        createdAt: new Date().toISOString(),
-      };
-
-      const updatedOrders = [
-        ...existingOrders,
-        newOrder,
-      ];
-
-      await AsyncStorage.setItem(
-        'chalega_orders',
-        JSON.stringify(updatedOrders)
-      );
-
-      router.replace({
-        pathname: '/order-confirmed',
-        params: {
-          orderId,
-          name: name.trim(),
-          total: orderTotal.toString(),
-        },
+      await finishOrder({
+        orderId: dbOrder.order_id,
+        total: dbOrder.total,
+        deliveryDeadline: dbOrder.delivery_deadline,
       });
-    } catch (error) {
-      console.log('Order save error:', error);
-
-      Alert.alert(
-        'Order error',
-        'We could not save your order. Please try again.'
+    } catch (error: any) {
+      console.error(
+        'Order/payment error:',
+        error,
       );
+      const message =
+        error?.message ||
+        'We could not complete your order. Please try again.';
+
+      if (
+        message
+          .toLowerCase()
+          .includes('cancel')
+      ) {
+        Alert.alert(
+          'Payment Cancelled',
+          'Your order was not placed. You can choose another payment method and try again.',
+        );
+      } else {
+        Alert.alert(
+          'Order / Payment Error',
+          message,
+        );
+      }
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={
@@ -283,303 +584,669 @@ export default function CheckoutScreen() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={
+            styles.content
+          }
         >
-          {/* HEADER */}
-
-          <View style={styles.header}>
+          <View
+            style={styles.header}
+          >
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={() =>
+                router.back()
+              }
             >
-              <Text style={styles.backText}>‹</Text>
+              <Text
+                style={styles.backText}
+              >
+                â€¹
+              </Text>
             </TouchableOpacity>
 
-            <View>
-              <Text style={styles.brand}>
-                C H A L E G A  I N D I A
-              </Text>
-
-              <Text style={styles.title}>
+            <View
+              style={styles.headerCenter}
+            >
+              <Text
+                style={styles.headerTitle}
+              >
                 Checkout
               </Text>
-            </View>
-          </View>
 
-          {/* TOTAL */}
-
-          <View style={styles.summaryCard}>
-            <View>
-              <Text style={styles.summaryLabel}>
-                ORDER TOTAL
-              </Text>
-
-              <Text style={styles.summaryAmount}>
-                ₹{orderTotal.toLocaleString('en-IN')}
-              </Text>
-
-              <Text style={styles.summaryItems}>
-                {itemCount} item
-                {itemCount === 1 ? '' : 's'}
+              <Text
+                style={
+                  styles.headerSubtitle
+                }
+              >
+                Shop to Feed
               </Text>
             </View>
 
-            <Text style={styles.summaryEmoji}>
-              🛒
-            </Text>
+            <View
+              style={styles.headerSpacer}
+            />
           </View>
 
-          {/* PRODUCTS */}
-
-          <Text style={styles.sectionTitle}>
-            Your Products
-          </Text>
-
-          <View style={styles.productsCard}>
-            {selectedProducts.length === 0 ? (
-              <Text style={styles.emptyProducts}>
-                No products found in this order.
+          <View
+            style={styles.promiseHero}
+          >
+            <View
+              style={styles.promiseIcon}
+            >
+              <Text
+                style={
+                  styles.promiseIconText
+                }
+              >
+                ðŸšš
               </Text>
-            ) : (
-              selectedProducts.map((product) => (
-                <View
-                  key={product.id}
-                  style={styles.productRow}
-                >
-                  <View style={styles.productEmojiBox}>
-                    <Text style={styles.productEmoji}>
-                      {product.emoji}
-                    </Text>
-                  </View>
+            </View>
 
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>
-                      {product.name}
-                    </Text>
+            <View
+              style={styles.promiseBody}
+            >
+              <Text
+                style={styles.promiseTitle}
+              >
+                CHALEGA 24-HOUR DELIVERY
+              </Text>
 
-                    <Text style={styles.quantityText}>
-                      Quantity: {product.quantity}
-                    </Text>
-
-                    <Text style={styles.priceText}>
-                      ₹{product.price.toLocaleString('en-IN')}
-                      {' '}each
-                    </Text>
-                  </View>
-
-                  <Text style={styles.productTotal}>
-                    ₹{product.total.toLocaleString('en-IN')}
-                  </Text>
-                </View>
-              ))
-            )}
+              <Text
+                style={styles.promiseText}
+              >
+                Your fresh order will be
+                delivered within 24 hours
+                of order placement.
+              </Text>
+            </View>
           </View>
 
-          {/* CUSTOMER */}
-
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={styles.sectionTitle}
+          >
             Your Details
           </Text>
 
-          <Text style={styles.label}>
-            Full Name
+          <View
+            style={styles.formCard}
+          >
+            <Text
+              style={styles.inputLabel}
+            >
+              Full Name
+            </Text>
+
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your full name"
+              placeholderTextColor="#88939D"
+              style={styles.input}
+              autoCapitalize="words"
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              Mobile Number
+            </Text>
+
+            <TextInput
+              value={phone}
+              onChangeText={(text) =>
+                setPhone(
+                  text.replace(/\D/g, ''),
+                )
+              }
+              placeholder="10-digit mobile number"
+              placeholderTextColor="#88939D"
+              keyboardType="number-pad"
+              maxLength={10}
+              style={styles.input}
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              Delivery Address
+            </Text>
+
+            <TextInput
+              value={address}
+              onChangeText={setAddress}
+              placeholder="House / flat / street"
+              placeholderTextColor="#88939D"
+              style={[
+                styles.input,
+                styles.textarea,
+              ]}
+              multiline
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              Area / Locality
+            </Text>
+
+            <TextInput
+              value={area}
+              onChangeText={setArea}
+              placeholder="Area or locality"
+              placeholderTextColor="#88939D"
+              style={styles.input}
+              autoCapitalize="words"
+            />
+
+            <Text
+              style={styles.inputLabel}
+            >
+              PIN Code
+            </Text>
+
+            <TextInput
+              value={pin}
+              onChangeText={(text) =>
+                setPin(
+                  text.replace(/\D/g, ''),
+                )
+              }
+              placeholder="6-digit PIN code"
+              placeholderTextColor="#88939D"
+              keyboardType="number-pad"
+              maxLength={6}
+              style={styles.input}
+            />
+          </View>
+
+          <Text
+            style={styles.sectionTitle}
+          >
+            Your Products
           </Text>
 
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter your full name"
-            placeholderTextColor="#999999"
-            style={styles.input}
-          />
+          <View
+            style={styles.productsCard}
+          >
+            {selectedProducts.length ===
+            0 ? (
+              <Text
+                style={
+                  styles.emptyProducts
+                }
+              >
+                No products found in
+                this order.
+              </Text>
+            ) : (
+              selectedProducts.map(
+                (product) => (
+                  <View
+                    key={product.id}
+                    style={
+                      styles.productRow
+                    }
+                  >
+                    <View
+                      style={
+                        styles.productEmoji
+                      }
+                    >
+                      <Text>
+                        {
+                          product.emoji
+                        }
+                      </Text>
+                    </View>
 
-          <Text style={styles.label}>
-            Mobile Number
-          </Text>
+                    <View
+                      style={
+                        styles.productInfo
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.productName
+                        }
+                      >
+                        {product.name}
+                      </Text>
 
-          <TextInput
-            value={phone}
-            onChangeText={(text) =>
-              setPhone(
-                text.replace(/[^0-9]/g, '')
+                      <Text
+                        style={
+                          styles.productUnit
+                        }
+                      >
+                        {product.quantity}{' '}
+                        Ã— â‚¹
+                        {product.price.toLocaleString(
+                          'en-IN',
+                        )}{' '}
+                        / {product.unit}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={
+                        styles.productTotal
+                      }
+                    >
+                      â‚¹
+                      {(
+                        product.price *
+                        (product.quantity ||
+                          0)
+                      ).toLocaleString(
+                        'en-IN',
+                      )}
+                    </Text>
+                  </View>
+                ),
               )
-            }
-            placeholder="10-digit mobile number"
-            placeholderTextColor="#999999"
-            keyboardType="phone-pad"
-            maxLength={10}
-            style={styles.input}
-          />
+            )}
+          </View>
 
-          {/* ADDRESS */}
-
-          <Text style={styles.sectionTitle}>
-            Delivery Address
-          </Text>
-
-          <Text style={styles.label}>
-            House / Street / Building
-          </Text>
-
-          <TextInput
-            value={address}
-            onChangeText={setAddress}
-            placeholder="House number, street, building..."
-            placeholderTextColor="#999999"
-            multiline
-            style={[
-              styles.input,
-              styles.addressInput,
-            ]}
-          />
-
-          <Text style={styles.label}>
-            Area / Locality
-          </Text>
-
-          <TextInput
-            value={area}
-            onChangeText={setArea}
-            placeholder="e.g. Park Circus"
-            placeholderTextColor="#999999"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>
-            PIN Code
-          </Text>
-
-          <TextInput
-            value={pin}
-            onChangeText={(text) =>
-              setPin(
-                text.replace(/[^0-9]/g, '')
-              )
-            }
-            placeholder="6-digit PIN code"
-            placeholderTextColor="#999999"
-            keyboardType="number-pad"
-            maxLength={6}
-            style={styles.input}
-          />
-
-          {/* DELIVERY */}
-
-          <Text style={styles.sectionTitle}>
+          <Text
+            style={styles.sectionTitle}
+          >
             Delivery
           </Text>
 
           <TouchableOpacity
             style={[
-              styles.option,
-              delivery === 'Standard' &&
-                styles.optionSelected,
+              styles.deliveryOption,
+              styles.deliveryOptionSelected,
             ]}
+            activeOpacity={0.85}
             onPress={() =>
-              setDelivery('Standard')
+              setDelivery(
+                'Chalega 24-Hour',
+              )
             }
           >
-            <View>
-              <Text style={styles.optionTitle}>
-                🛵 Standard Delivery
-              </Text>
-
-              <Text style={styles.optionText}>
-                Delivery within Kolkata
+            <View
+              style={
+                styles.deliveryOptionIcon
+              }
+            >
+              <Text>
+                ðŸšš
               </Text>
             </View>
 
             <View
-              style={[
-                styles.radio,
-                delivery === 'Standard' &&
-                  styles.radioSelected,
-              ]}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.option,
-              delivery === 'Express' &&
-                styles.optionSelected,
-            ]}
-            onPress={() =>
-              setDelivery('Express')
-            }
-          >
-            <View>
-              <Text style={styles.optionTitle}>
-                ⚡ Express Delivery
+              style={
+                styles.deliveryOptionBody
+              }
+            >
+              <Text
+                style={
+                  styles.deliveryOptionTitle
+                }
+              >
+                Chalega 24-Hour Delivery
               </Text>
 
-              <Text style={styles.optionText}>
-                Faster delivery where available
+              <Text
+                style={
+                  styles.deliveryOptionText
+                }
+              >
+                Guaranteed delivery
+                within 24 hours of
+                order placement.
               </Text>
             </View>
 
             <View
-              style={[
-                styles.radio,
-                delivery === 'Express' &&
-                  styles.radioSelected,
-              ]}
-            />
+              style={
+                styles.selectedRadio
+              }
+            >
+              <View
+                style={
+                  styles.selectedRadioDot
+                }
+              />
+            </View>
           </TouchableOpacity>
 
-          {/* PAYMENT */}
-
-          <Text style={styles.sectionTitle}>
-            Payment
+          <Text
+            style={styles.sectionTitle}
+          >
+            Order Summary
           </Text>
 
-          <View style={styles.paymentCard}>
-            <Text style={styles.paymentEmoji}>
-              💵
-            </Text>
-
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentTitle}>
-                Cash on Delivery
+          <View
+            style={styles.summaryCard}
+          >
+            <View
+              style={styles.summaryRow}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Items
               </Text>
 
-              <Text style={styles.paymentText}>
-                Payment gateway can be connected later.
+              <Text
+                style={
+                  styles.summaryValue
+                }
+              >
+                â‚¹
+                {subtotal.toLocaleString(
+                  'en-IN',
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={styles.summaryRow}
+            >
+              <Text
+                style={
+                  styles.summaryLabel
+                }
+              >
+                Delivery
+              </Text>
+
+              <Text
+                style={[
+                  styles.summaryValue,
+                  deliveryFee === 0 &&
+                    styles.freeValue,
+                ]}
+              >
+                {deliveryFee === 0
+                  ? 'FREE'
+                  : `â‚¹${deliveryFee}`}
+              </Text>
+            </View>
+
+            <Text
+              style={
+                styles.freeDeliveryNote
+              }
+            >
+              {subtotal >=
+              FREE_DELIVERY_THRESHOLD
+                ? 'âœ“ You unlocked free delivery.'
+                : `Add â‚¹${
+                    FREE_DELIVERY_THRESHOLD -
+                    subtotal
+                  } more for free delivery.`}
+            </Text>
+
+            <View
+              style={
+                styles.summaryDivider
+              }
+            />
+
+            <View
+              style={styles.summaryRow}
+            >
+              <Text
+                style={
+                  styles.totalLabel
+                }
+              >
+                Total
+              </Text>
+
+              <Text
+                style={
+                  styles.totalValue
+                }
+              >
+                â‚¹
+                {orderTotal.toLocaleString(
+                  'en-IN',
+                )}
               </Text>
             </View>
           </View>
 
-          {/* FINAL TOTAL */}
-
-          <View style={styles.finalTotal}>
-            <Text style={styles.finalLabel}>
-              Total to Pay
+          <View
+            style={styles.paymentCard}
+          >
+            <Text
+              style={styles.paymentTitle}
+            >
+              Payment
             </Text>
 
-            <Text style={styles.finalAmount}>
-              ₹{orderTotal.toLocaleString('en-IN')}
-            </Text>
+            <TouchableOpacity
+              style={[
+                styles.paymentOption,
+                paymentMethod ===
+                  'online' &&
+                  styles.paymentOptionSelected,
+              ]}
+              activeOpacity={0.85}
+              onPress={() =>
+                setPaymentMethod(
+                  'online',
+                )
+              }
+            >
+              <View
+                style={
+                  styles.onlineIcon
+                }
+              >
+                <Text
+                  style={
+                    styles.onlineIconText
+                  }
+                >
+                  â‚¹
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.paymentBody
+                }
+              >
+                <Text
+                  style={
+                    styles.paymentOptionTitle
+                  }
+                >
+                  Pay Online
+                </Text>
+
+                <Text
+                  style={
+                    styles.paymentOptionText
+                  }
+                >
+                  UPI, cards, net banking
+                  and supported payment
+                  methods.
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.radioOuter,
+                  paymentMethod ===
+                    'online' &&
+                    styles.radioOuterSelected,
+                ]}
+              >
+                {paymentMethod ===
+                  'online' && (
+                  <View
+                    style={
+                      styles.radioInner
+                    }
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.paymentOption,
+                styles.paymentOptionLast,
+                paymentMethod === 'cod' &&
+                  styles.paymentOptionSelected,
+              ]}
+              activeOpacity={0.85}
+              onPress={() =>
+                setPaymentMethod('cod')
+              }
+            >
+              <View
+                style={styles.codIcon}
+              >
+                <Text>â‚¹</Text>
+              </View>
+
+              <View
+                style={
+                  styles.paymentBody
+                }
+              >
+                <Text
+                  style={
+                    styles.paymentOptionTitle
+                  }
+                >
+                  Cash on Delivery
+                </Text>
+
+                <Text
+                  style={
+                    styles.paymentOptionText
+                  }
+                >
+                  Pay when your order
+                  arrives.
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.radioOuter,
+                  paymentMethod ===
+                    'cod' &&
+                    styles.radioOuterSelected,
+                ]}
+              >
+                {paymentMethod === 'cod' && (
+                  <View
+                    style={
+                      styles.radioInner
+                    }
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {paymentMethod ===
+              'online' && (
+              <View
+                style={
+                  styles.onlineNote
+                }
+              >
+                <Text
+                  style={
+                    styles.onlineNoteTitle
+                  }
+                >
+                  ðŸ”’ Secure online payment
+                </Text>
+
+                <Text
+                  style={
+                    styles.onlineNoteText
+                  }
+                >
+                  Your payment is processed
+                  securely through Razorpay.
+                  Chalega verifies
+                  the payment before
+                  confirming your order.
+                </Text>
+              </View>
+            )}
           </View>
-
-          {/* BUTTON */}
 
           <TouchableOpacity
             style={[
-              styles.placeButton,
-              saving && styles.disabledButton,
+              styles.placeOrderButton,
+              saving &&
+                styles.placeOrderDisabled,
             ]}
             onPress={placeOrder}
             disabled={saving}
+            activeOpacity={0.85}
           >
-            <Text style={styles.placeButtonText}>
-              {saving
-                ? 'SAVING ORDER...'
-                : 'PLACE ORDER →'}
-            </Text>
+            <View>
+              <Text
+                style={
+                  styles.placeOrderText
+                }
+              >
+                {saving
+                  ? paymentMethod ===
+                    'online'
+                    ? 'PROCESSING PAYMENT...'
+                    : 'SAVING ORDER...'
+                  : paymentMethod ===
+                    'online'
+                  ? 'PAY & PLACE ORDER'
+                  : 'PLACE ORDER'}
+              </Text>
+
+              {!saving && (
+                <Text
+                  style={
+                    styles.placeOrderSubtext
+                  }
+                >
+                  Delivered within 24 hours
+                </Text>
+              )}
+            </View>
+
+            {!saving && (
+              <Text
+                style={
+                  styles.placeOrderTotal
+                }
+              >
+                â‚¹
+                {orderTotal.toLocaleString(
+                  'en-IN',
+                )}
+              </Text>
+            )}
           </TouchableOpacity>
 
-          <Text style={styles.note}>
-            Your order will be saved on this device.
+          <Text
+            style={styles.orderNote}
+          >
+            {itemsParam || itemCount}{' '}
+            item
+            {itemCount === 1 ? '' : 's'} â€¢
+            Fresh order â€¢ Chalega 24-hour
+            delivery
+          </Text>
+
+          <Text
+            style={styles.footer}
+          >
+            CHALEGA KOLKATA
+            ♥
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -590,7 +1257,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   keyboard: {
@@ -598,290 +1265,491 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 55,
+    paddingBottom: 45,
   },
 
   header: {
+    height: 72,
+    paddingHorizontal: 18,
+    backgroundColor: BRAND.white,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
   },
 
   backButton: {
-    width: 45,
-    height: 45,
+    width: 43,
+    height: 43,
+    borderRadius: 22,
+    backgroundColor: '#F0F4F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  backText: {
+    fontSize: 34,
+    lineHeight: 38,
+    color: BRAND.midnight,
+  },
+
+  headerCenter: {
+    alignItems: 'center',
+  },
+
+  headerTitle: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: '#162530',
+  },
+
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#7A8793',
+  },
+
+  headerSpacer: {
+    width: 43,
+  },
+
+  promiseHero: {
+    marginHorizontal: 18,
+    marginTop: 16,
+    padding: 15,
+    borderRadius: 20,
+    backgroundColor: BRAND.greenLight,
+    borderWidth: 1,
+    borderColor: '#C9E4D0',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  promiseIcon: {
+    width: 46,
+    height: 46,
     borderRadius: 23,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
 
-  backText: {
-    color: '#1976F3',
-    fontSize: 38,
-    lineHeight: 40,
+  promiseIconText: {
+    fontSize: 23,
   },
 
-  brand: {
-    color: '#1976F3',
-    fontSize: 10,
+  promiseBody: {
+    flex: 1,
+  },
+
+  promiseTitle: {
+    fontSize: 12,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 0.6,
+    color: '#14592C',
   },
 
-  title: {
-    color: '#111111',
-    fontSize: 31,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-
-  summaryCard: {
-    backgroundColor: '#1976F3',
-    borderRadius: 24,
-    padding: 22,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  summaryLabel: {
-    color: '#DCEAFF',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-
-  summaryAmount: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '900',
+  promiseText: {
     marginTop: 3,
-  },
-
-  summaryItems: {
-    color: '#E6F0FF',
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-
-  summaryEmoji: {
-    fontSize: 48,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#536A5A',
+    fontWeight: '600',
   },
 
   sectionTitle: {
-    color: '#111111',
-    fontSize: 23,
+    marginHorizontal: 18,
+    marginTop: 21,
+    marginBottom: 9,
+    fontSize: 18,
     fontWeight: '900',
-    marginTop: 25,
-    marginBottom: 13,
+    color: '#172630',
+  },
+
+  formCard: {
+    marginHorizontal: 18,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+  },
+
+  inputLabel: {
+    marginBottom: 6,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#596875',
+  },
+
+  input: {
+    minHeight: 46,
+    marginBottom: 14,
+    paddingHorizontal: 13,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#DCE2E8',
+    backgroundColor: '#FAFBFC',
+    fontSize: 14,
+    color: '#192832',
+  },
+
+  textarea: {
+    minHeight: 82,
+    paddingTop: 12,
+    textAlignVertical: 'top',
   },
 
   productsCard: {
-    backgroundColor: '#FFFFFF',
+    marginHorizontal: 18,
     borderRadius: 20,
-    padding: 14,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+    overflow: 'hidden',
   },
 
   productRow: {
+    padding: 13,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-
-  productEmojiBox: {
-    width: 62,
-    height: 62,
-    borderRadius: 16,
-    backgroundColor: '#EEF4FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomColor: '#EEF1F4',
   },
 
   productEmoji: {
-    fontSize: 31,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#F3F7F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
   },
 
   productInfo: {
     flex: 1,
-    paddingLeft: 12,
-    paddingRight: 7,
+    paddingRight: 10,
   },
 
   productName: {
-    color: '#111111',
     fontSize: 13,
     fontWeight: '900',
+    color: '#1B2934',
   },
 
-  quantityText: {
-    color: '#555555',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-
-  priceText: {
-    color: '#888888',
+  productUnit: {
+    marginTop: 3,
     fontSize: 10,
-    marginTop: 2,
+    color: '#78858F',
+    fontWeight: '700',
   },
 
   productTotal: {
-    color: '#1976F3',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
+    color: BRAND.midnight,
   },
 
   emptyProducts: {
-    color: '#777777',
-    padding: 15,
-    textAlign: 'center',
-  },
-
-  label: {
-    color: '#444444',
+    padding: 20,
     fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 7,
+    textAlign: 'center',
+    color: '#71808D',
   },
 
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    minHeight: 54,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#111111',
-    marginBottom: 15,
-  },
-
-  addressInput: {
-    minHeight: 90,
-    paddingTop: 15,
-    textAlignVertical: 'top',
-  },
-
-  option: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 17,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  deliveryOption: {
+    marginHorizontal: 18,
+    padding: 15,
+    borderRadius: 20,
+    backgroundColor: BRAND.white,
     borderWidth: 2,
-    borderColor: 'transparent',
-    marginBottom: 10,
+    borderColor: '#E2E7EC',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
-  optionSelected: {
-    borderColor: '#1976F3',
+  deliveryOptionSelected: {
+    borderColor: '#2FA84F',
+    backgroundColor: '#F4FAF5',
   },
 
-  optionTitle: {
-    color: '#111111',
-    fontSize: 15,
+  deliveryOptionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: BRAND.greenLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  deliveryOptionBody: {
+    flex: 1,
+  },
+
+  deliveryOptionTitle: {
+    fontSize: 13,
     fontWeight: '900',
+    color: '#183129',
   },
 
-  optionText: {
-    color: '#777777',
+  deliveryOptionText: {
+    marginTop: 3,
     fontSize: 11,
-    marginTop: 4,
+    lineHeight: 16,
+    color: '#607168',
   },
 
-  radio: {
+  selectedRadio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#BBBBBB',
+    borderColor: '#2FA84F',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  radioSelected: {
-    borderColor: '#1976F3',
-    backgroundColor: '#1976F3',
+  selectedRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2FA84F',
+  },
+
+  summaryCard: {
+    marginHorizontal: 18,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+  },
+
+  summaryRow: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  summaryLabel: {
+    fontSize: 13,
+    color: '#687681',
+    fontWeight: '700',
+  },
+
+  summaryValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1B2934',
+  },
+
+  freeValue: {
+    color: '#25773D',
+  },
+
+  freeDeliveryNote: {
+    marginTop: 6,
+    fontSize: 11,
+    color: '#6A6F57',
+    fontWeight: '700',
+  },
+
+  summaryDivider: {
+    height: 1,
+    marginVertical: 6,
+    backgroundColor: '#E8ECEF',
+  },
+
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1A2731',
+  },
+
+  totalValue: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: BRAND.midnight,
   },
 
   paymentCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 17,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  paymentEmoji: {
-    fontSize: 30,
-    marginRight: 13,
-  },
-
-  paymentInfo: {
-    flex: 1,
+    marginHorizontal: 18,
+    marginTop: 2,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
   },
 
   paymentTitle: {
-    color: '#111111',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
+    color: '#172630',
+    marginBottom: 11,
   },
 
-  paymentText: {
-    color: '#777777',
-    fontSize: 11,
-    marginTop: 4,
-  },
-
-  finalTotal: {
-    marginTop: 24,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: '#DDDDDD',
+  paymentOption: {
+    padding: 12,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFB',
+    borderWidth: 1,
+    borderColor: '#E4E8EC',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 9,
   },
 
-  finalLabel: {
-    color: '#555555',
+  paymentOptionLast: {
+    marginBottom: 0,
+  },
+
+  paymentOptionSelected: {
+    borderColor: '#2FA84F',
+    backgroundColor: '#F4FAF5',
+  },
+
+  onlineIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BRAND.greenLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  onlineIconText: {
     fontSize: 16,
-    fontWeight: '800',
-  },
-
-  finalAmount: {
-    color: '#111111',
-    fontSize: 28,
     fontWeight: '900',
+    color: BRAND.teal,
   },
 
-  placeButton: {
-    backgroundColor: '#111111',
-    borderRadius: 18,
-    paddingVertical: 18,
+  codIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
-    marginTop: 18,
+    justifyContent: 'center',
+    marginRight: 10,
   },
 
-  disabledButton: {
-    opacity: 0.6,
+  paymentBody: {
+    flex: 1,
   },
 
-  placeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  paymentOptionTitle: {
+    fontSize: 12,
     fontWeight: '900',
+    color: '#263540',
   },
 
-  note: {
-    color: '#999999',
+  paymentOptionText: {
+    marginTop: 2,
+    fontSize: 10,
+    lineHeight: 15,
+    color: '#77838D',
+  },
+
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#B8C2C9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  radioOuterSelected: {
+    borderColor: '#2FA84F',
+  },
+
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2FA84F',
+  },
+
+  onlineNote: {
+    marginTop: 11,
+    padding: 12,
+    borderRadius: 13,
+    backgroundColor: '#F1F6FF',
+    borderWidth: 1,
+    borderColor: '#D6E4FA',
+  },
+
+  onlineNoteTitle: {
     fontSize: 11,
-    textAlign: 'center',
+    fontWeight: '900',
+    color: '#245B9B',
+  },
+
+  onlineNoteText: {
+    marginTop: 4,
+    fontSize: 10,
+    lineHeight: 15,
+    color: '#5A708A',
+    fontWeight: '600',
+  },
+
+  placeOrderButton: {
+    marginHorizontal: 18,
+    marginTop: 17,
+    minHeight: 60,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: BRAND.teal,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  placeOrderDisabled: {
+    opacity: 0.65,
+  },
+
+  placeOrderText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: BRAND.white,
+    letterSpacing: 0.4,
+  },
+
+  placeOrderSubtext: {
+    marginTop: 3,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#DCEAFF',
+  },
+
+  placeOrderTotal: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: BRAND.white,
+  },
+
+  orderNote: {
+    marginHorizontal: 18,
     marginTop: 12,
+    textAlign: 'center',
+    fontSize: 10,
+    color: '#7B8791',
+    fontWeight: '700',
+  },
+
+  footer: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 10,
+    letterSpacing: 3,
+    color: '#8A96A0',
   },
 });

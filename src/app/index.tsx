@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -7,28 +8,48 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { getPoints } from '@/lib/points';
+import { supabase } from '@/lib/supabase';
 
-const WALKING_DATA_KEY = 'chalega_walking_data';
-const HEALTH_DATA_KEY = 'chalega_health_home';
-const POINTS_KEY = 'chalega_points';
+import { BRAND } from '@/lib/brand';
 
-type WalkingData = {
-  steps?: number;
-  goal?: number;
-  streak?: number;
-  points?: number;
+const getLocalDateKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 };
 
-type HealthData = {
-  water?: number;
-  mood?: string;
-};
+const getStreakFromSteps = (
+  rows: Array<{ step_date: string; steps: number | null }>,
+  today: string,
+) => {
+  const stepsByDate = new Map<string, number>();
 
-type MissionData = {
-  completed?: boolean;
+  for (const row of rows) {
+    stepsByDate.set(row.step_date, Math.max(0, Number(row.steps) || 0));
+  }
+
+  let streak = 0;
+  const cursor = new Date(`${today}T00:00:00`);
+
+  while (true) {
+    const year = cursor.getFullYear();
+    const month = String(cursor.getMonth() + 1).padStart(2, '0');
+    const day = String(cursor.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
+
+    if ((stepsByDate.get(dateKey) ?? 0) <= 0) {
+      break;
+    }
+
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
 };
 
 export default function HomeScreen() {
@@ -40,83 +61,147 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [points, setPoints] = useState(0);
   const [mood, setMood] = useState('');
-  const [missionCompleted, setMissionCompleted] =
-    useState(false);
+  const [activity, setActivity] = useState('');
+  const [sleep, setSleep] = useState('');
+  const [lastCheckInDate, setLastCheckInDate] = useState('');
+  const [missionCompleted, setMissionCompleted] = useState(false);
 
   const loadData = async () => {
     try {
-      const walkingText =
-        await AsyncStorage.getItem(WALKING_DATA_KEY);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      const healthText =
-        await AsyncStorage.getItem(HEALTH_DATA_KEY);
-
-      if (walkingText) {
-        const walking: WalkingData =
-          JSON.parse(walkingText);
-
-        if (typeof walking.steps === 'number') {
-          setSteps(walking.steps);
-        }
-
-        if (typeof walking.goal === 'number') {
-          setGoal(walking.goal);
-        }
-
-        if (typeof walking.streak === 'number') {
-          setStreak(walking.streak);
-        }
-
-        if (typeof walking.points === 'number') {
-          setPoints(walking.points);
-        }
+      if (userError) {
+        throw userError;
       }
 
-      if (healthText) {
-        const health: HealthData =
-          JSON.parse(healthText);
-
-        if (typeof health.water === 'number') {
-          setWater(health.water);
-        }
-
-        if (typeof health.mood === 'string') {
-          setMood(health.mood);
-        }
+      if (!user) {
+        setSteps(0);
+        setGoal(4000);
+        setWater(0);
+        setStreak(0);
+        setPoints(0);
+        setMood('');
+        setActivity('');
+        setSleep('');
+        setLastCheckInDate('');
+        setMissionCompleted(false);
+        return;
       }
 
-      const storedPoints = await getPoints();
-      setPoints(storedPoints);
+      const todayKey = getLocalDateKey();
 
-      const today = new Date();
+      const startDate = new Date(`${todayKey}T00:00:00`);
+      startDate.setDate(startDate.getDate() - 30);
+      const startYear = startDate.getFullYear();
+      const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
+      const startDay = String(startDate.getDate()).padStart(2, '0');
+      const startDateKey = `${startYear}-${startMonth}-${startDay}`;
 
-      const todayKey =
-        today.getFullYear() +
-        '-' +
-        String(today.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(today.getDate()).padStart(2, '0');
+      const [
+        { data: stepRows, error: stepsError },
+        { data: profile, error: profileError },
+        { data: healthCheckIn, error: healthError },
+      ] = await Promise.all([
+        supabase
+          .from('daily_steps')
+          .select('step_date, steps')
+          .eq('user_id', user.id)
+          .gte('step_date', startDateKey)
+          .lte('step_date', todayKey)
+          .order('step_date', { ascending: false }),
+        supabase
+          .from('profiles')
+          .select('daily_step_goal, points')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('daily_health_checkins')
+          .select('checkin_date, mood, water, activity, sleep')
+          .eq('user_id', user.id)
+          .eq('checkin_date', todayKey)
+          .maybeSingle(),
+      ]);
 
-      const missionText =
-        await AsyncStorage.getItem(
-          `chalega_daily_missions_${todayKey}`
-        );
-
-      if (missionText) {
-        const missions: Record<
-          string,
-          MissionData
-        > = JSON.parse(missionText);
-
-        setMissionCompleted(
-          Boolean(missions.walk?.completed)
-        );
+      if (stepsError) {
+        throw stepsError;
       }
-    } catch (error) {
-      console.log(
-        'Could not load Chalega home data:',
-        error
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (healthError) {
+        throw healthError;
+      }
+
+      const todaySteps =
+        (stepRows ?? []).find(row => row.step_date === todayKey)?.steps ?? 0;
+
+      const dailyGoal =
+        typeof profile?.daily_step_goal === 'number' &&
+        profile.daily_step_goal > 0
+          ? profile.daily_step_goal
+          : 4000;
+
+      setSteps(Math.max(0, Number(todaySteps) || 0));
+      setGoal(dailyGoal);
+      setStreak(
+        getStreakFromSteps(
+          (stepRows ?? []).map(row => ({
+            step_date: row.step_date,
+            steps: row.steps,
+          })),
+          todayKey,
+        ),
       );
+
+      if (healthCheckIn) {
+        setWater(Math.max(0, Number(healthCheckIn.water) || 0));
+        setMood(
+          typeof healthCheckIn.mood === 'string'
+            ? healthCheckIn.mood
+            : '',
+        );
+        setActivity(
+          typeof healthCheckIn.activity === 'string'
+            ? healthCheckIn.activity
+            : '',
+        );
+        setSleep(
+          typeof healthCheckIn.sleep === 'string'
+            ? healthCheckIn.sleep
+            : '',
+        );
+        setLastCheckInDate(healthCheckIn.checkin_date);
+      } else {
+        setWater(0);
+        setMood('');
+        setActivity('');
+        setSleep('');
+        setLastCheckInDate('');
+      }
+
+      setPoints(Math.max(0, Number(profile?.points) || 0));
+
+      const { data: missionRows, error: missionError } = await supabase
+        .from('daily_steps')
+        .select('steps')
+        .eq('user_id', user.id)
+        .eq('step_date', todayKey)
+        .maybeSingle();
+
+      if (missionError) {
+        throw missionError;
+      }
+
+      setMissionCompleted(
+        Math.max(0, Number(missionRows?.steps) || 0) >= dailyGoal,
+      );
+    } catch (error) {
+      console.log('Could not load Chalega home data:', error);
     }
   };
 
@@ -135,27 +220,96 @@ export default function HomeScreen() {
 
   const stepProgress = Math.min(
     steps / safeGoal,
-    1
+    1,
   );
 
   const remainingSteps = Math.max(
     safeGoal - steps,
-    0
+    0,
   );
 
-  const waterProgress = Math.min(
-    water / 8,
-    1
+  /*
+   * ----------------------------------------------------
+   * CANONICAL HEALTH SCORE
+   * ----------------------------------------------------
+   *
+   * This uses the same scoring model as the Health tab.
+   *
+   * Walking       30 points
+   * Hydration     20 points
+   * Mood          15 points
+   * Activity      15 points
+   * Sleep         10 points
+   * Streak         5 points
+   * Check-in       5 points
+   *
+   * Total = 100
+   */
+
+  const waterProgress =
+    Math.min(water / 8, 1);
+
+  const walkingScore = Math.round(
+    stepProgress * 30,
   );
+
+  const hydrationScore = Math.round(
+    waterProgress * 20,
+  );
+
+  const moodScore =
+    mood === 'great'
+      ? 15
+      : mood === 'good'
+      ? 13
+      : mood === 'okay'
+      ? 9
+      : mood === 'care'
+      ? 6
+      : 0;
+
+  const activityScore =
+    activity === 'walked'
+      ? 15
+      : activity === 'movement'
+      ? 11
+      : activity === 'not-yet'
+      ? 3
+      : 0;
+
+  const sleepScore =
+    sleep === 'good'
+      ? 10
+      : sleep === 'okay'
+      ? 7
+      : sleep === 'not-enough'
+      ? 4
+      : 0;
+
+  const streakScore = Math.min(
+    streak,
+    5,
+  );
+
+  const todayKey = getLocalDateKey();
+
+  const checkInCompletedToday =
+    lastCheckInDate === todayKey;
+
+  const checkInScore =
+    checkInCompletedToday
+      ? 5
+      : 0;
 
   const healthScore = Math.min(
     100,
-    Math.round(
-      stepProgress * 45 +
-        waterProgress * 25 +
-        Math.min(streak * 3, 15) +
-        (mood ? 15 : 8)
-    )
+    walkingScore +
+      hydrationScore +
+      moodScore +
+      activityScore +
+      sleepScore +
+      streakScore +
+      checkInScore,
   );
 
   const missionProgress = missionCompleted
@@ -174,6 +328,10 @@ export default function HomeScreen() {
 
   const openWalking = () => {
     router.push('/walking');
+  };
+
+  const openCompetitions = () => {
+    router.push('/competitions?from=home');
   };
 
   const openRewards = () => {
@@ -207,16 +365,18 @@ export default function HomeScreen() {
 
         <View style={styles.header}>
           <View style={styles.headerText}>
-            <Text style={styles.brand}>
-              C H A L E G A  I N D I A
-            </Text>
+            <Image
+              source={require("../../assets/images/icon.png")}
+              style={styles.homeLogo}
+              resizeMode="contain"
+            />
 
             <Text style={styles.greeting}>
               Good morning 👋
             </Text>
 
             <Text style={styles.subtitle}>
-              Chalo Health Banaye
+              MOVE PEOPLE • LIVE HEALTHIER
             </Text>
           </View>
 
@@ -238,40 +398,82 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* HEALTH SCORE */}
+        {/* TODAY'S MOVEMENT */}
 
         <View style={styles.scoreCard}>
           <View style={styles.scoreLeft}>
             <Text style={styles.cardEyebrow}>
-              YOUR HEALTH TODAY
+              TODAY'S MOVEMENT
             </Text>
 
             <Text style={styles.scoreNumber}>
-              {healthScore}
-              <Text style={styles.scoreOutOf}>
-                /100
-              </Text>
+              {steps.toLocaleString('en-IN')}
+            </Text>
+
+            <Text style={styles.scoreOutOf}>
+              / {safeGoal.toLocaleString('en-IN')} steps
             </Text>
 
             <Text style={styles.scoreMessage}>
-              {healthScore >= 80
-                ? 'Excellent! Keep going. 🔥'
-                : healthScore >= 60
-                ? 'Good progress. Keep moving!'
-                : 'Every healthy choice counts.'}
+              {missionCompleted
+                ? 'Amazing! You reached your daily walking goal.'
+                : `${remainingSteps.toLocaleString('en-IN')} steps to reach today's goal.`}
             </Text>
+
+            <View style={styles.heroHealthBadge}>
+              <View style={styles.heroHealthDot} />
+              <Text style={styles.heroHealthText}>
+                Health Score {healthScore}/100
+              </Text>
+            </View>
           </View>
 
           <View style={styles.scoreCircle}>
             <Text style={styles.scoreCircleText}>
-              {healthScore}
+              {Math.round(stepProgress * 100)}%
             </Text>
 
             <Text style={styles.scoreCircleLabel}>
-              HEALTH
+              GOAL
             </Text>
           </View>
         </View>
+
+        {/* COMPETITION HQ */}
+
+        <TouchableOpacity
+          style={styles.competitionCard}
+          onPress={openCompetitions}
+          activeOpacity={0.9}
+        >
+          <View style={styles.competitionIconBox}>
+            <Text style={styles.competitionEmoji}>🏆</Text>
+          </View>
+
+          <View style={styles.competitionText}>
+            <Text style={styles.competitionEyebrow}>
+              CHALEGA COMPETITION
+            </Text>
+
+            <Text style={styles.competitionTitle}>
+              Walk. Compete. Win.
+            </Text>
+
+            <Text style={styles.competitionSubtitle}>
+              Your verified steps can put you on today's podium.
+            </Text>
+
+            <View style={styles.competitionMetaRow}>
+              <Text style={styles.competitionMeta}>
+                1st • 2nd • 3rd
+              </Text>
+
+              <Text style={styles.competitionOpen}>
+                OPEN →
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* TODAY'S MISSION */}
 
@@ -401,14 +603,17 @@ export default function HomeScreen() {
         <View style={styles.quickGrid}>
 
           <TouchableOpacity
-            style={styles.quickCard}
+            style={[
+              styles.quickCard,
+              styles.quickWalking,
+            ]}
             onPress={openWalking}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                🚶
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/walking.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Walking
@@ -420,14 +625,17 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickCard}
+            style={[
+              styles.quickCard,
+              styles.quickMissions,
+            ]}
             onPress={openMissions}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                🎯
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/missions.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Missions
@@ -441,14 +649,17 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickCard}
+            style={[
+              styles.quickCard,
+              styles.quickHealth,
+            ]}
             onPress={openHealth}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                ❤️
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/health.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Health
@@ -460,14 +671,17 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickCard}
+            style={[
+              styles.quickCard,
+              styles.quickRewards,
+            ]}
             onPress={openRewards}
           >
-            <View style={styles.quickIcon}>
-              <Text style={styles.quickEmoji}>
-                🏆
-              </Text>
-            </View>
+            <Image
+              source={require("../../assets/quick-actions/rewards.png")}
+              style={styles.quickImage}
+              resizeMode="contain"
+            />
 
             <Text style={styles.quickTitle}>
               Rewards
@@ -576,7 +790,7 @@ export default function HomeScreen() {
 
           <View style={styles.communityIcon}>
             <Text style={styles.communityEmoji}>
-              🌆
+              🏙️
             </Text>
           </View>
 
@@ -657,7 +871,7 @@ export default function HomeScreen() {
           <View style={styles.shopPromoText}>
 
             <Text style={styles.shopPromoEyebrow}>
-              CHALEGA INDIA HEALTH SHOP
+              CHALEGA KOLKATA HEALTH SHOP
             </Text>
 
             <Text style={styles.shopPromoTitle}>
@@ -694,7 +908,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.ordersSubtitle}>
-              Track your Chalega India purchases
+              Track your Chalega purchases
             </Text>
           </View>
 
@@ -709,11 +923,11 @@ export default function HomeScreen() {
         <View style={styles.footer}>
 
           <Text style={styles.footerBrand}>
-            C H A L E G A  I N D I A
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>
-            Chalo Health Banaye
+            MOVE PEOPLE • LIVE HEALTHIER
           </Text>
 
           <Text style={styles.footerText}>
@@ -730,63 +944,74 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 60,
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 58,
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 12,
+    paddingTop: 0,
   },
 
   headerText: {
     flex: 1,
   },
 
+  homeLogo: {
+    width: 72,
+    height: 72,
+    marginBottom: 4,
+  },
+
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 2.5,
   },
 
   greeting: {
-    color: '#111111',
-    fontSize: 28,
+    color: '#102A43',
+    fontSize: 23,
     fontWeight: '900',
-    marginTop: 6,
+    marginTop: 0,
+    letterSpacing: -0.6,
   },
 
   subtitle: {
-    color: '#777777',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 3,
+    color: '#6B7280',
+    fontSize: 10.5,
+    fontWeight: '700',
+    marginTop: 1,
+    letterSpacing: 0.15,
   },
 
   pointsButton: {
-    width: 70,
+    width: 76,
     minHeight: 76,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E9E1CF',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 11,
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 4,
     },
-    elevation: 2,
+    elevation: 3,
   },
 
   pointsIcon: {
@@ -794,29 +1019,30 @@ const styles = StyleSheet.create({
   },
 
   pointsNumber: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 16,
     fontWeight: '900',
     marginTop: 2,
   },
 
   pointsLabel: {
-    color: '#888888',
+    color: BRAND.muted,
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1,
   },
 
   scoreCard: {
-    backgroundColor: '#1976F3',
-    borderRadius: 25,
-    padding: 23,
+    backgroundColor: '#102A43',
+    borderRadius: 28,
+    padding: 18,
+    minHeight: 178,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#1976F3',
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
     shadowOffset: {
       width: 0,
       height: 7,
@@ -829,82 +1055,198 @@ const styles = StyleSheet.create({
   },
 
   cardEyebrow: {
-    color: '#DCEAFF',
+    color: '#D7F7F1',
     fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 1.7,
   },
 
   scoreNumber: {
     color: '#FFFFFF',
-    fontSize: 47,
+    fontSize: 43,
     fontWeight: '900',
-    marginTop: 2,
+    marginTop: 3,
+    letterSpacing: -1,
   },
 
   scoreOutOf: {
     fontSize: 19,
     fontWeight: '700',
-    color: '#DCEAFF',
+    color: '#D7F7F1',
   },
 
   scoreMessage: {
-    color: '#E8F1FF',
+    color: '#E6FAF6',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '600',
-    marginTop: 3,
-    maxWidth: 190,
+    marginTop: 7,
+    maxWidth: 205,
+  },
+
+  heroHealthBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 11,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+
+  heroHealthDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: BRAND.green,
+    marginRight: 6,
+  },
+
+  heroHealthText: {
+    color: '#DCEAFF',
+    fontSize: 9,
+    fontWeight: '800',
   },
 
   scoreCircle: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: '#FFFFFF',
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    backgroundColor: '#FFFDF8',
+    borderWidth: 8,
+    borderColor: BRAND.orange,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.14,
+    shadowRadius: 13,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 5,
   },
 
   scoreCircleText: {
-    color: '#1976F3',
-    fontSize: 25,
+    color: '#102A43',
+    fontSize: 28,
     fontWeight: '900',
   },
 
   scoreCircleLabel: {
-    color: '#777777',
+    color: '#7A8490',
     fontSize: 8,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 1.4,
+    marginTop: 2,
   },
 
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: 27,
-    marginBottom: 12,
+    marginTop: 18,
+    marginBottom: 9,
   },
 
   sectionTitle: {
-    color: '#111111',
-    fontSize: 18,
+    color: '#102A43',
+    fontSize: 16,
     fontWeight: '900',
+    letterSpacing: 0.1,
   },
 
   viewAll: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     marginBottom: 2,
   },
 
+  competitionCard: {
+    backgroundColor: BRAND.midnight,
+    borderRadius: 23,
+    padding: 18,
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9E1CF',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
+  },
+
+  competitionIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 19,
+    backgroundColor: '#FFF0DE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  competitionEmoji: {
+    fontSize: 29,
+  },
+
+  competitionText: {
+    flex: 1,
+    paddingLeft: 14,
+  },
+
+  competitionEyebrow: {
+    color: '#C87819',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+
+  competitionTitle: {
+    color: '#102A43',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  competitionSubtitle: {
+    color: '#D7F7F1',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 3,
+  },
+
+  competitionMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 9,
+  },
+
+  competitionMeta: {
+    color: '#102A43',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+
+  competitionOpen: {
+    color: BRAND.green,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+
   missionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 20,
-    shadowColor: '#000000',
+    shadowColor: BRAND.shadow,
     shadowOpacity: 0.05,
     shadowRadius: 9,
     shadowOffset: {
@@ -915,7 +1257,7 @@ const styles = StyleSheet.create({
   },
 
   missionCardComplete: {
-    backgroundColor: '#F0FBF4',
+    backgroundColor: BRAND.greenLight,
   },
 
   missionTop: {
@@ -927,13 +1269,13 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 17,
-    backgroundColor: '#EAF2FF',
+    backgroundColor: BRAND.orangeLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   missionIconComplete: {
-    backgroundColor: '#DFF5E6',
+    backgroundColor: BRAND.greenLight,
   },
 
   missionEmoji: {
@@ -946,27 +1288,27 @@ const styles = StyleSheet.create({
   },
 
   missionTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 16,
     fontWeight: '900',
   },
 
   missionSubtitle: {
-    color: '#777777',
+    color: BRAND.muted,
     fontSize: 11,
     marginTop: 4,
     lineHeight: 16,
   },
 
   missionArrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 30,
     fontWeight: '300',
   },
 
   progressBackground: {
     height: 10,
-    backgroundColor: '#E7EDF7',
+    backgroundColor: '#E7EBEF',
     borderRadius: 5,
     marginTop: 20,
     overflow: 'hidden',
@@ -974,12 +1316,12 @@ const styles = StyleSheet.create({
 
   progressFill: {
     height: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.blue,
     borderRadius: 5,
   },
 
   progressComplete: {
-    backgroundColor: '#2BA84A',
+    backgroundColor: BRAND.green,
   },
 
   progressRow: {
@@ -989,7 +1331,7 @@ const styles = StyleSheet.create({
   },
 
   progressText: {
-    color: '#777777',
+    color: BRAND.muted,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1002,13 +1344,13 @@ const styles = StyleSheet.create({
   },
 
   remainingText: {
-    color: '#555555',
+    color: BRAND.muted,
     fontSize: 10,
     fontWeight: '700',
   },
 
   openText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 10,
     fontWeight: '900',
   },
@@ -1026,7 +1368,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 5,
-    backgroundColor: '#28A745',
+    backgroundColor: BRAND.green,
   },
 
   connectedText: {
@@ -1035,20 +1377,20 @@ const styles = StyleSheet.create({
   },
 
   connectedTitle: {
-    color: '#217A3C',
+    color: BRAND.green,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.7,
   },
 
   connectedSubtitle: {
-    color: '#5C7A65',
+    color: BRAND.muted,
     fontSize: 9,
     marginTop: 2,
   },
 
   connectedArrow: {
-    color: '#217A3C',
+    color: BRAND.green,
     fontSize: 25,
   },
 
@@ -1059,53 +1401,86 @@ const styles = StyleSheet.create({
   },
 
   quickCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
+    width: '48.2%',
+    backgroundColor: '#FFFDF8',
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-    minHeight: 125,
-    shadowColor: '#000000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
+    padding: 14,
+    marginBottom: 10,
+    minHeight: 126,
+    borderWidth: 1,
+    borderColor: '#E6E0D4',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 9,
     shadowOffset: {
       width: 0,
       height: 3,
     },
-    elevation: 1,
+    elevation: 2,
   },
 
   quickIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 15,
-    backgroundColor: '#F0F4FA',
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.24)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.34)',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
 
-  quickEmoji: {
-    fontSize: 22,
+  quickWalking: {
+    backgroundColor: '#F3F7FF',
+    borderColor: '#D7E5FF',
+  },
+
+  quickMissions: {
+    backgroundColor: '#FFF5EA',
+    borderColor: '#F7DEC2',
+  },
+
+  quickHealth: {
+    backgroundColor: '#EEF9F1',
+    borderColor: '#D6EEDC',
+  },
+
+  quickRewards: {
+    backgroundColor: '#FFF8E6',
+    borderColor: '#F2E2B5',
+  },
+
+  quickImage: {
+    width: 64,
+    height: 64,
+    marginBottom: -2,
   },
 
   quickTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 14,
     fontWeight: '900',
-    marginTop: 10,
+    marginTop: 7,
   },
 
   quickText: {
-    color: '#888888',
+    color: BRAND.muted,
     fontSize: 10,
     marginTop: 3,
   },
 
   hydrationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 20,
-    marginTop: 8,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 24,
+    padding: 19,
+    marginTop: 7,
+    borderWidth: 1,
+    borderColor: '#E9E5DC',
   },
 
   hydrationHeader: {
@@ -1115,21 +1490,21 @@ const styles = StyleSheet.create({
   },
 
   hydrationEyebrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.5,
   },
 
   hydrationTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 17,
     fontWeight: '900',
     marginTop: 4,
   },
 
   hydrationCount: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 23,
     fontWeight: '900',
   },
@@ -1144,13 +1519,13 @@ const styles = StyleSheet.create({
     width: 30,
     height: 38,
     borderRadius: 9,
-    backgroundColor: '#F1F4F8',
+    backgroundColor: '#EEF6F1',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   waterGlassFilled: {
-    backgroundColor: '#E4F0FF',
+    backgroundColor: '#DDF3E5',
   },
 
   waterGlassText: {
@@ -1164,19 +1539,21 @@ const styles = StyleSheet.create({
   },
 
   streakCard: {
-    backgroundColor: '#FFF8E8',
-    borderRadius: 22,
+    backgroundColor: '#FFF1D5',
+    borderRadius: 24,
     padding: 18,
-    marginTop: 20,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F2D9A7',
   },
 
   streakIconBox: {
     width: 54,
     height: 54,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1198,14 +1575,14 @@ const styles = StyleSheet.create({
   },
 
   streakNumber: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 21,
     fontWeight: '900',
     marginTop: 2,
   },
 
   streakMessage: {
-    color: '#777777',
+    color: BRAND.muted,
     fontSize: 11,
     marginTop: 2,
   },
@@ -1216,10 +1593,18 @@ const styles = StyleSheet.create({
   },
 
   communityCard: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 23,
     padding: 20,
     flexDirection: 'row',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
   },
 
   communityIcon: {
@@ -1264,7 +1649,7 @@ const styles = StyleSheet.create({
   communityProgressFill: {
     width: '76%',
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 4,
   },
 
@@ -1288,10 +1673,10 @@ const styles = StyleSheet.create({
   },
 
   adInner: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E3E7ED',
+    borderColor: '#E4E8ED',
     borderStyle: 'dashed',
     padding: 15,
     flexDirection: 'row',
@@ -1302,7 +1687,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 13,
-    backgroundColor: '#F0F4FA',
+    backgroundColor: BRAND.cream,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1324,14 +1709,14 @@ const styles = StyleSheet.create({
   },
 
   adText: {
-    color: '#888888',
+    color: BRAND.muted,
     fontSize: 9,
     lineHeight: 13,
     marginTop: 3,
   },
 
   adButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.midnight,
     borderRadius: 9,
     paddingHorizontal: 9,
     paddingVertical: 8,
@@ -1344,12 +1729,20 @@ const styles = StyleSheet.create({
   },
 
   shopPromo: {
-    backgroundColor: '#1976F3',
-    borderRadius: 23,
+    backgroundColor: '#2D73E8',
+    borderRadius: 25,
     padding: 21,
-    marginTop: 20,
+    marginTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: BRAND.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    elevation: 3,
   },
 
   shopPromoText: {
@@ -1357,7 +1750,7 @@ const styles = StyleSheet.create({
   },
 
   shopPromoEyebrow: {
-    color: '#CFE2FF',
+    color: '#BFEFE5',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.2,
@@ -1384,12 +1777,14 @@ const styles = StyleSheet.create({
   },
 
   ordersButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: '#FFFDF8',
+    borderRadius: 23,
     padding: 17,
-    marginTop: 13,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9E5DC',
   },
 
   ordersIcon: {
@@ -1402,19 +1797,19 @@ const styles = StyleSheet.create({
   },
 
   ordersTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
 
   ordersSubtitle: {
-    color: '#888888',
+    color: BRAND.muted,
     fontSize: 10,
     marginTop: 3,
   },
 
   ordersArrow: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 28,
   },
 
@@ -1425,14 +1820,14 @@ const styles = StyleSheet.create({
   },
 
   footerBrand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   footerTagline: {
-    color: '#555555',
+    color: BRAND.muted,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 5,

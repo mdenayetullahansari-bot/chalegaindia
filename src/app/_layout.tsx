@@ -10,6 +10,7 @@ import {
 } from 'expo-router';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   ActivityIndicator,
@@ -24,58 +25,60 @@ import {
   supabase,
 } from '@/lib/supabase';
 
+import {
+  hydrateGuestMode,
+  subscribeToGuestMode,
+} from '@/lib/guest-session';
+
+import { BRAND } from '@/lib/brand';
+
 export default function RootLayout() {
-  const pathname =
-    usePathname();
+  const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
   const [
     session,
     setSession,
-  ] =
-    useState<Session | null>(
-      null
-    );
+  ] = useState<Session | null>(null);
 
   const [
     loading,
     setLoading,
-  ] =
-    useState(true);
+  ] = useState(true);
 
-  /*
-   * ----------------------------------------------------
-   * LOAD SUPABASE SESSION
-   * ----------------------------------------------------
-   */
+  const [
+    guestMode,
+    setGuestMode,
+  ] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadSession =
-      async () => {
-        const {
+    const loadSession = async () => {
+      const [
+        {
           data,
           error,
-        } =
-          await supabase.auth.getSession();
+        },
+        isGuest,
+      ] = await Promise.all([
+        supabase.auth.getSession(),
+        hydrateGuestMode(),
+      ]);
 
-        if (error) {
-          console.log(
-            'Supabase session error:',
-            error.message
-          );
-        }
+      if (error) {
+        console.log(
+          'Supabase session error:',
+          error.message
+        );
+      }
 
-        if (mounted) {
-          setSession(
-            data.session
-          );
-
-          setLoading(
-            false
-          );
-        }
-      };
+      if (mounted) {
+        setSession(data.session);
+        setGuestMode(isGuest);
+        setLoading(false);
+      }
+    };
 
     loadSession();
 
@@ -90,25 +93,23 @@ export default function RootLayout() {
           newSession
         ) => {
           if (mounted) {
-            setSession(
-              newSession
-            );
+            setSession(newSession);
           }
         }
+      );
+
+    const unsubscribeGuest =
+      subscribeToGuestMode(
+        setGuestMode
       );
 
     return () => {
       mounted = false;
 
       subscription.unsubscribe();
+      unsubscribeGuest();
     };
   }, []);
-
-  /*
-   * ----------------------------------------------------
-   * LOADING
-   * ----------------------------------------------------
-   */
 
   if (loading) {
     return (
@@ -119,23 +120,15 @@ export default function RootLayout() {
       >
         <ActivityIndicator
           size="large"
-          color="#1976F3"
+          color={BRAND.teal}
         />
       </View>
     );
   }
 
-  /*
-   * ----------------------------------------------------
-   * NOT LOGGED IN
-   * ----------------------------------------------------
-   *
-   * Send users to authentication unless
-   * they are already on /auth.
-   */
-
   if (
     !session &&
+    !guestMode &&
     pathname !== '/auth'
   ) {
     return (
@@ -145,14 +138,9 @@ export default function RootLayout() {
     );
   }
 
-  /*
-   * ----------------------------------------------------
-   * AUTH SCREEN
-   * ----------------------------------------------------
-   */
-
   if (
     !session &&
+    !guestMode &&
     pathname === '/auth'
   ) {
     return (
@@ -175,22 +163,12 @@ export default function RootLayout() {
     );
   }
 
-  /*
-   * ----------------------------------------------------
-   * LOGGED-IN USER
-   * ----------------------------------------------------
-   *
-   * Main Chalega India navigation:
-   *
-   * Home
-   * Walk
-   * Health
-   * Shop
-   * More
-   *
-   * All other screens are hidden from
-   * the bottom navigation.
-   */
+  const isMainTab =
+    pathname === '/' ||
+    pathname === '/walking' ||
+    pathname === '/explore' ||
+    pathname === '/shop' ||
+    pathname === '/more';
 
   return (
     <Tabs
@@ -198,16 +176,34 @@ export default function RootLayout() {
         headerShown: false,
 
         tabBarActiveTintColor:
-          '#1976F3',
+          BRAND.teal,
 
         tabBarInactiveTintColor:
-          '#888888',
+          BRAND.muted,
 
-        tabBarStyle: {
-          height: 78,
-          paddingTop: 8,
-          paddingBottom: 12,
-        },
+        tabBarStyle: isMainTab
+          ? {
+              height:
+                56 +
+                insets.bottom,
+
+              paddingTop: 8,
+
+              paddingBottom:
+                Math.max(
+                  8,
+                  insets.bottom
+                ),
+
+              backgroundColor:
+                BRAND.white,
+
+              borderTopColor:
+                BRAND.line,
+            }
+          : {
+              display: 'none',
+            },
 
         tabBarLabelStyle: {
           fontSize: 12,
@@ -218,11 +214,6 @@ export default function RootLayout() {
           true,
       }}
     >
-
-      {/* ------------------------------------------------
-       * HOME
-       * ------------------------------------------------ */}
-
       <Tabs.Screen
         name="index"
         options={{
@@ -240,10 +231,6 @@ export default function RootLayout() {
           ),
         }}
       />
-
-      {/* ------------------------------------------------
-       * WALK
-       * ------------------------------------------------ */}
 
       <Tabs.Screen
         name="walking"
@@ -263,10 +250,6 @@ export default function RootLayout() {
         }}
       />
 
-      {/* ------------------------------------------------
-       * HEALTH
-       * ------------------------------------------------ */}
-
       <Tabs.Screen
         name="explore"
         options={{
@@ -284,10 +267,6 @@ export default function RootLayout() {
           ),
         }}
       />
-
-      {/* ------------------------------------------------
-       * SHOP
-       * ------------------------------------------------ */}
 
       <Tabs.Screen
         name="shop"
@@ -307,10 +286,6 @@ export default function RootLayout() {
         }}
       />
 
-      {/* ------------------------------------------------
-       * MORE
-       * ------------------------------------------------ */}
-
       <Tabs.Screen
         name="more"
         options={{
@@ -329,18 +304,26 @@ export default function RootLayout() {
         }}
       />
 
-      {/* =================================================
-       * HIDDEN SCREENS
-       * =================================================
-       *
-       * These screens can still be opened using
-       * router.push(), router.back(), etc.
-       *
-       * They simply do NOT appear in the bottom
-       * navigation bar.
-       * ================================================= */}
+      <Tabs.Screen
+        name="competitions"
+        options={{
+          href: null,
+        }}
+      />
 
-      {/* Rewards */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile-settings"
+        options={{
+          href: null,
+        }}
+      />
 
       <Tabs.Screen
         name="rewards"
@@ -349,16 +332,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* Points Activity */}
-
       <Tabs.Screen
         name="points-activity"
         options={{
           href: null,
         }}
       />
-
-      {/* Missions */}
 
       <Tabs.Screen
         name="missions"
@@ -367,16 +346,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* Product */}
-
       <Tabs.Screen
         name="product"
         options={{
           href: null,
         }}
       />
-
-      {/* Checkout */}
 
       <Tabs.Screen
         name="checkout"
@@ -385,16 +360,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* Order Confirmed */}
-
       <Tabs.Screen
         name="order-confirmed"
         options={{
           href: null,
         }}
       />
-
-      {/* Track Order */}
 
       <Tabs.Screen
         name="track-order"
@@ -403,16 +374,12 @@ export default function RootLayout() {
         }}
       />
 
-      {/* Orders */}
-
       <Tabs.Screen
         name="orders"
         options={{
           href: null,
         }}
       />
-
-      {/* Customer Orders */}
 
       <Tabs.Screen
         name="customer-orders"
@@ -421,8 +388,6 @@ export default function RootLayout() {
         }}
       />
 
-      {/* Health Topic */}
-
       <Tabs.Screen
         name="health-topic"
         options={{
@@ -430,7 +395,19 @@ export default function RootLayout() {
         }}
       />
 
-      {/* Auth */}
+      <Tabs.Screen
+        name="daily-health-checkin"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="entally"
+        options={{
+          href: null,
+        }}
+      />
 
       <Tabs.Screen
         name="auth"
@@ -439,27 +416,21 @@ export default function RootLayout() {
         }}
       />
 
+      <Tabs.Screen
+        name="kmc-ward"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
 
-/*
- * ======================================================
- * STYLES
- * ======================================================
- */
-
 const styles = {
   loadingContainer: {
     flex: 1,
-
-    justifyContent:
-      'center' as const,
-
-    alignItems:
-      'center' as const,
-
-    backgroundColor:
-      '#F5F7FB',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: BRAND.midnight,
   },
 };

@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const categories = [
@@ -18,7 +19,7 @@ const categories = [
   },
   {
     icon: '👕',
-    title: 'Chalega India',
+    title: 'Chalega',
     subtitle: 'Official merchandise',
   },
   {
@@ -36,12 +37,12 @@ const categories = [
 const products = [
   {
     icon: '💧',
-    name: 'Chalega India Water Bottle',
+    name: 'Chalega Water Bottle',
     price: '₹399',
   },
   {
     icon: '👕',
-    name: 'Chalega India Walking T-Shirt',
+    name: 'Chalega Walking T-Shirt',
     price: '₹699',
   },
   {
@@ -58,7 +59,7 @@ export default function ShopScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.smallTitle}>CHALEGA INDIA</Text>
+      <Text style={styles.smallTitle}>CHALEGA KOLKATA</Text>
       <Text style={styles.title}>Health Shop</Text>
 
       <Text style={styles.subtitle}>
@@ -74,7 +75,7 @@ export default function ShopScreen() {
           </Text>
 
           <Text style={styles.bannerText}>
-            Discover healthy food, walking essentials and Chalega India
+            Discover healthy food, walking essentials and Chalega
             merchandise.
           </Text>
         </View>
@@ -137,7 +138,7 @@ export default function ShopScreen() {
 
       <View style={styles.footerCard}>
         <Text style={styles.footerTitle}>
-          Chalo Health Banaye 🇮🇳
+          MOVE PEOPLE • HEALTHY COMMUNITIES
         </Text>
 
         <Text style={styles.footerText}>
@@ -151,7 +152,7 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FC',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -163,14 +164,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 3,
-    color: '#1976F3',
+    color: BRAND.teal,
     marginTop: 10,
   },
 
   title: {
     fontSize: 38,
     fontWeight: '900',
-    color: '#111111',
+    color: BRAND.ink,
     marginTop: 5,
   },
 
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   },
 
   banner: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 25,
     padding: 22,
     flexDirection: 'row',
@@ -201,13 +202,13 @@ const styles = StyleSheet.create({
   },
 
   bannerTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 21,
     fontWeight: '900',
   },
 
   bannerText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 6,
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 25,
     fontWeight: '900',
-    color: '#111111',
+    color: BRAND.ink,
     marginBottom: 14,
   },
 
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
 
   categoryCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     padding: 18,
     marginBottom: 12,
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#111111',
+    color: BRAND.ink,
   },
 
   categorySubtitle: {
@@ -261,13 +262,13 @@ const styles = StyleSheet.create({
   },
 
   viewAll: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 15,
     fontWeight: '800',
   },
 
   productCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 15,
     marginBottom: 12,
@@ -278,7 +279,7 @@ const styles = StyleSheet.create({
     width: 105,
     height: 105,
     borderRadius: 18,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -296,19 +297,19 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#111111',
+    color: BRAND.ink,
   },
 
   productPrice: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#1976F3',
+    color: BRAND.teal,
     marginTop: 6,
   },
 
   addButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -316,13 +317,13 @@ const styles = StyleSheet.create({
   },
 
   addButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 11,
     fontWeight: '900',
   },
 
   footerCard: {
-    backgroundColor: '#111827',
+    backgroundColor: BRAND.midnight,
     borderRadius: 24,
     padding: 25,
     marginTop: 20,
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
   },
 
   footerTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 21,
     fontWeight: '900',
   },

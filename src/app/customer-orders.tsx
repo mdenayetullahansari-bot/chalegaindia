@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,8 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 type Order = {
   id?: string;
@@ -87,27 +88,59 @@ export default function CustomerOrdersScreen() {
 
   const loadOrders = async () => {
     try {
-      const stored =
-        await AsyncStorage.getItem('chalega_orders');
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      if (!stored) {
+      if (userError) {
+        throw userError;
+      }
+
+      if (!user) {
         setOrders([]);
         return;
       }
 
-      const parsed = JSON.parse(stored);
+      const { data, error } = await supabase
+        .from('orders')
+        .select(
+          'id, order_id, customer_name, products, total, delivery, status, created_at'
+        )
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      if (!Array.isArray(parsed)) {
-        setOrders([]);
-        return;
+      if (error) {
+        throw error;
       }
 
-      const sorted = [...parsed].reverse();
+      const mappedOrders: Order[] = (data || []).map((row: any) => {
+        const products = Array.isArray(row.products)
+          ? row.products
+          : [];
 
-      setOrders(sorted);
+        const items = products.reduce(
+          (sum: number, product: any) =>
+            sum + Number(product?.quantity || 0),
+          0
+        );
+
+        return {
+          id: row.id,
+          orderId: row.order_id || row.id,
+          products,
+          items,
+          total: Number(row.total || 0),
+          delivery: row.delivery || 'Standard',
+          status: row.status || 'Order Received',
+          createdAt: row.created_at,
+        };
+      });
+
+      setOrders(mappedOrders);
     } catch (error) {
       console.log(
-        'Could not load customer orders:',
+        'Could not load customer orders from Supabase:',
         error
       );
 
@@ -160,7 +193,7 @@ export default function CustomerOrdersScreen() {
         <View style={styles.loading}>
           <ActivityIndicator
             size="large"
-            color="#1976F3"
+            color="#00D1A7"
           />
 
           <Text style={styles.loadingText}>
@@ -198,7 +231,7 @@ export default function CustomerOrdersScreen() {
 
           <View>
             <Text style={styles.brand}>
-              CHALEGA INDIA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -244,7 +277,7 @@ export default function CustomerOrdersScreen() {
               </Text>
 
               <Text style={styles.introText}>
-                Track your Chalega India orders
+                Track your Chalega orders
                 anytime.
               </Text>
             </View>
@@ -411,9 +444,7 @@ export default function CustomerOrdersScreen() {
 
                             <Text style={styles.productPrice}>
                               ₹
-                              {Number(
-                                product.total || 0
-                              ).toLocaleString('en-IN')}
+                              {(Number(product.price || 0) * Number(product.quantity || 0)).toLocaleString('en-IN')}
                             </Text>
 
                           </View>
@@ -449,11 +480,11 @@ export default function CustomerOrdersScreen() {
         {/* FOOTER */}
 
         <Text style={styles.footer}>
-          CHALEGA INDIA 🇮🇳
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
-          Chalo Health Banaye
+          MOVE PEOPLE • HEALTHY COMMUNITIES
         </Text>
 
       </ScrollView>
@@ -464,7 +495,7 @@ export default function CustomerOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -494,41 +525,41 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
   },
 
   backText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 42,
     lineHeight: 46,
   },
 
   brand: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 3,
   },
 
   title: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 34,
     fontWeight: '900',
     marginTop: 2,
   },
 
   introCard: {
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 24,
     padding: 22,
     marginBottom: 17,
   },
 
   introTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 22,
     fontWeight: '900',
   },
@@ -540,7 +571,7 @@ const styles = StyleSheet.create({
   },
 
   emptyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 25,
     padding: 30,
     alignItems: 'center',
@@ -552,7 +583,7 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 26,
     fontWeight: '900',
     marginTop: 15,
@@ -567,7 +598,7 @@ const styles = StyleSheet.create({
   },
 
   shopButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingHorizontal: 28,
     paddingVertical: 16,
@@ -575,13 +606,13 @@ const styles = StyleSheet.create({
   },
 
   shopButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 13,
     fontWeight: '900',
   },
 
   orderCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 23,
     padding: 18,
     marginBottom: 16,
@@ -606,14 +637,14 @@ const styles = StyleSheet.create({
   },
 
   orderNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 20,
     fontWeight: '900',
     marginTop: 4,
   },
 
   statusBadge: {
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 7,
@@ -628,7 +659,7 @@ const styles = StyleSheet.create({
   },
 
   statusBadgeLabel: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 9,
     fontWeight: '900',
     flexShrink: 1,
@@ -651,7 +682,7 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
   },
 
   progressDot: {
@@ -664,7 +695,7 @@ const styles = StyleSheet.create({
   progressLineActive: {
     height: 3,
     flex: 1,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
   },
 
   progressLine: {
@@ -693,14 +724,14 @@ const styles = StyleSheet.create({
   },
 
   infoValue: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 12,
     fontWeight: '800',
     marginTop: 4,
   },
 
   totalValue: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 13,
     fontWeight: '900',
     marginTop: 3,
@@ -739,7 +770,7 @@ const styles = StyleSheet.create({
   },
 
   productPrice: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 12,
     fontWeight: '900',
   },
@@ -751,7 +782,7 @@ const styles = StyleSheet.create({
   },
 
   trackButton: {
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 15,
     paddingVertical: 15,
     alignItems: 'center',
@@ -759,13 +790,13 @@ const styles = StyleSheet.create({
   },
 
   trackButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 12,
     fontWeight: '900',
   },
 
   footer: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 3,

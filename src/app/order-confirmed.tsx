@@ -1,3 +1,4 @@
+import { BRAND } from '@/lib/brand';
 import React from 'react';
 import {
   SafeAreaView,
@@ -69,7 +70,7 @@ export default function OrderConfirmedScreen() {
         </Text>
 
         <Text style={styles.subtitle}>
-          Thank you for choosing Chalega India.
+          Thank you for choosing Chalega.
         </Text>
 
         {customerName ? (
@@ -251,11 +252,11 @@ export default function OrderConfirmedScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footer}>
-          CHALEGA INDIA 🇮🇳
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
-          Chalo Health Banaye
+          MOVE PEOPLE • HEALTHY COMMUNITIES
         </Text>
 
       </ScrollView>
@@ -266,7 +267,7 @@ export default function OrderConfirmedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: BRAND.cream,
   },
 
   content: {
@@ -280,13 +281,13 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   successIcon: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 58,
     fontWeight: '900',
   },
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '900',
-    color: '#111111',
+    color: BRAND.ink,
     textAlign: 'center',
     marginTop: 5,
   },
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
   },
 
   customerGreeting: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 15,
     fontWeight: '800',
     textAlign: 'center',
@@ -322,7 +323,7 @@ const styles = StyleSheet.create({
 
   orderCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     padding: 22,
     marginTop: 25,
@@ -337,7 +338,7 @@ const styles = StyleSheet.create({
   },
 
   orderNumber: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 27,
     fontWeight: '900',
     marginTop: 7,
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
   },
 
   totalAmount: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 25,
     fontWeight: '900',
     marginTop: 4,
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
 
   trackButton: {
     width: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 17,
     paddingVertical: 18,
     alignItems: 'center',
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
   },
 
   trackButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     width: '100%',
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 23,
     fontWeight: '900',
     marginTop: 28,
@@ -406,7 +407,7 @@ const styles = StyleSheet.create({
 
   timeline: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: BRAND.white,
     borderRadius: 22,
     padding: 20,
   },
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: BRAND.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,7 +438,7 @@ const styles = StyleSheet.create({
   timelineIconText: {
     fontSize: 21,
     fontWeight: '900',
-    color: '#1976F3',
+    color: BRAND.teal,
   },
 
   timelineText: {
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
   },
 
   timelineTitle: {
-    color: '#111111',
+    color: BRAND.ink,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
 
   healthCard: {
     width: '100%',
-    backgroundColor: '#1976F3',
+    backgroundColor: BRAND.teal,
     borderRadius: 22,
     padding: 22,
     marginTop: 20,
@@ -480,7 +481,7 @@ const styles = StyleSheet.create({
   },
 
   healthTitle: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 19,
     fontWeight: '900',
     textAlign: 'center',
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
 
   secondaryButton: {
     width: '100%',
-    backgroundColor: '#111111',
+    backgroundColor: BRAND.ink,
     borderRadius: 17,
     paddingVertical: 17,
     alignItems: 'center',
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
   },
 
   secondaryButtonText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 14,
     fontWeight: '900',
   },
@@ -513,7 +514,7 @@ const styles = StyleSheet.create({
   homeButton: {
     width: '100%',
     borderWidth: 2,
-    borderColor: '#1976F3',
+    borderColor: BRAND.teal,
     borderRadius: 17,
     paddingVertical: 15,
     alignItems: 'center',
@@ -521,13 +522,13 @@ const styles = StyleSheet.create({
   },
 
   homeButtonText: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 14,
     fontWeight: '900',
   },
 
   footer: {
-    color: '#1976F3',
+    color: BRAND.teal,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 3,
