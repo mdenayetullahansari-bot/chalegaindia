@@ -540,7 +540,7 @@ export default function ProfileSettingsScreen() {
           </TouchableOpacity>
 
           <Text style={styles.bottomNote}>
-            Your Points, walking history and
+            Your Chalega Coins, walking history and
             Chalega activity are not changed
             when you edit your profile.
           </Text>
