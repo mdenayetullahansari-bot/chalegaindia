@@ -37,41 +37,8 @@ type Reward = {
   cost: number;
 };
 
-const REWARDS: Reward[] = [
-  {
-    id: 'badge-500',
-    emoji: '🥉',
-    category: 'MILESTONE',
-    title: 'First 500',
-    description: 'Your first major Chalega milestone.',
-    cost: 500,
-  },
-  {
-    id: 'badge-1000',
-    emoji: '🥈',
-    category: 'MILESTONE',
-    title: 'Healthy Walker',
-    description: 'Reach 1,000 Chalega Points.',
-    cost: 1000,
-  },
-  {
-    id: 'badge-2500',
-    emoji: '🥇',
-    category: 'MILESTONE',
-    title: 'Chalega Champion',
-    description: 'Reach 2,500 Chalega Points.',
-    cost: 2500,
-  },
-  {
-    id: 'shop-50',
-    emoji: '🎁',
-    category: 'SHOP REWARD',
-    title: '₹50 Health Reward',
-    description:
-      'A future reward redeemable with participating Chalega partners.',
-    cost: 5000,
-  },
-];
+const DEFAULT_REWARDS: Reward[] = [];
+
 
 export default function RewardsScreen() {
   const router = useRouter();
@@ -79,6 +46,7 @@ export default function RewardsScreen() {
   const [points, setPoints] = useState(0);
   const [history, setHistory] = useState<PointsTransaction[]>([]);
   const [claimed, setClaimed] = useState<string[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>(DEFAULT_REWARDS);
   const [loading, setLoading] = useState(true);
 
   const loadWallet = useCallback(async () => {
@@ -89,6 +57,7 @@ export default function RewardsScreen() {
         { data: profileData, error: profileError },
         { data: transactionData, error: transactionError },
         { data: redemptionData, error: redemptionError },
+        { data: rewardCatalogData, error: rewardCatalogError },
       ] = await Promise.all([
         supabase
           .from('profiles')
@@ -96,16 +65,42 @@ export default function RewardsScreen() {
           .single(),
         supabase.rpc('get_my_points_transactions'),
         supabase.rpc('get_my_reward_redemptions'),
+        supabase
+          .from('chalega_reward_catalog')
+          .select('id, emoji, category, title, description, cost')
+          .eq('active', true)
+          .order('sort_order', { ascending: true }),
       ]);
 
       if (profileError) throw profileError;
       if (transactionError) throw transactionError;
       if (redemptionError) throw redemptionError;
+      if (rewardCatalogError) throw rewardCatalogError;
 
       setPoints(
         Math.max(
           0,
           Math.round(Number(profileData?.points) || 0)
+        )
+      );
+      
+      setRewards(
+        (rewardCatalogData ?? []).map(
+          (reward: {
+            id: string;
+            emoji: string;
+            category: string;
+            title: string;
+            description: string;
+            cost: number;
+          }) => ({
+            id: reward.id,
+            emoji: reward.emoji,
+            category: reward.category,
+            title: reward.title,
+            description: reward.description,
+            cost: Number(reward.cost) || 0,
+          })
         )
       );
 
@@ -227,7 +222,7 @@ export default function RewardsScreen() {
         'Keep Walking 🚶',
         `You need ${(
           reward.cost - points
-        ).toLocaleString('en-IN')} more Chalega Points.`
+        ).toLocaleString('en-IN')} more Chalega Coins.`
       );
       return;
     }
@@ -296,7 +291,7 @@ export default function RewardsScreen() {
     const message =
       `Use ${reward.cost.toLocaleString(
         'en-IN'
-      )} Chalega Points for ${reward.title}?`;
+      )} Chalega Coins for ${reward.title}?`;
 
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(
@@ -395,7 +390,7 @@ export default function RewardsScreen() {
           </Text>
 
           <Text style={styles.pointsLabel}>
-            CHALEGA POINTS
+            CHALEGA COINS
           </Text>
 
           <View style={styles.levelBadge}>
@@ -419,7 +414,7 @@ export default function RewardsScreen() {
                   ? 'Maximum Level'
                   : `${nextLevelPoints.toLocaleString(
                       'en-IN'
-                    )} points to go`}
+                    )} coins to go`}
               </Text>
             </View>
 
@@ -526,7 +521,7 @@ export default function RewardsScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitleNoMargin}>
-            POINTS ACTIVITY
+            COIN ACTIVITY
           </Text>
 
           <TouchableOpacity
@@ -618,7 +613,7 @@ export default function RewardsScreen() {
           REDEEM REWARDS
         </Text>
 
-        {REWARDS.map(reward => {
+        {rewards.map(reward => {
           const alreadyClaimed =
             claimed.includes(reward.id);
 
