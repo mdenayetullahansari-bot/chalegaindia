@@ -521,7 +521,12 @@ Your rewards have been added to your account.`,
    * START / STOP PHONE TRACKING
    * -------------------------------------------------------
    */
-  // Keep step simulation available only in local development web builds.\n  // Production web builds must not expose test controls to users.\n  const isDevRuntime =\n    typeof __DEV__ !== 'undefined' ? __DEV__ : false;\n  const WEB_TEST_CONTROLS =\n    isDevRuntime && Platform.OS === 'web';
+  // Keep step simulation available only in local development web builds.
+  // Production web builds must not expose test controls to users.
+  const isDevRuntime =
+    typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+  const WEB_TEST_CONTROLS =
+    isDevRuntime && Platform.OS === 'web';
 
   const startTracking = async () => {
     if (tracking) {
