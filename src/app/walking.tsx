@@ -106,7 +106,7 @@ export default function WalkingScreen() {
    * -------------------------------------------------------
    *
    * Walking progress is stored separately from the central
-   * Chalega Points wallet.
+   * Chalega Coins wallet.
    *
    * IMPORTANT:
    * data.points is intentionally NOT used as the wallet.
@@ -241,7 +241,7 @@ export default function WalkingScreen() {
         }
       } catch (error) {
         console.log(
-          'Could not refresh Chalega Points:',
+          'Could not refresh Chalega Coins:',
           error
         );
       }
@@ -455,7 +455,7 @@ export default function WalkingScreen() {
             'en-IN'
           )} steps today.
 
-+${WALK_MISSION_POINTS} Chalega Points
++${WALK_MISSION_POINTS} Chalega Coins
 +25 Streak Points
 
 Your rewards have been added to your account.`,
@@ -764,7 +764,7 @@ Your rewards have been added to your account.`,
             style={styles.pointsSmall}
             onPress={() =>
               Alert.alert(
-                'Chalega Points',
+                'Chalega Coins',
                 `You currently have ${points} points.`
               )
             }
@@ -946,7 +946,7 @@ Your rewards have been added to your account.`,
             <Text style={styles.missionText}>
               {walkMissionComplete
                 ? `+${WALK_MISSION_POINTS} points earned today`
-                : `Earn +${WALK_MISSION_POINTS} Chalega Points`}
+                : `Earn +${WALK_MISSION_POINTS} Chalega Coins`}
             </Text>
           </View>
 
@@ -1118,7 +1118,7 @@ Your rewards have been added to your account.`,
                 25,000 Step Challenge
               </Text>
               <Text style={styles.challengeText}>
-                Walk 25,000 steps this week and earn bonus Chalega Points.
+                Walk 25,000 steps this week and earn bonus Chalega Coins.
               </Text>
             </View>
           </View>
@@ -1177,7 +1177,7 @@ Your rewards have been added to your account.`,
             {walkMissionComplete
               ? '✓ WALKING MISSION COMPLETE'
               : steps >= WALK_MISSION_GOAL
-              ? 'CLAIM +40 POINTS'
+              ? 'CLAIM +40 COINS'
               : 'KEEP WALKING →'}
           </Text>
         </TouchableOpacity>
