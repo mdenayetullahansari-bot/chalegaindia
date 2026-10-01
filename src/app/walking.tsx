@@ -521,7 +521,7 @@ Your rewards have been added to your account.`,
    * START / STOP PHONE TRACKING
    * -------------------------------------------------------
    */
-  const WEB_TEST_CONTROLS = Platform.OS === 'web';
+  // Keep step simulation available only in local development web builds.\n  // Production web builds must not expose test controls to users.\n  const WEB_TEST_CONTROLS = __DEV__ && Platform.OS === 'web';
 
   const startTracking = async () => {
     if (tracking) {
