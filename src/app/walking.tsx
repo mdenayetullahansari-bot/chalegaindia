@@ -17,6 +17,7 @@ import { BRAND } from '@/lib/brand';
 import { supabase } from '../lib/supabase';
 import { completeStreakDay } from '../lib/streak';
 import { syncDailySteps } from '../services/dailyStepsService';
+import { qualifyMyReferral } from '@/services/referralService';
 
 type DayData = {
   day: string;
@@ -58,6 +59,7 @@ export default function WalkingScreen() {
     useState<number | null>(null);
   const lastDailyStepsSyncAt = useRef(0);
   const lastDailyStepsSyncedValue = useRef<number | null>(null);
+  const referralQualificationTriggered = useRef(false);
 
   const progress = Math.min(steps / goal, 1);
 
@@ -265,6 +267,26 @@ export default function WalkingScreen() {
       completeWalkMissionIfNeeded();
     }
   }, [steps, goal, walkMissionComplete]);
+
+  /*
+   * Referral qualification is based on the first 1,000 steps.
+   * The backend RPC is idempotent, so triggering it once when
+   * the user crosses 1,000 steps is safe.
+   */
+  useEffect(() => {
+    if (steps < 1000 || referralQualificationTriggered.current) {
+      return;
+    }
+
+    referralQualificationTriggered.current = true;
+
+    qualifyMyReferral().catch((error) => {
+      console.log(
+        'Referral qualification check skipped:',
+        error
+      );
+    });
+  }, [steps]);
 
   /*
    * -------------------------------------------------------
