@@ -393,7 +393,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.pointsLabel}>
-              POINTS
+              COINS
             </Text>
           </TouchableOpacity>
         </View>
@@ -555,7 +555,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.progressText}>
-              +40 POINTS
+              +40 COINS
             </Text>
           </View>
 
