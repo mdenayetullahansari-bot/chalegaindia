@@ -424,7 +424,7 @@ export default function ProfileScreen() {
             <Text
               style={styles.statLabel}
             >
-              POINTS
+              COINS
             </Text>
           </View>
 
