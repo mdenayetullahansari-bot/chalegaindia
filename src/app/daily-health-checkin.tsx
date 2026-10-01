@@ -505,7 +505,7 @@ export default function DailyHealthCheckIn() {
       if (result.awarded) {
         Alert.alert(
           '❤️ Health Check-in Complete!',
-          `+10 Chalega Points\n\nToday's wellness score is ${healthScore}/100.\n\nYour check-in has been saved for your Health History.`
+          `+10 Chalega Coins\n\nToday's wellness score is ${healthScore}/100.\n\nYour check-in has been saved for your Health History.`
         );
       } else {
         Alert.alert(
@@ -810,7 +810,7 @@ export default function DailyHealthCheckIn() {
             <Text style={styles.submitButtonText}>
               {saving
                 ? 'SAVING...'
-                : 'COMPLETE CHECK-IN • +10 POINTS'}
+                : 'COMPLETE CHECK-IN • +10 COINS'}
             </Text>
           </TouchableOpacity>
         ) : (
