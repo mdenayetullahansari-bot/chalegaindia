@@ -1,9 +1,7 @@
 {
+  "buildCommand": "expo export -p web",
+  "outputDirectory": "dist",
+  "devCommand": "expo",
   "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/auth",
-      "destination": "/auth.html"
-    }
-  ]
+  "framework": null
 }
