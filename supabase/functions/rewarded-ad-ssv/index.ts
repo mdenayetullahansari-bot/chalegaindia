@@ -249,6 +249,7 @@ Deno.serve(async (req) => {
           reward_amount: rewardAmount,
           timestamp,
           key_id: keyId,
+          custom_data: params.get('custom_data'),
         },
       },
     );
