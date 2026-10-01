@@ -17,7 +17,6 @@ import { BRAND } from '@/lib/brand';
 import { supabase } from '../lib/supabase';
 import { completeStreakDay } from '../lib/streak';
 import { syncDailySteps } from '../services/dailyStepsService';
-import { qualifyMyReferral } from '@/services/referralService';
 
 type DayData = {
   day: string;
@@ -59,7 +58,6 @@ export default function WalkingScreen() {
     useState<number | null>(null);
   const lastDailyStepsSyncAt = useRef(0);
   const lastDailyStepsSyncedValue = useRef<number | null>(null);
-  const referralQualificationTriggered = useRef(false);
 
   const progress = Math.min(steps / goal, 1);
 
@@ -269,26 +267,6 @@ export default function WalkingScreen() {
   }, [steps, goal, walkMissionComplete]);
 
   /*
-   * Referral qualification is based on the first 1,000 steps.
-   * The backend RPC is idempotent, so triggering it once when
-   * the user crosses 1,000 steps is safe.
-   */
-  useEffect(() => {
-    if (steps < 1000 || referralQualificationTriggered.current) {
-      return;
-    }
-
-    referralQualificationTriggered.current = true;
-
-    qualifyMyReferral().catch((error) => {
-      console.log(
-        'Referral qualification check skipped:',
-        error
-      );
-    });
-  }, [steps]);
-
-  /*
    * -------------------------------------------------------
    * SAVE WALKING DATA
    * -------------------------------------------------------
@@ -353,7 +331,26 @@ export default function WalkingScreen() {
         throw new Error('No authenticated user');
       }
 
-      await syncDailySteps(steps);
+      const { error: dailyStepsError } = await supabase
+        .from('daily_steps')
+        .upsert(
+          {
+            user_id: user.id,
+            step_date: todayKey,
+            steps: Math.floor(steps),
+            distance_km: Number(
+              (steps * 0.00072).toFixed(3)
+            ),
+            calories: Math.round(steps * 0.04),
+          },
+          {
+            onConflict: 'user_id,step_date',
+          }
+        );
+
+      if (dailyStepsError) {
+        throw dailyStepsError;
+      }
 
       const { error: missionSaveError } = await supabase
         .from('user_missions')
