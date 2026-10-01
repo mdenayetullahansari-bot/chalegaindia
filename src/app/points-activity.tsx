@@ -70,7 +70,7 @@ export default function PointsActivityScreen() {
         if (userError) throw userError;
         if (!user) {
           throw new Error(
-            'Please sign in to view your Chalega Points activity.'
+            'Please sign in to view your Chalega Coins activity.'
           );
         }
 
@@ -120,7 +120,7 @@ export default function PointsActivityScreen() {
         );
       } catch (error) {
         console.log(
-          'Could not load Chalega Points Activity:',
+          'Could not load Chalega Coins Activity:',
           error
         );
       } finally {
@@ -332,7 +332,7 @@ export default function PointsActivityScreen() {
               styles.walletSub
             }
           >
-            CHALEGA POINTS
+            CHALEGA COINS
           </Text>
         </View>
 
@@ -469,7 +469,7 @@ export default function PointsActivityScreen() {
               >
                 Complete a walking mission
                 or healthy challenge and
-                your Chalega Points activity
+                your Chalega Coins activity
                 will appear here.
               </Text>
             </View>
