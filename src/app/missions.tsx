@@ -653,7 +653,7 @@ const saveMissionState = useCallback(
           ) {
             Alert.alert(
               'Already Completed',
-              `You've already earned today's +${mission.points} Chalega Points for this mission.`
+              `You've already earned today's +${mission.points} Chalega Coins for this mission.`
             );
 
             return;
@@ -661,9 +661,9 @@ const saveMissionState = useCallback(
 
           Alert.alert(
             'Mission Complete!',
-            `+${mission.points} Chalega Points\n\nYour total is now ${result.balance.toLocaleString(
+            `+${mission.points} Chalega Coins\n\nYour total is now ${result.balance.toLocaleString(
               'en-IN'
-            )} Chalega Points.`,
+            )} Chalega Coins.`,
             [
               {
                 text: 'CONTINUE',
@@ -1024,7 +1024,7 @@ const saveMissionState = useCallback(
               styles.heroSubtitle
             }
           >
-            Complete healthy actions today and earn Chalega Points.
+            Complete healthy actions today and earn Chalega Coins.
           </Text>
 
           {/* HERO STATS */}
@@ -1082,7 +1082,7 @@ const saveMissionState = useCallback(
                   styles.heroStatLabel
                 }
               >
-                TOTAL POINTS
+                TOTAL COINS
               </Text>
             </View>
           </View>
@@ -1468,7 +1468,7 @@ const saveMissionState = useCallback(
                 styles.completeText
               }
             >
-              You completed every mission today and earned all {totalPossible} available Chalega Points.
+              You completed every mission today and earned all {totalPossible} available Chalega Coins.
             </Text>
 
             <View
@@ -1489,7 +1489,7 @@ const saveMissionState = useCallback(
                   styles.completePointsLabel
                 }
               >
-                POINTS TODAY
+                COINS TODAY
               </Text>
             </View>
 
@@ -1636,7 +1636,7 @@ const saveMissionState = useCallback(
               styles.motivationText
             }
           >
-            Every healthy day builds your streak, your Points and your progress.
+            Every healthy day builds your streak, your Coins and your progress.
           </Text>
         </View>
 
