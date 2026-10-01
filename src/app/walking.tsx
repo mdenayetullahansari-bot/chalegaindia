@@ -331,26 +331,7 @@ export default function WalkingScreen() {
         throw new Error('No authenticated user');
       }
 
-      const { error: dailyStepsError } = await supabase
-        .from('daily_steps')
-        .upsert(
-          {
-            user_id: user.id,
-            step_date: todayKey,
-            steps: Math.floor(steps),
-            distance_km: Number(
-              (steps * 0.00072).toFixed(3)
-            ),
-            calories: Math.round(steps * 0.04),
-          },
-          {
-            onConflict: 'user_id,step_date',
-          }
-        );
-
-      if (dailyStepsError) {
-        throw dailyStepsError;
-      }
+      await syncDailySteps(steps);
 
       const { error: missionSaveError } = await supabase
         .from('user_missions')
