@@ -199,21 +199,21 @@ export default function MoreScreen() {
         <MenuRow
           icon="trophy-outline"
           title="Rewards"
-          subtitle="View your Chalega Points and unlock rewards."
+          subtitle="View your Chalega Coins and unlock rewards."
           onPress={() => goTo('/rewards')}
         />
 
         <MenuRow
           icon="flag-outline"
           title="Daily Missions"
-          subtitle="Complete healthy actions and earn points."
+          subtitle="Complete healthy actions and earn Coins."
           onPress={() => goTo('/missions')}
         />
 
         <MenuRow
           icon="time-outline"
           title="Points Activity"
-          subtitle="See everything you have earned and spent."
+          subtitle="See everything you have earned and spent in your Coin wallet."
           onPress={() => goTo('/points-activity')}
           tone="green"
         />
@@ -282,7 +282,7 @@ export default function MoreScreen() {
 
         <TouchableOpacity
           style={styles.wardCard}
-          onPress={() => showComingSoon('My KMC Ward')}
+          onPress={() => goTo('/kmc-ward')}
           activeOpacity={0.86}
         >
           <View style={styles.wardIcon}>
