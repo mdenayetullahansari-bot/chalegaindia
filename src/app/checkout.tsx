@@ -600,7 +600,7 @@ export default function CheckoutScreen() {
               <Text
                 style={styles.backText}
               >
-                â€¹
+                ‹
               </Text>
             </TouchableOpacity>
 
@@ -638,7 +638,7 @@ export default function CheckoutScreen() {
                   styles.promiseIconText
                 }
               >
-                ðŸšš
+                🚚
               </Text>
             </View>
 
@@ -818,7 +818,7 @@ export default function CheckoutScreen() {
                         }
                       >
                         {product.quantity}{' '}
-                        Ã— â‚¹
+                        × ₹
                         {product.price.toLocaleString(
                           'en-IN',
                         )}{' '}
@@ -831,7 +831,7 @@ export default function CheckoutScreen() {
                         styles.productTotal
                       }
                     >
-                      â‚¹
+                      ₹
                       {(
                         product.price *
                         (product.quantity ||
@@ -870,7 +870,7 @@ export default function CheckoutScreen() {
               }
             >
               <Text>
-                ðŸšš
+                🚚
               </Text>
             </View>
 
@@ -936,7 +936,7 @@ export default function CheckoutScreen() {
                   styles.summaryValue
                 }
               >
-                â‚¹
+                ₹
                 {subtotal.toLocaleString(
                   'en-IN',
                 )}
@@ -963,7 +963,7 @@ export default function CheckoutScreen() {
               >
                 {deliveryFee === 0
                   ? 'FREE'
-                  : `â‚¹${deliveryFee}`}
+                  : `₹${deliveryFee}`}
               </Text>
             </View>
 
@@ -974,8 +974,8 @@ export default function CheckoutScreen() {
             >
               {subtotal >=
               FREE_DELIVERY_THRESHOLD
-                ? 'âœ“ You unlocked free delivery.'
-                : `Add â‚¹${
+                ? '✓ You unlocked free delivery.'
+                : `Add ₹${
                     FREE_DELIVERY_THRESHOLD -
                     subtotal
                   } more for free delivery.`}
@@ -1003,7 +1003,7 @@ export default function CheckoutScreen() {
                   styles.totalValue
                 }
               >
-                â‚¹
+                ₹
                 {orderTotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1044,7 +1044,7 @@ export default function CheckoutScreen() {
                     styles.onlineIconText
                   }
                 >
-                  â‚¹
+                  ₹
                 </Text>
               </View>
 
@@ -1106,7 +1106,7 @@ export default function CheckoutScreen() {
               <View
                 style={styles.codIcon}
               >
-                <Text>â‚¹</Text>
+                <Text>₹</Text>
               </View>
 
               <View
@@ -1162,7 +1162,7 @@ export default function CheckoutScreen() {
                     styles.onlineNoteTitle
                   }
                 >
-                  ðŸ”’ Secure online payment
+                  🔒 Secure online payment
                 </Text>
 
                 <Text
@@ -1224,7 +1224,7 @@ export default function CheckoutScreen() {
                   styles.placeOrderTotal
                 }
               >
-                â‚¹
+                ₹
                 {orderTotal.toLocaleString(
                   'en-IN',
                 )}
@@ -1237,8 +1237,8 @@ export default function CheckoutScreen() {
           >
             {itemsParam || itemCount}{' '}
             item
-            {itemCount === 1 ? '' : 's'} â€¢
-            Fresh order â€¢ Chalega 24-hour
+            {itemCount === 1 ? '' : 's'} •
+            Fresh order • Chalega 24-hour
             delivery
           </Text>
 
