@@ -97,6 +97,35 @@ export async function qualifyMyReferral(): Promise<ReferralQualificationResult> 
   return result;
 }
 
+
+export type ReferralSummary = {
+  totalReferrals: number;
+  pendingReferrals: number;
+  qualifiedReferrals: number;
+  rewardedReferrals: number;
+  coinsEarned: number;
+};
+
+export async function getMyReferralSummary(): Promise<ReferralSummary> {
+  const { data, error } = await supabase.rpc(
+    'get_my_referral_summary'
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  const row = (data ?? {}) as Record<string, unknown>;
+
+  return {
+    totalReferrals: Number(row.total_referrals) || 0,
+    pendingReferrals: Number(row.pending_referrals) || 0,
+    qualifiedReferrals: Number(row.qualified_referrals) || 0,
+    rewardedReferrals: Number(row.rewarded_referrals) || 0,
+    coinsEarned: Number(row.coins_earned) || 0,
+  };
+}
+
 export async function savePendingReferralCode(
   referralCode: string
 ): Promise<void> {
