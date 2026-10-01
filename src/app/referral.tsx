@@ -129,7 +129,7 @@ export default function ReferralScreen() {
           ) : (
             <>
               <Text style={styles.code}>
-                {referralCode || 'â€”'}
+                {referralCode || '—'}
               </Text>
 
               <Text style={styles.codeHint}>
