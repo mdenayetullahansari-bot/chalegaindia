@@ -59,6 +59,7 @@ export default function WalkingScreen() {
     useState<number | null>(null);
   const lastDailyStepsSyncAt = useRef(0);
   const lastDailyStepsSyncedValue = useRef<number | null>(null);
+  const referralQualificationAttempted = useRef(false);
 
   const progress = Math.min(steps / goal, 1);
 
@@ -712,7 +713,34 @@ Your rewards have been added to your account.`,
                 week,
                 goal,
                 streak
-              );syncDailySteps(nextSteps);
+              );
+
+              void syncDailySteps(nextSteps)
+                .then(() => {
+                  if (
+                    nextSteps >= 1000 &&
+                    !referralQualificationAttempted.current
+                  ) {
+                    referralQualificationAttempted.current = true;
+
+                    return qualifyMyReferral().catch(
+                      referralError => {
+                        console.warn(
+                          '[REFERRAL] Qualification check failed:',
+                          referralError
+                        );
+                      }
+                    );
+                  }
+
+                  return undefined;
+                })
+                .catch(syncError => {
+                  console.warn(
+                    '[WALK] Daily step sync failed:',
+                    syncError
+                  );
+                });
             }
           );
       } catch (error) {
