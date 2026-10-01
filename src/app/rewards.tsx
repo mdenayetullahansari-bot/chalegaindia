@@ -13,6 +13,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { supabase } from '../lib/supabase';
+import { createRewardedAd } from '@/lib/rewardedAds';
 
 type PointsTransaction = {
   id: string;
@@ -48,6 +49,8 @@ export default function RewardsScreen() {
   const [claimed, setClaimed] = useState<string[]>([]);
   const [rewards, setRewards] = useState<Reward[]>(DEFAULT_REWARDS);
   const [loading, setLoading] = useState(true);
+  const [adReady, setAdReady] = useState(false);
+  const [adBusy, setAdBusy] = useState(false);
 
   const loadWallet = useCallback(async () => {
     try {
@@ -147,6 +150,74 @@ export default function RewardsScreen() {
   useEffect(() => {
     loadWallet();
   }, [loadWallet]);
+
+  const rewardedAd = useMemo(
+    () => createRewardedAd(),
+    []
+  );
+
+  useEffect(() => {
+    if (!rewardedAd) {
+      return;
+    }
+
+    const removeLoaded = rewardedAd.addListener(
+      'loaded',
+      () => setAdReady(true)
+    );
+
+    const removeClosed = rewardedAd.addListener(
+      'closed',
+      () => setAdReady(false)
+    );
+
+    const removeError = rewardedAd.addListener(
+      'error',
+      () => setAdReady(false)
+    );
+
+    rewardedAd.load();
+
+    return () => {
+      removeLoaded();
+      removeClosed();
+      removeError();
+    };
+  }, [rewardedAd]);
+
+  const watchAdForCoins = async () => {
+    if (!rewardedAd || adBusy) {
+      if (Platform.OS === 'web') {
+        Alert.alert(
+          'Watch Ads on Mobile',
+          'Rewarded ads are available in the Chalega mobile app.'
+        );
+      }
+      return;
+    }
+
+    try {
+      setAdBusy(true);
+      setAdReady(false);
+
+      await rewardedAd.show();
+      await loadWallet();
+
+      Alert.alert(
+        '🎉 Coins Added',
+        'Your 25 Chalega Coins were verified and added to your wallet.'
+      );
+    } catch (error) {
+      console.warn('[REWARDED AD] Error:', error);
+      Alert.alert(
+        'Reward Verification',
+        'The ad completed, but verification is still pending. Please check your Coin wallet again shortly.'
+      );
+    } finally {
+      setAdBusy(false);
+      rewardedAd.load();
+    }
+  };
 
   /*
    * Refresh whenever the user returns to Rewards.
@@ -515,6 +586,32 @@ export default function RewardsScreen() {
               Build better daily habits.
             </Text>
           </View>
+
+          <TouchableOpacity
+            style={[
+              styles.earnCard,
+              adBusy && styles.earnCardDisabled,
+            ]}
+            onPress={watchAdForCoins}
+            activeOpacity={0.84}
+            disabled={adBusy}
+          >
+            <Text style={styles.earnEmoji}>
+              📺
+            </Text>
+
+            <Text style={styles.earnTitle}>
+              WATCH AD
+            </Text>
+
+            <Text style={styles.earnDescription}>
+              {adBusy
+                ? 'Verifying your reward...'
+                : adReady
+                  ? 'Watch a short ad and earn +25 Coins.'
+                  : 'Loading a rewarded ad...'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* WALLET ACTIVITY */}
@@ -1047,6 +1144,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     lineHeight: 14,
     marginTop: 3,
+  },
+
+  earnCardDisabled: {
+    opacity: 0.65,
   },
 
   activityCard: {
