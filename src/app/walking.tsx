@@ -17,6 +17,7 @@ import { BRAND } from '@/lib/brand';
 import { supabase } from '../lib/supabase';
 import { completeStreakDay } from '../lib/streak';
 import { syncDailySteps } from '../services/dailyStepsService';
+import { qualifyMyReferral } from '@/services/referralService';
 
 type DayData = {
   day: string;
@@ -331,25 +332,22 @@ export default function WalkingScreen() {
         throw new Error('No authenticated user');
       }
 
-      const { error: dailyStepsError } = await supabase
-        .from('daily_steps')
-        .upsert(
-          {
-            user_id: user.id,
-            step_date: todayKey,
-            steps: Math.floor(steps),
-            distance_km: Number(
-              (steps * 0.00072).toFixed(3)
-            ),
-            calories: Math.round(steps * 0.04),
-          },
-          {
-            onConflict: 'user_id,step_date',
-          }
-        );
+      await syncDailySteps(steps);
 
-      if (dailyStepsError) {
-        throw dailyStepsError;
+      /*
+       * Referral qualification is checked from the hardened backend
+       * once a user has reached at least 1,000 daily steps.
+       * The RPC is idempotent, so repeat checks are safe.
+       */
+      if (steps >= 1000) {
+        try {
+          await qualifyMyReferral();
+        } catch (referralError) {
+          console.warn(
+            '[REFERRAL] Qualification check failed:',
+            referralError
+          );
+        }
       }
 
       const { error: missionSaveError } = await supabase
