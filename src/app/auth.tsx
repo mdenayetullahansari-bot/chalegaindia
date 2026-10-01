@@ -482,7 +482,7 @@ export default function AuthScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.logoCircle}>
-              <Image source={require("../../assets/chalega-india-logo.png")} style={styles.logoImage} resizeMode="contain" />
+              <Image source={require("../../assets/images/icon.png")} style={styles.logoImage} resizeMode="contain" />
             </View>
 
             <Text style={styles.brand}>
@@ -582,7 +582,7 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoCircle}>
-            <Image source={require("../../assets/chalega-india-logo.png")} style={styles.logoImage} resizeMode="contain" />
+            <Image source={require("../../assets/images/icon.png")} style={styles.logoImage} resizeMode="contain" />
           </View>
 
           <Text style={styles.brand}>
