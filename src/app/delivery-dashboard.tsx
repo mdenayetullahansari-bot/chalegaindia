@@ -59,6 +59,31 @@ export default function DeliveryDashboard() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!partner || partner.status !== 'approved') return;
+    if (partner.availability !== 'online' && partner.availability !== 'busy') return;
+
+    let cancelled = false;
+
+    startDeliveryLocationTracking().catch(async (error: any) => {
+      if (cancelled) return;
+      try {
+        await setMyDeliveryAvailability('offline');
+        setPartner(prev => prev ? { ...prev, availability: 'offline' } : prev);
+      } catch {
+        // Leave the backend state unchanged if the safety fallback fails.
+      }
+      Alert.alert(
+        'Location required',
+        error?.message || 'Live location is required while you are online.'
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [partner?.id, partner?.status, partner?.availability]);
+
   const approved = partner?.status === 'approved';
   const online = partner?.availability === 'online';
   const active = online || partner?.availability === 'busy';
