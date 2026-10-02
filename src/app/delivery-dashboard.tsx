@@ -262,6 +262,16 @@ export default function DeliveryDashboard() {
           <Row label="Vehicle number" value={partner.vehicle_number || 'Not provided'} />
           <Row label="Area" value={partner.city_area || 'Not provided'} />
           <Row label="Phone" value={partner.phone || 'Not provided'} />
+          <Row
+            label="Live location"
+            value={
+              partner.location_updated_at
+                ? 'GPS active'
+                : active
+                ? 'Waiting for GPS'
+                : 'Offline'
+            }
+          />
         </View>
 
         <Text style={styles.section}>MY DELIVERIES</Text>
