@@ -21,6 +21,8 @@ import {
   setMyDeliveryAvailability,
   acceptMyDeliveryAssignment,
   rejectMyDeliveryAssignment,
+  acceptMyDeliveryBatch,
+  rejectMyDeliveryBatch,
   updateMyDeliveryJobStatus,
 } from '@/services/deliveryService';
 
@@ -68,6 +70,22 @@ export default function DeliveryDashboard() {
       setPartner(prev => prev ? { ...prev, availability: next } : prev);
     } catch (error: any) {
       Alert.alert('Could not change status', error?.message || 'Please try again.');
+    }
+  };
+
+  const handleBatchAssignment = async (batchId: string, action: 'accept' | 'reject') => {
+    try {
+      if (action === 'accept') {
+        await acceptMyDeliveryBatch(batchId);
+      } else {
+        await rejectMyDeliveryBatch(batchId);
+      }
+      await load();
+    } catch (error: any) {
+      Alert.alert(
+        action === 'accept' ? 'Could not accept batch' : 'Could not reject batch',
+        error?.message || 'Please try again.'
+      );
     }
   };
 
@@ -215,7 +233,64 @@ export default function DeliveryDashboard() {
             </Text>
           </View>
         ) : (
-          assignments.slice(0, 10).map(item => (
+          (() => {
+            const displayed: any[] = [];
+            const seenBatches = new Set<string>();
+            for (const item of assignments.slice(0, 20)) {
+              const batchId = item.job?.batch_id;
+              if (item.status === 'offered' && batchId) {
+                if (seenBatches.has(batchId)) continue;
+                seenBatches.add(batchId);
+                const batchItems = assignments.filter(
+                  candidate => candidate.status === 'offered' && candidate.job?.batch_id === batchId
+                );
+                const total = batchItems.reduce(
+                  (sum, candidate) => sum + Number(candidate.job?.partner_earnings || 0),
+                  0
+                );
+                displayed.push({ type: 'batch', item, batchItems, total });
+              } else {
+                displayed.push({ type: 'job', item });
+              }
+            }
+            return displayed.slice(0, 10).map(entry => {
+              if (entry.type === 'batch') {
+                const { item, batchItems, total } = entry;
+                return (
+                  <View key={item.job.batch_id} style={styles.jobCard}>
+                    <View style={styles.jobIcon}>
+                      <Ionicons name="layers" size={22} color={BRAND.teal} />
+                    </View>
+                    <View style={styles.jobText}>
+                      <Text style={styles.jobTitle}>BATCH OFFER</Text>
+                      <Text style={styles.jobMeta}>{batchItems.length} DELIVERIES • EARN ₹{total.toFixed(0)}</Text>
+                      {item.job?.drop_area ? <Text style={styles.jobAddress}>{item.job.drop_area}</Text> : null}
+                      <Text style={styles.batchSubtext}>
+                        {batchItems.map((candidate: any) => candidate.job?.order_id).filter(Boolean).join(' • ')}
+                      </Text>
+                    </View>
+                    {online && (
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity
+                          style={styles.rejectButton}
+                          onPress={() => handleBatchAssignment(item.job.batch_id, 'reject')}
+                        >
+                          <Text style={styles.rejectText}>REJECT BATCH</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.acceptButton}
+                          onPress={() => handleBatchAssignment(item.job.batch_id, 'accept')}
+                        >
+                          <Text style={styles.acceptText}>ACCEPT BATCH</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                );
+              }
+
+              const item = entry.item;
+              return (
             <View key={item.id} style={styles.jobCard}>
               <View style={styles.jobIcon}>
                 <Ionicons name="cube" size={22} color={BRAND.teal} />
@@ -270,7 +345,10 @@ export default function DeliveryDashboard() {
                 </View>
               )}
             </View>
-          ))        )}
+              );
+            });
+          })()
+        )}
 
         <Text style={styles.section}>PAYOUTS</Text>
         <View style={styles.card}>
@@ -349,6 +427,7 @@ const styles = StyleSheet.create({
   jobMeta: { color: BRAND.teal, fontSize: 9, fontWeight: '900', marginTop: 3 },
   jobDate: { color: BRAND.muted, fontSize: 9, fontWeight: '700' },
   jobAddress: { color: BRAND.muted, fontSize: 9, marginTop: 3 },
+  batchSubtext: { color: BRAND.muted, fontSize: 8, marginTop: 5, lineHeight: 13 },
   actionRow: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 12 },
   rejectButton: { flex: 1, minHeight: 40, borderRadius: 13, borderWidth: 1, borderColor: '#D5DCE2', alignItems: 'center', justifyContent: 'center' },
   rejectText: { color: BRAND.muted, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
