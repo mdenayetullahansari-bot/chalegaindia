@@ -55,6 +55,30 @@ export default function DeliveryDashboard() {
   const approved = partner?.status === 'approved';
   const online = partner?.availability === 'online';
 
+  const changeAvailability = async () => {
+    if (!partner || !approved) return;
+    try {
+      const next = online ? 'offline' : 'online';
+      await setMyDeliveryAvailability(next);
+      setPartner(prev => prev ? { ...prev, availability: next } : prev);
+    } catch (error: any) {
+      Alert.alert('Could not change status', error?.message || 'Please try again.');
+    }
+  };
+
+  const handleAssignment = async (assignmentId: string, action: 'accept' | 'reject') => {
+    try {
+      if (action === 'accept') {
+        await acceptMyDeliveryAssignment(assignmentId);
+      } else {
+        await rejectMyDeliveryAssignment(assignmentId);
+      }
+      await load();
+    } catch (error: any) {
+      Alert.alert(action === 'accept' ? 'Could not accept job' : 'Could not reject job', error?.message || 'Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loading}>
@@ -115,6 +139,14 @@ export default function DeliveryDashboard() {
               {approved ? (online ? 'ONLINE' : 'OFFLINE') : partner.status.toUpperCase()}
             </Text>
           </View>
+          {approved && (
+            <TouchableOpacity style={[styles.availabilityButton, online && styles.availabilityButtonOnline]} onPress={changeAvailability}>
+              <View style={[styles.availabilityDot, online && styles.availabilityDotOnline]} />
+              <Text style={[styles.availabilityText, online && styles.availabilityTextOnline]}>
+                {online ? 'GO OFFLINE' : 'GO ONLINE'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {!approved && (
@@ -168,15 +200,26 @@ export default function DeliveryDashboard() {
                 <Ionicons name="cube" size={22} color={BRAND.teal} />
               </View>
               <View style={styles.jobText}>
-                <Text style={styles.jobTitle}>Delivery Job</Text>
+                <Text style={styles.jobTitle}>{item.job?.order_id || 'Delivery Job'}</Text>
                 <Text style={styles.jobMeta}>{item.status.replaceAll('_', ' ').toUpperCase()}</Text>
+                {item.job?.drop_area ? <Text style={styles.jobAddress}>{item.job.drop_area}</Text> : null}
+                {item.job?.drop_pin ? <Text style={styles.jobAddress}>PIN {item.job.drop_pin}</Text> : null}
               </View>
               <Text style={styles.jobDate}>
                 {new Date(item.offered_at).toLocaleDateString('en-IN')}
               </Text>
+              {item.status === 'offered' && online && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.rejectButton} onPress={() => handleAssignment(item.id, 'reject')}>
+                    <Text style={styles.rejectText}>REJECT</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.acceptButton} onPress={() => handleAssignment(item.id, 'accept')}>
+                    <Text style={styles.acceptText}>ACCEPT</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
-          ))
-        )}
+          ))        )}
 
         <Text style={styles.section}>PAYOUTS</Text>
         <View style={styles.card}>
@@ -226,6 +269,12 @@ const styles = StyleSheet.create({
   dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#A06C00' },
   dotApproved: { backgroundColor: BRAND.green },
   statusText: { color: BRAND.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  availabilityButton: { marginTop: 13, alignSelf: 'flex-start', minHeight: 42, paddingHorizontal: 16, borderRadius: 14, backgroundColor: BRAND.white, borderWidth: 1, borderColor: BRAND.teal, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  availabilityButtonOnline: { backgroundColor: BRAND.greenLight, borderColor: BRAND.green },
+  availabilityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#A06C00' },
+  availabilityDotOnline: { backgroundColor: BRAND.green },
+  availabilityText: { color: BRAND.teal, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
+  availabilityTextOnline: { color: BRAND.green },
   pending: { backgroundColor: BRAND.goldLight, borderRadius: 18, padding: 15, flexDirection: 'row', gap: 10, marginBottom: 18 },
   pendingText: { flex: 1 },
   pendingTitle: { color: BRAND.ink, fontSize: 14, fontWeight: '900' },
@@ -248,6 +297,12 @@ const styles = StyleSheet.create({
   jobTitle: { color: BRAND.midnight, fontSize: 13, fontWeight: '900' },
   jobMeta: { color: BRAND.teal, fontSize: 9, fontWeight: '900', marginTop: 3 },
   jobDate: { color: BRAND.muted, fontSize: 9, fontWeight: '700' },
+  jobAddress: { color: BRAND.muted, fontSize: 9, marginTop: 3 },
+  actionRow: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 12 },
+  rejectButton: { flex: 1, minHeight: 40, borderRadius: 13, borderWidth: 1, borderColor: '#D5DCE2', alignItems: 'center', justifyContent: 'center' },
+  rejectText: { color: BRAND.muted, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
+  acceptButton: { flex: 1, minHeight: 40, borderRadius: 13, backgroundColor: BRAND.teal, alignItems: 'center', justifyContent: 'center' },
+  acceptText: { color: BRAND.white, fontSize: 9, fontWeight: '900', letterSpacing: 0.6 },
   payoutRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#EEF1F4' },
   payoutAmount: { color: BRAND.midnight, fontSize: 14, fontWeight: '900' },
   payoutStatus: { color: BRAND.teal, fontSize: 8, fontWeight: '900', marginTop: 2 },
