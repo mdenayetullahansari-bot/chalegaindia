@@ -239,6 +239,20 @@ export default function MoreScreen() {
           tone="grey"
         />
 
+
+
+        <Text style={styles.sectionTitle}>
+          DELIVERY NETWORK
+        </Text>
+
+        <MenuRow
+          icon="bicycle-outline"
+          title="Chalega Delivery Partner"
+          subtitle="Deliver local orders and earn from completed jobs."
+          onPress={() => goTo('/delivery-dashboard')}
+          tone="green"
+        />
+
         {/* COMMUNITY */}
         <Text style={styles.sectionTitle}>
           COMMUNITY
