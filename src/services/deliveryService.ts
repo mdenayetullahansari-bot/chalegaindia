@@ -30,6 +30,10 @@ export type DeliveryPartner = {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  location_accuracy_m: number | null;
+  location_updated_at: string | null;
 };
 
 export type DeliveryPartnerApplication = {
@@ -56,7 +60,7 @@ export async function getMyDeliveryPartner(): Promise<DeliveryPartner | null> {
   const { data, error } = await supabase
     .from('chalega_delivery_partners')
     .select(
-      'id,user_id,status,availability,vehicle_type,vehicle_number,phone,city_area,approved_at,created_at,updated_at'
+      'id,user_id,status,availability,vehicle_type,vehicle_number,phone,city_area,approved_at,created_at,updated_at,latitude,longitude,location_accuracy_m,location_updated_at'
     )
     .eq('user_id', user.id)
     .maybeSingle();
@@ -123,7 +127,7 @@ export async function getMyDeliveryAssignments() {
   const { data, error } = await supabase
     .from('chalega_delivery_assignments')
     .select(
-      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,drop_address,drop_area,drop_pin,delivery_fee,partner_earnings,distance_km,waiting_minutes,demand_bonus,community_bonus,tip_amount,earnings_breakdown,batch_id,sequence_in_batch)'
+      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,pickup_address,pickup_area,pickup_pin,pickup_latitude,pickup_longitude,drop_address,drop_area,drop_pin,drop_latitude,drop_longitude,delivery_fee,partner_earnings,distance_km,waiting_minutes,demand_bonus,community_bonus,tip_amount,earnings_breakdown,batch_id,sequence_in_batch)'
     )
     .eq('partner_id', partner.id)
     .order('offered_at', { ascending: false });
