@@ -123,7 +123,7 @@ export async function getMyDeliveryAssignments() {
   const { data, error } = await supabase
     .from('chalega_delivery_assignments')
     .select(
-      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,drop_address,drop_area,drop_pin,delivery_fee,partner_earnings)'
+      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,drop_address,drop_area,drop_pin,delivery_fee,partner_earnings,distance_km,waiting_minutes,demand_bonus,community_bonus,tip_amount,earnings_breakdown,batch_id,sequence_in_batch)'
     )
     .eq('partner_id', partner.id)
     .order('offered_at', { ascending: false });
@@ -235,6 +235,42 @@ export async function rejectMyDeliveryAssignment(
   return data as {
     assignment_id: string;
     job_id: string;
+    status: string;
+  };
+}
+
+
+export async function acceptMyDeliveryBatch(
+  batchId: string
+): Promise<{ batch_id: string; partner_id: string; jobs_accepted: number; status: string }> {
+  const { data, error } = await supabase.rpc(
+    'accept_my_delivery_batch',
+    { p_batch_id: batchId }
+  );
+
+  if (error) throw error;
+
+  return data as {
+    batch_id: string;
+    partner_id: string;
+    jobs_accepted: number;
+    status: string;
+  };
+}
+
+export async function rejectMyDeliveryBatch(
+  batchId: string
+): Promise<{ batch_id: string; jobs_released: number; status: string }> {
+  const { data, error } = await supabase.rpc(
+    'reject_my_delivery_batch',
+    { p_batch_id: batchId }
+  );
+
+  if (error) throw error;
+
+  return data as {
+    batch_id: string;
+    jobs_released: number;
     status: string;
   };
 }
