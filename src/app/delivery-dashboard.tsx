@@ -90,12 +90,27 @@ export default function DeliveryDashboard() {
 
   const changeAvailability = async () => {
     if (!partner || !approved) return;
+
     try {
-      const next = online ? 'offline' : 'online';
-      await setMyDeliveryAvailability(next);
-      setPartner(prev => prev ? { ...prev, availability: next } : prev);
+      if (online) {
+        await stopDeliveryLocationTracking();
+        await setMyDeliveryAvailability('offline');
+        setPartner(prev =>
+          prev ? { ...prev, availability: 'offline' } : prev
+        );
+        return;
+      }
+
+      await startDeliveryLocationTracking();
+      await setMyDeliveryAvailability('online');
+      setPartner(prev =>
+        prev ? { ...prev, availability: 'online' } : prev
+      );
     } catch (error: any) {
-      Alert.alert('Could not change status', error?.message || 'Please try again.');
+      Alert.alert(
+        'Could not go online',
+        error?.message || 'Please allow location access and try again.'
+      );
     }
   };
 
