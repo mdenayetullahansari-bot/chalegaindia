@@ -191,6 +191,35 @@ export async function acceptMyDeliveryAssignment(
   };
 }
 
+export async function updateMyDeliveryJobStatus(
+  jobId: string,
+  status: 'picked_up' | 'out_for_delivery' | 'delivered'
+): Promise<{
+  job_id: string;
+  order_id: string;
+  status: string;
+  order_status: string;
+}> {
+  const { data, error } = await supabase.rpc(
+    'update_my_delivery_job_status',
+    {
+      p_job_id: jobId,
+      p_status: status,
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data as {
+    job_id: string;
+    order_id: string;
+    status: string;
+    order_status: string;
+  };
+}
+
 export async function rejectMyDeliveryAssignment(
   assignmentId: string
 ): Promise<{ assignment_id: string; job_id: string; status: string }> {
