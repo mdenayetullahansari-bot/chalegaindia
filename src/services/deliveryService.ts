@@ -123,7 +123,7 @@ export async function getMyDeliveryAssignments() {
   const { data, error } = await supabase
     .from('chalega_delivery_assignments')
     .select(
-      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at'
+      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,drop_address,drop_area,drop_pin,delivery_fee,partner_earnings)'
     )
     .eq('partner_id', partner.id)
     .order('offered_at', { ascending: false });
