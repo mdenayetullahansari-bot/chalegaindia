@@ -1,0 +1,10 @@
+alter table public.chalega_delivery_pricing_scenarios enable row level security;
+alter table public.chalega_delivery_economics_scenarios enable row level security;
+revoke execute on function public.create_delivery_job_for_paid_order() from public,anon,authenticated;
+revoke execute on function public.create_delivery_payout_on_delivered() from public,anon,authenticated;
+revoke execute on function public.auto_assign_delivery_job(uuid) from public,anon,authenticated;
+revoke execute on function public.auto_assign_delivery_job_trigger() from public,anon,authenticated;
+revoke execute on function public.st_estimatedextent(text,text) from public,anon,authenticated;
+revoke execute on function public.st_estimatedextent(text,text,text) from public,anon,authenticated;
+revoke execute on function public.st_estimatedextent(text,text,text,boolean) from public,anon,authenticated;
+drop index if exists public.idx_delivery_assignments_partner;
