@@ -18,6 +18,10 @@ import {
   getMyDeliveryAssignments,
   getMyDeliveryPartner,
   getMyDeliveryPayouts,
+  setMyDeliveryAvailability,
+  acceptMyDeliveryAssignment,
+  rejectMyDeliveryAssignment,
+  updateMyDeliveryJobStatus,
 } from '@/services/deliveryService';
 
 export default function DeliveryDashboard() {
@@ -76,6 +80,22 @@ export default function DeliveryDashboard() {
       await load();
     } catch (error: any) {
       Alert.alert(action === 'accept' ? 'Could not accept job' : 'Could not reject job', error?.message || 'Please try again.');
+    }
+  };
+
+
+  const handleProgress = async (
+    jobId: string,
+    status: 'picked_up' | 'out_for_delivery' | 'delivered'
+  ) => {
+    try {
+      await updateMyDeliveryJobStatus(jobId, status);
+      await load();
+    } catch (error: any) {
+      Alert.alert(
+        'Could not update delivery',
+        error?.message || 'Please try again.'
+      );
     }
   };
 
@@ -218,6 +238,36 @@ export default function DeliveryDashboard() {
                   </TouchableOpacity>
                 </View>
               )}
+              {online && item.job?.status === 'accepted' && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.acceptButton}
+                    onPress={() => handleProgress(item.job.id, 'picked_up')}
+                  >
+                    <Text style={styles.acceptText}>PICK UP</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {online && item.job?.status === 'picked_up' && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.acceptButton}
+                    onPress={() => handleProgress(item.job.id, 'out_for_delivery')}
+                  >
+                    <Text style={styles.acceptText}>OUT FOR DELIVERY</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {online && item.job?.status === 'out_for_delivery' && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.acceptButton}
+                    onPress={() => handleProgress(item.job.id, 'delivered')}
+                  >
+                    <Text style={styles.acceptText}>DELIVERED</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           ))        )}
 
@@ -291,7 +341,7 @@ const styles = StyleSheet.create({
   emptyCard: { backgroundColor: BRAND.white, borderRadius: 20, padding: 25, alignItems: 'center', marginBottom: 20 },
   emptyCardTitle: { color: BRAND.midnight, fontSize: 15, fontWeight: '900', marginTop: 9 },
   emptyCardText: { color: BRAND.muted, fontSize: 10, lineHeight: 15, textAlign: 'center', marginTop: 4 },
-  jobCard: { backgroundColor: BRAND.white, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', marginBottom: 9 },
+  jobCard: { backgroundColor: BRAND.white, borderRadius: 18, padding: 14, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 9 },
   jobIcon: { width: 45, height: 45, borderRadius: 14, backgroundColor: BRAND.greenLight, alignItems: 'center', justifyContent: 'center' },
   jobText: { flex: 1, paddingLeft: 12 },
   jobTitle: { color: BRAND.midnight, fontSize: 13, fontWeight: '900' },
