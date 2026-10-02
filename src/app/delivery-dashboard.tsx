@@ -58,6 +58,7 @@ export default function DeliveryDashboard() {
 
   const approved = partner?.status === 'approved';
   const online = partner?.availability === 'online';
+  const active = online || partner?.availability === 'busy';
 
   const changeAvailability = async () => {
     if (!partner || !approved) return;
@@ -238,7 +239,7 @@ export default function DeliveryDashboard() {
                   </TouchableOpacity>
                 </View>
               )}
-              {online && item.job?.status === 'accepted' && (
+              {active && item.job?.status === 'accepted' && (
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={styles.acceptButton}
@@ -248,7 +249,7 @@ export default function DeliveryDashboard() {
                   </TouchableOpacity>
                 </View>
               )}
-              {online && item.job?.status === 'picked_up' && (
+              {active && item.job?.status === 'picked_up' && (
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={styles.acceptButton}
@@ -258,7 +259,7 @@ export default function DeliveryDashboard() {
                   </TouchableOpacity>
                 </View>
               )}
-              {online && item.job?.status === 'out_for_delivery' && (
+              {active && item.job?.status === 'out_for_delivery' && (
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={styles.acceptButton}
