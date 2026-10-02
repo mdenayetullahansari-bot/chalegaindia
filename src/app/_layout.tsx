@@ -416,6 +416,21 @@ export default function RootLayout() {
         }}
       />
 
+
+      <Tabs.Screen
+        name="delivery-partner"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="delivery-dashboard"
+        options={{
+          href: null,
+        }}
+      />
+
       <Tabs.Screen
         name="kmc-ward"
         options={{
