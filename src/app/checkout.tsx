@@ -1,5 +1,6 @@
 import { BRAND } from '@/lib/brand';
 import React, { useMemo, useState } from 'react';
+import * as Location from 'expo-location';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -162,6 +163,12 @@ export default function CheckoutScreen() {
   const [address, setAddress] = useState('');
   const [area, setArea] = useState('');
   const [pin, setPin] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number | null;
+  } | null>(null);
+  const [locating, setLocating] = useState(false);
 
   const [delivery, setDelivery] =
     useState<DeliveryType>('Chalega 24-Hour');
@@ -170,6 +177,41 @@ export default function CheckoutScreen() {
     useState<PaymentMethod>('cod');
 
   const [saving, setSaving] = useState(false);
+
+  const pinCurrentLocation = async () => {
+    try {
+      setLocating(true);
+
+      const permission = await Location.requestForegroundPermissionsAsync();
+
+      if (!permission.granted) {
+        throw new Error('Location permission is required to pin your delivery location.');
+      }
+
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        mayShowUserSettingsDialog: true,
+      });
+
+      setDeliveryLocation({
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+        accuracy: current.coords.accuracy ?? null,
+      });
+
+      Alert.alert(
+        'Location pinned',
+        'Your current GPS location will be used for delivery matching.'
+      );
+    } catch (error: any) {
+      Alert.alert(
+        'Could not get location',
+        error?.message || 'Please turn on Location Services and try again.'
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const finishOrder = async ({
     orderId,
@@ -221,6 +263,8 @@ export default function CheckoutScreen() {
           paymentMethod === 'online'
             ? 'Razorpay'
             : 'COD',
+        p_latitude: deliveryLocation?.latitude ?? null,
+        p_longitude: deliveryLocation?.longitude ?? null,
       },
     );
 
@@ -757,6 +801,25 @@ export default function CheckoutScreen() {
               maxLength={6}
               style={styles.input}
             />
+
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={pinCurrentLocation}
+              disabled={locating}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.locationButtonText}>
+                {locating
+                  ? 'GETTING LOCATION...'
+                  : deliveryLocation
+                  ? '✓ DELIVERY LOCATION PINNED'
+                  : 'USE MY CURRENT LOCATION'}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.locationHint}>
+              GPS helps Chalega match your order with nearby delivery partners.
+            </Text>
           </View>
 
           <Text
@@ -1399,6 +1462,31 @@ const styles = StyleSheet.create({
     minHeight: 82,
     paddingTop: 12,
     textAlignVertical: 'top',
+  },
+
+  locationButton: {
+    minHeight: 44,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: BRAND.teal,
+    backgroundColor: '#F2FBF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+
+  locationButtonText: {
+    color: BRAND.teal,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+
+  locationHint: {
+    color: '#7A8791',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 6,
   },
 
   productsCard: {
