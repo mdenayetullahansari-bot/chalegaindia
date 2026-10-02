@@ -156,3 +156,56 @@ export async function getMyDeliveryPayouts() {
 
   return data ?? [];
 }
+
+export async function setMyDeliveryAvailability(
+  availability: 'offline' | 'online'
+): Promise<{ partner_id: string; availability: string }> {
+  const { data, error } = await supabase.rpc(
+    'set_delivery_partner_availability',
+    { p_availability: availability }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data as { partner_id: string; availability: string };
+}
+
+export async function acceptMyDeliveryAssignment(
+  assignmentId: string
+): Promise<{ assignment_id: string; job_id: string; status: string }> {
+  const { data, error } = await supabase.rpc(
+    'accept_my_delivery_assignment',
+    { p_assignment_id: assignmentId }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data as {
+    assignment_id: string;
+    job_id: string;
+    status: string;
+  };
+}
+
+export async function rejectMyDeliveryAssignment(
+  assignmentId: string
+): Promise<{ assignment_id: string; job_id: string; status: string }> {
+  const { data, error } = await supabase.rpc(
+    'reject_my_delivery_assignment',
+    { p_assignment_id: assignmentId }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data as {
+    assignment_id: string;
+    job_id: string;
+    status: string;
+  };
+}
