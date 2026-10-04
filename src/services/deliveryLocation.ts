@@ -1,9 +1,12 @@
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import { supabase } from '@/lib/supabase';
 
 export const DELIVERY_LOCATION_TASK = 'chalega-delivery-location';
+
+let webLocationSubscription: Location.LocationSubscription | null = null;
 
 TaskManager.defineTask(DELIVERY_LOCATION_TASK, async ({ data, error }) => {
   if (error) {
@@ -37,6 +40,12 @@ TaskManager.defineTask(DELIVERY_LOCATION_TASK, async ({ data, error }) => {
 });
 
 export async function stopDeliveryLocationTracking(): Promise<void> {
+  if (Platform.OS === 'web') {
+    webLocationSubscription?.remove();
+    webLocationSubscription = null;
+    return;
+  }
+
   try {
     if (await Location.hasStartedLocationUpdatesAsync(DELIVERY_LOCATION_TASK)) {
       await Location.stopLocationUpdatesAsync(DELIVERY_LOCATION_TASK);
@@ -55,6 +64,46 @@ export async function startDeliveryLocationTracking(): Promise<{
     throw new Error(
       'Location permission is required to go online for delivery jobs.',
     );
+  }
+
+  if (Platform.OS === 'web') {
+    const current = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+      mayShowUserSettingsDialog: true,
+    });
+
+    const { error: locationError } = await supabase.rpc(
+      'update_delivery_partner_location',
+      {
+        p_latitude: current.coords.latitude,
+        p_longitude: current.coords.longitude,
+        p_accuracy_m: current.coords.accuracy ?? null,
+      },
+    );
+
+    if (locationError) throw locationError;
+
+    webLocationSubscription?.remove();
+    webLocationSubscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 60_000,
+        distanceInterval: 100,
+      },
+      async (location) => {
+        try {
+          await supabase.rpc('update_delivery_partner_location', {
+            p_latitude: location.coords.latitude,
+            p_longitude: location.coords.longitude,
+            p_accuracy_m: location.coords.accuracy ?? null,
+          });
+        } catch (error) {
+          console.warn('[DELIVERY LOCATION] Web upload failed:', error);
+        }
+      },
+    );
+
+    return { backgroundEnabled: false };
   }
 
   const background = await Location.requestBackgroundPermissionsAsync();
