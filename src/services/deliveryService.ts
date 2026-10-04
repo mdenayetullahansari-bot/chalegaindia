@@ -195,6 +195,25 @@ export async function acceptMyDeliveryAssignment(
   };
 }
 
+export async function markMyCODOrderCollected(
+  orderId: string
+): Promise<{ order_id: string; payment_status: string; amount: number }> {
+  const { data, error } = await supabase.rpc(
+    'mark_my_cod_order_collected',
+    { p_order_id: orderId }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data as {
+    order_id: string;
+    payment_status: string;
+    amount: number;
+  };
+}
+
 export async function updateMyDeliveryJobStatus(
   jobId: string,
   status: 'picked_up' | 'out_for_delivery' | 'delivered'
