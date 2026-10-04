@@ -41,8 +41,13 @@ TaskManager.defineTask(DELIVERY_LOCATION_TASK, async ({ data, error }) => {
 
 export async function stopDeliveryLocationTracking(): Promise<void> {
   if (Platform.OS === 'web') {
-    webLocationSubscription?.remove();
-    webLocationSubscription = null;
+    try {
+      webLocationSubscription?.remove();
+    } catch (error) {
+      console.warn('[DELIVERY LOCATION] Web watcher cleanup failed:', error);
+    } finally {
+      webLocationSubscription = null;
+    }
     return;
   }
 
@@ -83,7 +88,11 @@ export async function startDeliveryLocationTracking(): Promise<{
 
     if (locationError) throw locationError;
 
-    webLocationSubscription?.remove();
+    try {
+      webLocationSubscription?.remove();
+    } catch (error) {
+      console.warn('[DELIVERY LOCATION] Web watcher replacement failed:', error);
+    }
     webLocationSubscription = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Balanced,
