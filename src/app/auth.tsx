@@ -77,6 +77,14 @@ export default function AuthScreen() {
     }
   }
 
+  function getAuthRedirectUrl(path = '/auth') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return `${window.location.origin}${path}`;
+    }
+
+    return Linking.createURL(path);
+  }
+
   async function handleAuthUrl(url: string | null) {
     if (!url) return;
 
@@ -325,7 +333,7 @@ export default function AuthScreen() {
           email: cleanEmail,
           password,
           options: {
-            emailRedirectTo: Linking.createURL('/auth'),
+            emailRedirectTo: getAuthRedirectUrl('/auth'),
             data: {
               full_name: cleanName,
             },
@@ -386,7 +394,7 @@ export default function AuthScreen() {
     try {
       setLoading(true);
 
-      const redirectTo = Linking.createURL('/auth?type=recovery');
+      const redirectTo = getAuthRedirectUrl('/auth?type=recovery');
 
       console.log(
         'Password recovery redirect:',
