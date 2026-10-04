@@ -582,7 +582,10 @@ export default function DeliveryDashboard() {
                   </TouchableOpacity>
                 </View>
               )}
-              {item.job?.status === 'delivered' && item.job?.order_id && (
+              {item.job?.status === 'delivered' &&
+                item.job?.order_id &&
+                item.job?.payment_method === 'COD' &&
+                item.job?.payment_status === 'pending' && (
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={[styles.acceptButton, deliveryActionLoading === 'cod:' + item.job.order_id && styles.disabledButton]}
@@ -590,7 +593,9 @@ export default function DeliveryDashboard() {
                     disabled={!!deliveryActionLoading}
                   >
                     <Text style={styles.acceptText}>
-                      {deliveryActionLoading === 'cod:' + item.job.order_id ? 'RECORDING...' : 'CASH COLLECTED'}
+                      {deliveryActionLoading === 'cod:' + item.job.order_id
+                        ? 'RECORDING...'
+                        : 'CASH COLLECTED ₹' + Number(item.job?.order_total || 0).toFixed(0)}
                     </Text>
                   </TouchableOpacity>
                 </View>
