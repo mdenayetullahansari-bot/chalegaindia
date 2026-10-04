@@ -119,11 +119,15 @@ export default function DeliveryDashboard() {
 
     startDeliveryLocationTracking().catch(async (error: any) => {
       if (cancelled) return;
-      try {
-        await setMyDeliveryAvailability('offline');
-        setPartner(prev => prev ? { ...prev, availability: 'offline' } : prev);
-      } catch {
-        // Leave the backend state unchanged if the safety fallback fails.
+      if (Platform.OS !== 'web') {
+        try {
+          await setMyDeliveryAvailability('offline');
+          setPartner(prev => prev ? { ...prev, availability: 'offline' } : prev);
+        } catch {
+          // Leave the backend state unchanged if the safety fallback fails.
+        }
+      } else {
+        setAvailabilityError(error?.message || 'Live location could not be refreshed.');
       }
       Alert.alert(
         'Location required',
