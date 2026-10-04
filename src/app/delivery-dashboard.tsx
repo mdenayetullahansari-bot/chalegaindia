@@ -43,6 +43,8 @@ export default function DeliveryDashboard() {
   const [loginError, setLoginError] = useState('');
   const [availabilityError, setAvailabilityError] = useState('');
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [deliveryActionError, setDeliveryActionError] = useState('');
+  const [deliveryActionLoading, setDeliveryActionLoading] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -192,6 +194,8 @@ export default function DeliveryDashboard() {
 
   const handleBatchAssignment = async (batchId: string, action: 'accept' | 'reject') => {
     try {
+      setDeliveryActionError('');
+      setDeliveryActionLoading(batchId + ':' + action);
       if (action === 'accept') {
         await acceptMyDeliveryBatch(batchId);
       } else {
@@ -199,10 +203,14 @@ export default function DeliveryDashboard() {
       }
       await load();
     } catch (error: any) {
+      const message = error?.message || 'Please try again.';
+      setDeliveryActionError(message);
       Alert.alert(
         action === 'accept' ? 'Could not accept batch' : 'Could not reject batch',
-        error?.message || 'Please try again.'
+        message
       );
+    } finally {
+      setDeliveryActionLoading('');
     }
   };
 
@@ -411,6 +419,7 @@ export default function DeliveryDashboard() {
         </View>
 
         <Text style={styles.section}>MY DELIVERIES</Text>
+        {deliveryActionError ? <Text style={styles.deliveryActionError}>{deliveryActionError}</Text> : null}
         {assignments.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="cube-outline" size={29} color={BRAND.teal} />
@@ -461,14 +470,16 @@ export default function DeliveryDashboard() {
                         <TouchableOpacity
                           style={styles.rejectButton}
                           onPress={() => handleBatchAssignment(item.job.batch_id, 'reject')}
+                          disabled={!!deliveryActionLoading}
                         >
-                          <Text style={styles.rejectText}>REJECT BATCH</Text>
+                          <Text style={styles.rejectText}>{deliveryActionLoading === item.job.batch_id + ':reject' ? 'REJECTING...' : 'REJECT BATCH'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.acceptButton}
                           onPress={() => handleBatchAssignment(item.job.batch_id, 'accept')}
+                          disabled={!!deliveryActionLoading}
                         >
-                          <Text style={styles.acceptText}>ACCEPT BATCH</Text>
+                          <Text style={styles.acceptText}>{deliveryActionLoading === item.job.batch_id + ':accept' ? 'ACCEPTING...' : 'ACCEPT BATCH'}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -599,6 +610,7 @@ const styles = StyleSheet.create({
   availabilityText: { color: BRAND.teal, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
   availabilityTextOnline: { color: BRAND.green },
   availabilityError: { color: '#B42318', fontSize: 10, lineHeight: 15, marginTop: 8, maxWidth: 420 },
+  deliveryActionError: { color: '#B42318', fontSize: 11, lineHeight: 16, marginBottom: 10, maxWidth: 700 },
   pending: { backgroundColor: BRAND.goldLight, borderRadius: 18, padding: 15, flexDirection: 'row', gap: 10, marginBottom: 18 },
   pendingText: { flex: 1 },
   pendingTitle: { color: BRAND.ink, fontSize: 14, fontWeight: '900' },
