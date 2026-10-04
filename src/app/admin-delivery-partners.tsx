@@ -196,14 +196,6 @@ export default function AdminDeliveryPartners() {
                       onPress={() => changeStatus(partner, 'rejected')}
                     />
                   )}
-                  {partner.status === 'suspended' && (
-                    <ActionButton
-                      label="RE-APPROVE"
-                      tone="approve"
-                      disabled={busy}
-                      onPress={() => changeStatus(partner, 'approved')}
-                    />
-                  )}
                   {busy && <ActivityIndicator size="small" color={BRAND.teal} />}
                 </View>
               </View>
