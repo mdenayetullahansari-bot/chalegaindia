@@ -501,7 +501,7 @@ export default function DeliveryDashboard() {
               </View>
               <View style={styles.jobText}>
                 <Text style={styles.jobTitle}>{item.job?.order_id || 'Delivery Job'}</Text>
-                <Text style={styles.jobMeta}>{item.status.replaceAll('_', ' ').toUpperCase()}</Text>
+                <Text style={styles.jobMeta}>{(item.job?.status || item.status).replaceAll('_', ' ').toUpperCase()}</Text>
                 {item.job?.drop_area ? <Text style={styles.jobAddress}>{item.job.drop_area}</Text> : null}
                 {item.job?.drop_pin ? <Text style={styles.jobAddress}>PIN {item.job.drop_pin}</Text> : null}
               </View>
