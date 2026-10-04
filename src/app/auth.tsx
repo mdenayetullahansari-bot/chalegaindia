@@ -314,6 +314,7 @@ export default function AuthScreen() {
           'success'
         );
 
+        router.replace('/');
         return;
       }
 
