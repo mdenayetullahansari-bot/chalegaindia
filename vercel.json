@@ -1,0 +1,7 @@
+{
+  "buildCommand": "expo export -p web --clear",
+  "outputDirectory": "dist",
+  "devCommand": "expo",
+  "cleanUrls": true,
+  "framework": null
+}
