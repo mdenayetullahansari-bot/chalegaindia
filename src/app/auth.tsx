@@ -92,8 +92,29 @@ export default function AuthScreen() {
       console.log('AUTH DEEP LINK:', url);
 
       const parsed = Linking.parse(url);
-      const params = parsed.queryParams || {};
-      const hash = url.includes('#') ? url.split('#')[1] : '';
+      let params: Record<string, any> = parsed.queryParams || {};
+      let hash = url.includes('#') ? url.split('#')[1] : '';
+
+      // On web, read the browser URL directly as well. Supabase recovery
+      // links can arrive as query/hash parameters before Expo Linking sees them.
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const browserUrl = window.location.href;
+        const browserQuery = new URLSearchParams(window.location.search);
+        const browserHash = window.location.hash.replace(/^#/, '');
+
+        params = {
+          ...params,
+          ...Object.fromEntries(browserQuery.entries()),
+        };
+
+        if (browserHash) {
+          hash = browserHash;
+          const hashParams = new URLSearchParams(browserHash);
+          for (const [key, value] of hashParams.entries()) {
+            if (!(key in params)) params[key] = value;
+          }
+        }
+      }
 
       const referralParam = params.ref
         ? String(params.ref)
