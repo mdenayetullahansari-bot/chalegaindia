@@ -136,7 +136,39 @@ export async function getMyDeliveryAssignments() {
     throw error;
   }
 
-  return data ?? [];
+  const rows = data ?? [];
+  const orderIds = rows
+    .map((item: any) => item.job?.order_id)
+    .filter(Boolean);
+
+  if (orderIds.length === 0) {
+    return rows;
+  }
+
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('order_id,total,payment_method,payment_status')
+    .in('order_id', orderIds);
+
+  if (ordersError) {
+    throw ordersError;
+  }
+
+  const orderMap = new Map(
+    (orders ?? []).map((order: any) => [order.order_id, order])
+  );
+
+  return rows.map((item: any) => ({
+    ...item,
+    job: item.job
+      ? {
+          ...item.job,
+          order_total: orderMap.get(item.job.order_id)?.total ?? null,
+          payment_method: orderMap.get(item.job.order_id)?.payment_method ?? null,
+          payment_status: orderMap.get(item.job.order_id)?.payment_status ?? null,
+        }
+      : item.job,
+  }));
 }
 
 export async function getMyDeliveryPayouts() {
