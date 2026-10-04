@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Platform } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { BRAND } from '@/lib/brand';
@@ -40,6 +41,8 @@ export default function DeliveryDashboard() {
   const [password, setPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [availabilityError, setAvailabilityError] = useState('');
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -136,28 +139,54 @@ export default function DeliveryDashboard() {
   const active = online || partner?.availability === 'busy';
 
   const changeAvailability = async () => {
-    if (!partner || !approved) return;
+    if (!partner || !approved || availabilityLoading) return;
 
     try {
+      setAvailabilityLoading(true);
+      setAvailabilityError('');
+
       if (online) {
         await stopDeliveryLocationTracking();
         await setMyDeliveryAvailability('offline');
-        setPartner(prev =>
-          prev ? { ...prev, availability: 'offline' } : prev
-        );
+        setPartner(prev => prev ? { ...prev, availability: 'offline' } : prev);
+        return;
+      }
+
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+        await new Promise<void>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            async position => {
+              try {
+                const { error } = await supabase.rpc('update_delivery_partner_location', {
+                  p_latitude: position.coords.latitude,
+                  p_longitude: position.coords.longitude,
+                  p_accuracy_m: position.coords.accuracy ?? null,
+                });
+                if (error) throw error;
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            },
+            error => reject(new Error(error.message || 'Browser location could not be read.')),
+            { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 },
+          );
+        });
+
+        await setMyDeliveryAvailability('online');
+        setPartner(prev => prev ? { ...prev, availability: 'online' } : prev);
         return;
       }
 
       await startDeliveryLocationTracking();
       await setMyDeliveryAvailability('online');
-      setPartner(prev =>
-        prev ? { ...prev, availability: 'online' } : prev
-      );
+      setPartner(prev => prev ? { ...prev, availability: 'online' } : prev);
     } catch (error: any) {
-      Alert.alert(
-        'Could not go online',
-        error?.message || 'Please allow location access and try again.'
-      );
+      const message = error?.message || 'Please allow location access and try again.';
+      setAvailabilityError(message);
+      Alert.alert('Could not change availability', message);
+    } finally {
+      setAvailabilityLoading(false);
     }
   };
 
@@ -324,12 +353,15 @@ export default function DeliveryDashboard() {
             </Text>
           </View>
           {approved && (
-            <TouchableOpacity style={[styles.availabilityButton, online && styles.availabilityButtonOnline]} onPress={changeAvailability}>
+            <>
+            <TouchableOpacity style={[styles.availabilityButton, online && styles.availabilityButtonOnline, availabilityLoading && styles.disabledButton]} onPress={changeAvailability} disabled={availabilityLoading}>
               <View style={[styles.availabilityDot, online && styles.availabilityDotOnline]} />
               <Text style={[styles.availabilityText, online && styles.availabilityTextOnline]}>
                 {online ? 'GO OFFLINE' : 'GO ONLINE'}
               </Text>
             </TouchableOpacity>
+            {availabilityError ? <Text style={styles.availabilityError}>{availabilityError}</Text> : null}
+            </>
           )}
         </View>
 
@@ -566,6 +598,7 @@ const styles = StyleSheet.create({
   availabilityDotOnline: { backgroundColor: BRAND.green },
   availabilityText: { color: BRAND.teal, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
   availabilityTextOnline: { color: BRAND.green },
+  availabilityError: { color: '#B42318', fontSize: 10, lineHeight: 15, marginTop: 8, maxWidth: 420 },
   pending: { backgroundColor: BRAND.goldLight, borderRadius: 18, padding: 15, flexDirection: 'row', gap: 10, marginBottom: 18 },
   pendingText: { flex: 1 },
   pendingTitle: { color: BRAND.ink, fontSize: 14, fontWeight: '900' },
