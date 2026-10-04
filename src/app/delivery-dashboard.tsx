@@ -160,25 +160,30 @@ export default function DeliveryDashboard() {
       }
 
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
-        await new Promise<void>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(
-            async position => {
-              try {
-                const { error } = await supabase.rpc('update_delivery_partner_location', {
-                  p_latitude: position.coords.latitude,
-                  p_longitude: position.coords.longitude,
-                  p_accuracy_m: position.coords.accuracy ?? null,
-                });
-                if (error) throw error;
-                resolve();
-              } catch (error) {
-                reject(error);
-              }
-            },
-            error => reject(new Error(error.message || 'Browser location could not be read.')),
-            { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 },
-          );
-        });
+        try {
+          await new Promise<void>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              async position => {
+                try {
+                  const { error } = await supabase.rpc('update_delivery_partner_location', {
+                    p_latitude: position.coords.latitude,
+                    p_longitude: position.coords.longitude,
+                    p_accuracy_m: position.coords.accuracy ?? null,
+                  });
+                  if (error) throw error;
+                  resolve();
+                } catch (error) {
+                  reject(error);
+                }
+              },
+              error => reject(new Error(error.message || 'Browser location could not be read.')),
+              { enableHighAccuracy: false, maximumAge: 300000, timeout: 30000 },
+            );
+          });
+        } catch (locationError: any) {
+          const locationMessage = locationError?.message || '';
+          if (!/timeout|timed out/i.test(locationMessage)) throw locationError;
+        }
 
         await setMyDeliveryAvailability('online');
         setPartner(prev => prev ? { ...prev, availability: 'online' } : prev);
