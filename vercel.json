@@ -3,6 +3,5 @@
   "outputDirectory": "dist",
   "devCommand": "expo",
   "cleanUrls": true,
-  "framework": null,
-  "installCommand": "npm install --legacy-peer-deps"
+  "framework": null
 }
