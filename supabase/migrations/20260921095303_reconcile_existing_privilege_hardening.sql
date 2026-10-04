@@ -1,1 +1,0 @@
--- Reconciliation migration. The corresponding privilege hardening is already present in the production database. No schema changes are performed here.
