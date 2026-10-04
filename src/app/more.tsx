@@ -18,15 +18,18 @@ import {
 } from '@/lib/guest-session';
 
 import { BRAND } from '@/lib/brand';
+import { isChalegaAdmin } from '@/services/adminService';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function MoreScreen() {
   const router = useRouter();
   const [guestMode, setGuestMode] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     hydrateGuestMode().then(setGuestMode);
+    isChalegaAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
 
     return subscribeToGuestMode(setGuestMode);
   }, []);
@@ -252,6 +255,16 @@ export default function MoreScreen() {
           onPress={() => goTo('/delivery-dashboard')}
           tone="green"
         />
+
+        {isAdmin && (
+          <MenuRow
+            icon="cash-outline"
+            title="Admin Payouts"
+            subtitle="Review and settle delivery partner payouts."
+            onPress={() => goTo('/admin-payouts')}
+            tone="gold"
+          />
+        )}
 
         {/* COMMUNITY */}
         <Text style={styles.sectionTitle}>
