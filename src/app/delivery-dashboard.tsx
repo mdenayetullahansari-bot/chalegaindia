@@ -138,7 +138,8 @@ export default function DeliveryDashboard() {
 
   const approved = partner?.status === 'approved';
   const online = partner?.availability === 'online';
-  const active = online || partner?.availability === 'busy';
+  const busy = partner?.availability === 'busy';
+  const active = online || busy;
 
   const changeAvailability = async () => {
     if (!partner || !approved || availabilityLoading) return;
@@ -357,10 +358,10 @@ export default function DeliveryDashboard() {
           <View style={styles.statusRow}>
             <View style={[styles.dot, approved && styles.dotApproved]} />
             <Text style={styles.statusText}>
-              {approved ? (online ? 'ONLINE' : 'OFFLINE') : partner.status.toUpperCase()}
+              {approved ? (busy ? 'BUSY' : online ? 'ONLINE' : 'OFFLINE') : partner.status.toUpperCase()}
             </Text>
           </View>
-          {approved && (
+          {approved && !busy && (
             <>
             <TouchableOpacity style={[styles.availabilityButton, online && styles.availabilityButtonOnline, availabilityLoading && styles.disabledButton]} onPress={changeAvailability} disabled={availabilityLoading}>
               <View style={[styles.availabilityDot, online && styles.availabilityDotOnline]} />
@@ -371,6 +372,7 @@ export default function DeliveryDashboard() {
             {availabilityError ? <Text style={styles.availabilityError}>{availabilityError}</Text> : null}
             </>
           )}
+          {approved && busy ? <Text style={styles.busyHint}>DELIVERY IN PROGRESS — COMPLETE THE ACTIVE JOB TO GO OFFLINE.</Text> : null}
         </View>
 
         {!approved && (
@@ -603,6 +605,7 @@ const styles = StyleSheet.create({
   dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#A06C00' },
   dotApproved: { backgroundColor: BRAND.green },
   statusText: { color: BRAND.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  busyStatusText: { color: '#A06C00', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   availabilityButton: { marginTop: 13, alignSelf: 'flex-start', minHeight: 42, paddingHorizontal: 16, borderRadius: 14, backgroundColor: BRAND.white, borderWidth: 1, borderColor: BRAND.teal, flexDirection: 'row', alignItems: 'center', gap: 8 },
   availabilityButtonOnline: { backgroundColor: BRAND.greenLight, borderColor: BRAND.green },
   availabilityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#A06C00' },
@@ -610,6 +613,7 @@ const styles = StyleSheet.create({
   availabilityText: { color: BRAND.teal, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 },
   availabilityTextOnline: { color: BRAND.green },
   availabilityError: { color: '#B42318', fontSize: 10, lineHeight: 15, marginTop: 8, maxWidth: 420 },
+  busyHint: { color: '#A06C00', fontSize: 9, fontWeight: '900', letterSpacing: 0.5, marginTop: 10, maxWidth: 520 },
   deliveryActionError: { color: '#B42318', fontSize: 11, lineHeight: 16, marginBottom: 10, maxWidth: 700 },
   pending: { backgroundColor: BRAND.goldLight, borderRadius: 18, padding: 15, flexDirection: 'row', gap: 10, marginBottom: 18 },
   pendingText: { flex: 1 },
