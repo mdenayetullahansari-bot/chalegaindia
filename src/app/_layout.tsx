@@ -438,6 +438,13 @@ export default function RootLayout() {
       />
 
       <Tabs.Screen
+        name="admin-payouts"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
         name="kmc-ward"
         options={{
           href: null,
