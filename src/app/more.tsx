@@ -257,13 +257,23 @@ export default function MoreScreen() {
         />
 
         {isAdmin && (
-          <MenuRow
-            icon="cash-outline"
-            title="Admin Payouts"
-            subtitle="Review and settle delivery partner payouts."
-            onPress={() => goTo('/admin-payouts')}
-            tone="gold"
-          />
+          <>
+            <MenuRow
+              icon="grid-outline"
+              title="Admin Dashboard"
+              subtitle="Manage orders, delivery operations and partner payouts."
+              onPress={() => goTo('/admin')}
+              tone="gold"
+            />
+
+            <MenuRow
+              icon="cash-outline"
+              title="Admin Payouts"
+              subtitle="Review and settle delivery partner payouts."
+              onPress={() => goTo('/admin-payouts')}
+              tone="gold"
+            />
+          </>
         )}
 
         {/* COMMUNITY */}
