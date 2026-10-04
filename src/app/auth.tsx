@@ -27,6 +27,7 @@ import { startGuestSession } from '@/lib/guest-session';
 import {
   applyPendingReferral,
   captureReferralCode,
+  savePendingReferralCode,
 } from '@/services/referralService';
 
 export default function AuthScreen() {
@@ -37,6 +38,7 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -311,6 +313,12 @@ export default function AuthScreen() {
         'Attempting signup:',
         cleanEmail
       );
+
+      const cleanReferralCode = referralCode.trim().toUpperCase();
+
+      if (cleanReferralCode) {
+        await savePendingReferralCode(cleanReferralCode);
+      }
 
       const { data, error } =
         await supabase.auth.signUp({
@@ -618,6 +626,24 @@ export default function AuthScreen() {
             </View>
           )}
 
+          {!isLogin && (
+            <View style={styles.field}>
+              <Text style={styles.label}>
+                REFERRAL CODE (OPTIONAL)
+              </Text>
+
+              <TextInput
+                value={referralCode}
+                onChangeText={setReferralCode}
+                placeholder="Enter referral code"
+                placeholderTextColor="#999"
+                style={styles.input}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+          )}
+
           <View style={styles.field}>
             <Text style={styles.label}>
               EMAIL
@@ -727,6 +753,7 @@ export default function AuthScreen() {
                   (value) => !value
                 );
                 setPassword('');
+                setReferralCode('');
                 setMessage('');
                 setMessageType('');
               }}
