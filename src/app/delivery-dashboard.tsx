@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -13,6 +14,7 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { BRAND } from '@/lib/brand';
+import { supabase } from '@/lib/supabase';
 import {
   DeliveryPartner,
   getMyDeliveryAssignments,
@@ -33,10 +35,27 @@ export default function DeliveryDashboard() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const load = async () => {
     setLoading(true);
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      setAuthenticated(!!user);
+
+      if (!user) {
+        setPartner(null);
+        setAssignments([]);
+        setPayouts([]);
+        return;
+      }
+
       const current = await getMyDeliveryPartner();
       setPartner(current);
 
@@ -52,6 +71,34 @@ export default function DeliveryDashboard() {
       Alert.alert('Could not load delivery account', error?.message || 'Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePartnerLogin = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      setLoginError('Please enter your email and password.');
+      return;
+    }
+
+    try {
+      setLoginLoading(true);
+      setLoginError('');
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+      if (error) throw error;
+
+      setPassword('');
+      await load();
+    } catch (error: any) {
+      setLoginError(error?.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -164,6 +211,63 @@ export default function DeliveryDashboard() {
       <SafeAreaView style={styles.loading}>
         <ActivityIndicator size="large" color={BRAND.teal} />
         <Text style={styles.loadingText}>Loading delivery dashboard...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!authenticated) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView contentContainerStyle={styles.loginContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.emptyIcon}>
+            <Ionicons name="bicycle" size={34} color={BRAND.teal} />
+          </View>
+          <Text style={styles.title}>Delivery Partner Login</Text>
+          <Text style={styles.body}>
+            Sign in with the account linked to your approved Chalega delivery partner profile.
+          </Text>
+          <View style={styles.loginCard}>
+            <Text style={styles.loginLabel}>EMAIL</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="partner@example.com"
+              placeholderTextColor="#9AA4B2"
+              style={styles.loginInput}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={styles.loginLabel}>PASSWORD</Text>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Your password"
+              placeholderTextColor="#9AA4B2"
+              style={styles.loginInput}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              onSubmitEditing={handlePartnerLogin}
+            />
+            {loginError ? <Text style={styles.loginError}>{loginError}</Text> : null}
+            <TouchableOpacity
+              style={[styles.primary, loginLoading && styles.disabledButton]}
+              onPress={handlePartnerLogin}
+              disabled={loginLoading}
+            >
+              <Text style={styles.primaryText}>
+                {loginLoading ? 'SIGNING IN...' : 'SIGN IN AS DELIVERY PARTNER'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.loginHint}>
+            Only an authenticated account linked to an approved delivery partner can access delivery jobs.
+          </Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.secondary}>
+            <Text style={styles.secondaryText}>GO BACK</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -438,6 +542,13 @@ const styles = StyleSheet.create({
   loading: { flex: 1, backgroundColor: BRAND.cream, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 12, color: BRAND.muted, fontSize: 12, fontWeight: '700' },
   content: { padding: 20, paddingBottom: 50 },
+  loginContent: { flexGrow: 1, padding: 20, paddingTop: 70, paddingBottom: 50, alignItems: 'center', justifyContent: 'center' },
+  loginCard: { width: '100%', maxWidth: 520, backgroundColor: BRAND.white, borderRadius: 20, padding: 20, marginTop: 18 },
+  loginLabel: { color: BRAND.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginBottom: 7, marginTop: 5 },
+  loginInput: { height: 52, borderWidth: 1, borderColor: '#E1E5EB', borderRadius: 14, paddingHorizontal: 15, color: BRAND.midnight, fontSize: 15, backgroundColor: BRAND.cream, marginBottom: 14 },
+  loginError: { color: '#B42318', fontSize: 11, lineHeight: 16, marginBottom: 12 },
+  loginHint: { maxWidth: 520, textAlign: 'center', color: BRAND.muted, fontSize: 10, lineHeight: 15, marginTop: 15 },
+  disabledButton: { opacity: 0.6 },
   topBar: { height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { width: 42, height: 42, borderRadius: 14, backgroundColor: BRAND.white, alignItems: 'center', justifyContent: 'center' },
   refresh: { width: 42, height: 42, borderRadius: 14, backgroundColor: BRAND.white, alignItems: 'center', justifyContent: 'center' },

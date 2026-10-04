@@ -126,9 +126,14 @@ export default function RootLayout() {
     );
   }
 
+  const isDeliveryRoute =
+    pathname === '/delivery-dashboard' ||
+    pathname === '/delivery-partner';
+
   if (
     !session &&
     !guestMode &&
+    !isDeliveryRoute &&
     pathname !== '/auth'
   ) {
     return (
@@ -141,6 +146,7 @@ export default function RootLayout() {
   if (
     !session &&
     !guestMode &&
+    !isDeliveryRoute &&
     pathname === '/auth'
   ) {
     return (
