@@ -523,14 +523,9 @@ const saveMissionState = useCallback(
           const waterGlasses = Number(healthCheckIn?.water ?? 0);
 
           if (waterGlasses < 6) {
-            Alert.alert(
-              'Complete Health Check-in',
-              "Please record at least 6 glasses of water in today's Health Check-in before claiming this mission.",
-              [
-                { text: 'OPEN HEALTH', onPress: () => router.push('/daily-health-checkin') },
-                { text: 'NOT NOW', style: 'cancel' },
-              ]
-            );
+            // On web, route directly to the Health Check-in instead of
+            // relying on a native Alert to explain the requirement.
+            router.push('/daily-health-checkin');
             return;
           }
         }
