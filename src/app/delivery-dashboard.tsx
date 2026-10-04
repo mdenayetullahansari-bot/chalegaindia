@@ -27,6 +27,7 @@ import {
   acceptMyDeliveryBatch,
   rejectMyDeliveryBatch,
   updateMyDeliveryJobStatus,
+  markMyCODOrderCollected,
 } from '@/services/deliveryService';
 import { startDeliveryLocationTracking, stopDeliveryLocationTracking } from '@/services/deliveryLocation';
 
@@ -237,6 +238,34 @@ export default function DeliveryDashboard() {
     }
   };
 
+
+  const handleCODCollection = async (orderId: string, amount: number) => {
+    const confirmMessage = `Confirm that you collected ₹${amount.toFixed(0)} cash from the customer for order ${orderId}.`;
+    const confirmed =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.confirm(confirmMessage)
+        : await new Promise<boolean>(resolve => {
+            Alert.alert('Confirm cash collection', confirmMessage, [
+              { text: 'CANCEL', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'CASH COLLECTED', onPress: () => resolve(true) },
+            ]);
+          });
+
+    if (!confirmed) return;
+
+    try {
+      setDeliveryActionError('');
+      setDeliveryActionLoading('cod:' + orderId);
+      await markMyCODOrderCollected(orderId);
+      await load();
+    } catch (error: any) {
+      const message = error?.message || 'Could not record COD collection.';
+      setDeliveryActionError(message);
+      Alert.alert('COD collection failed', message);
+    } finally {
+      setDeliveryActionLoading('');
+    }
+  };
 
   const handleProgress = async (
     jobId: string,
@@ -550,6 +579,19 @@ export default function DeliveryDashboard() {
                     onPress={() => handleProgress(item.job.id, 'delivered')}
                   >
                     <Text style={styles.acceptText}>DELIVERED</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {item.job?.status === 'delivered' && item.job?.order_id && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={[styles.acceptButton, deliveryActionLoading === 'cod:' + item.job.order_id && styles.disabledButton]}
+                    onPress={() => handleCODCollection(item.job.order_id, Number(item.job?.order_total || 0))}
+                    disabled={!!deliveryActionLoading}
+                  >
+                    <Text style={styles.acceptText}>
+                      {deliveryActionLoading === 'cod:' + item.job.order_id ? 'RECORDING...' : 'CASH COLLECTED'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               )}
