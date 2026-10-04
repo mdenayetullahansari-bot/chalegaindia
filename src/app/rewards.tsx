@@ -1,0 +1,1455 @@
+import { BRAND } from '@/lib/brand';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+
+import { supabase } from '../lib/supabase';
+import { createRewardedAd } from '@/lib/rewardedAds';
+
+type PointsTransaction = {
+  id: string;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  transaction_key: string;
+  description: string;
+  created_at: string;
+  title: string;
+  type: string;
+  timestamp: string;
+};
+import { formatLocalDateTime } from '../lib/date';
+
+type Reward = {
+  id: string;
+  emoji: string;
+  category: string;
+  title: string;
+  description: string;
+  cost: number;
+};
+
+const DEFAULT_REWARDS: Reward[] = [];
+
+
+export default function RewardsScreen() {
+  const router = useRouter();
+
+  const [points, setPoints] = useState(0);
+  const [history, setHistory] = useState<PointsTransaction[]>([]);
+  const [claimed, setClaimed] = useState<string[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>(DEFAULT_REWARDS);
+  const [loading, setLoading] = useState(true);
+  const [adReady, setAdReady] = useState(false);
+  const [adBusy, setAdBusy] = useState(false);
+
+  const loadWallet = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const [
+        { data: profileData, error: profileError },
+        { data: transactionData, error: transactionError },
+        { data: redemptionData, error: redemptionError },
+        { data: rewardCatalogData, error: rewardCatalogError },
+      ] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('points')
+          .single(),
+        supabase.rpc('get_my_points_transactions'),
+        supabase.rpc('get_my_reward_redemptions'),
+        supabase
+          .from('chalega_reward_catalog')
+          .select('id, emoji, category, title, description, cost')
+          .eq('active', true)
+          .order('sort_order', { ascending: true }),
+      ]);
+
+      if (profileError) throw profileError;
+      if (transactionError) throw transactionError;
+      if (redemptionError) throw redemptionError;
+      if (rewardCatalogError) throw rewardCatalogError;
+
+      setPoints(
+        Math.max(
+          0,
+          Math.round(Number(profileData?.points) || 0)
+        )
+      );
+      
+      setRewards(
+        (rewardCatalogData ?? []).map(
+          (reward: {
+            id: string;
+            emoji: string;
+            category: string;
+            title: string;
+            description: string;
+            cost: number;
+          }) => ({
+            id: reward.id,
+            emoji: reward.emoji,
+            category: reward.category,
+            title: reward.title,
+            description: reward.description,
+            cost: Number(reward.cost) || 0,
+          })
+        )
+      );
+
+      setHistory(
+        (transactionData ?? []).map(
+          (transaction: {
+            id: string;
+            amount: number;
+            balance_after: number;
+            transaction_type: string;
+            transaction_key: string;
+            description: string;
+            created_at: string;
+          }) => ({
+            ...transaction,
+            title: transaction.description,
+            type: transaction.transaction_type,
+            timestamp: transaction.created_at,
+          })
+        )
+      );
+
+      setClaimed(
+        (redemptionData ?? [])
+          .map(
+            (redemption: { reward_id: string | null }) =>
+              redemption.reward_id
+          )
+          .filter(
+            (rewardId: string | null): rewardId is string =>
+              Boolean(rewardId)
+          )
+      );
+    } catch (error) {
+      console.log(
+        'Could not load Chalega wallet:',
+        error
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWallet();
+  }, [loadWallet]);
+
+  const rewardedAd = useMemo(
+    () => createRewardedAd(),
+    []
+  );
+
+  useEffect(() => {
+    if (!rewardedAd) {
+      return;
+    }
+
+    const removeLoaded = rewardedAd.addListener(
+      'loaded',
+      () => setAdReady(true)
+    );
+
+    const removeClosed = rewardedAd.addListener(
+      'closed',
+      () => setAdReady(false)
+    );
+
+    const removeError = rewardedAd.addListener(
+      'error',
+      () => setAdReady(false)
+    );
+
+    rewardedAd.load();
+
+    return () => {
+      removeLoaded();
+      removeClosed();
+      removeError();
+    };
+  }, [rewardedAd]);
+
+  const watchAdForCoins = async () => {
+    if (!rewardedAd || adBusy) {
+      if (Platform.OS === 'web') {
+        Alert.alert(
+          'Watch Ads on Mobile',
+          'Rewarded ads are available in the Chalega mobile app.'
+        );
+      }
+      return;
+    }
+
+    try {
+      setAdBusy(true);
+      setAdReady(false);
+
+      await rewardedAd.show();
+      await loadWallet();
+
+      Alert.alert(
+        '🎉 Coins Added',
+        'Your 25 Chalega Coins were verified and added to your wallet.'
+      );
+    } catch (error) {
+      console.warn('[REWARDED AD] Error:', error);
+      Alert.alert(
+        'Reward Verification',
+        'The ad completed, but verification is still pending. Please check your Coin wallet again shortly.'
+      );
+    } finally {
+      setAdBusy(false);
+      rewardedAd.load();
+    }
+  };
+
+  /*
+   * Refresh whenever the user returns to Rewards.
+   * This means Walking or Missions can change the
+   * balance and Rewards immediately reflects it.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadWallet();
+    }, [loadWallet])
+  );
+
+  const level = useMemo(() => {
+    if (points >= 5000) return 5;
+    if (points >= 2500) return 4;
+    if (points >= 1000) return 3;
+    if (points >= 500) return 2;
+    return 1;
+  }, [points]);
+
+  const levelName = [
+    'New Walker',
+    'Active Walker',
+    'Healthy Walker',
+    'Chalega Pro',
+    'Chalega Champion',
+  ][level - 1];
+
+  const levelStart = [
+    0,
+    500,
+    1000,
+    2500,
+    5000,
+  ][level - 1];
+
+  const levelEnd =
+    level === 5
+      ? 5000
+      : [500, 1000, 2500, 5000][level - 1];
+
+  const progress =
+    level === 5
+      ? 100
+      : Math.min(
+          100,
+          Math.max(
+            0,
+            ((points - levelStart) /
+              (levelEnd - levelStart)) *
+              100
+          )
+        );
+
+  const nextLevelPoints =
+    level === 5
+      ? 0
+      : Math.max(levelEnd - points, 0);
+
+  const recentHistory = history.slice(0, 6);
+
+  const claimReward = async (reward: Reward) => {
+    if (claimed.includes(reward.id)) {
+      Alert.alert(
+        'Already Claimed',
+        'This reward has already been claimed.'
+      );
+      return;
+    }
+
+    if (points < reward.cost) {
+      Alert.alert(
+        'Keep Walking 🚶',
+        `You need ${(
+          reward.cost - points
+        ).toLocaleString('en-IN')} more Chalega Coins.`
+      );
+      return;
+    }
+
+    const redeem = async () => {
+      try {
+        const {
+          data: redemptionResult,
+          error: redemptionError,
+        } = await supabase.rpc(
+          'redeem_chalega_reward',
+          {
+            p_reward_id: reward.id,
+          }
+        );
+
+        if (redemptionError) {
+          throw redemptionError;
+        }
+
+        const newBalance = Math.max(
+          0,
+          Math.round(
+            Number(redemptionResult?.balance) || 0
+          )
+        );
+
+        setPoints(newBalance);
+
+        await loadWallet();
+
+        if (Platform.OS === 'web') {
+          window.alert(
+            `${reward.title} has been redeemed successfully!`
+          );
+        } else {
+          Alert.alert(
+            '🎉 Reward Redeemed!',
+            `${reward.title} has been added to your Chalega rewards history.`,
+            [
+              {
+                text: 'KEEP GOING',
+              },
+            ]
+          );
+        }
+      } catch (error) {
+        console.log(
+          'Reward redemption failed:',
+          error
+        );
+
+        if (Platform.OS === 'web') {
+          window.alert(
+            'We could not complete the redemption.'
+          );
+        } else {
+          Alert.alert(
+            'Something went wrong',
+            'We could not complete the redemption.'
+          );
+        }
+      }
+    };
+
+    const message =
+      `Use ${reward.cost.toLocaleString(
+        'en-IN'
+      )} Chalega Coins for ${reward.title}?`;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Redeem Reward?\n\n${message}`
+      );
+
+      if (confirmed) {
+        await redeem();
+      }
+
+      return;
+    }
+
+    Alert.alert(
+      'Redeem Reward?',
+      message,
+      [
+        {
+          text: 'CANCEL',
+          style: 'cancel',
+        },
+        {
+          text: 'REDEEM',
+          onPress: redeem,
+        },
+      ]
+    );
+  };
+
+  const showAllHistory = () => {
+    router.push('/points-activity');
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <Text style={styles.loadingEmoji}>
+            🏆
+          </Text>
+
+          <Text style={styles.loadingText}>
+            Loading your Chalega wallet...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        {/* HEADER */}
+
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>
+              ‹
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerCenter}>
+            <Text style={styles.brand}>
+              CHALEGA KOLKATA
+            </Text>
+
+            <Text style={styles.headerTitle}>
+              Rewards
+            </Text>
+          </View>
+
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* WALLET HERO */}
+
+        <View style={styles.hero}>
+          <View style={styles.heroIcon}>
+            <Text style={styles.heroEmoji}>
+              🏆
+            </Text>
+          </View>
+
+          <Text style={styles.heroEyebrow}>
+            YOUR CHALEGA WALLET
+          </Text>
+
+          <Text style={styles.points}>
+            {points.toLocaleString('en-IN')}
+          </Text>
+
+          <Text style={styles.pointsLabel}>
+            CHALEGA COINS
+          </Text>
+
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText}>
+              LEVEL {level} • {levelName.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        {/* LEVEL CARD */}
+
+        <View style={styles.card}>
+          <View style={styles.levelTop}>
+            <View>
+              <Text style={styles.smallLabel}>
+                YOUR PROGRESS
+              </Text>
+
+              <Text style={styles.levelTitle}>
+                {level === 5
+                  ? 'Maximum Level'
+                  : `${nextLevelPoints.toLocaleString(
+                      'en-IN'
+                    )} coins to go`}
+              </Text>
+            </View>
+
+            <Text style={styles.percent}>
+              {Math.round(progress)}%
+            </Text>
+          </View>
+
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${progress}%`,
+                },
+              ]}
+            />
+          </View>
+
+          <View style={styles.progressLabels}>
+            <Text style={styles.progressLabel}>
+              {levelStart.toLocaleString('en-IN')}
+            </Text>
+
+            <Text style={styles.progressLabel}>
+              {levelEnd.toLocaleString('en-IN')}
+            </Text>
+          </View>
+        </View>
+
+        {/* QUICK EARNING */}
+
+        <Text style={styles.sectionTitle}>
+          EARN MORE
+        </Text>
+
+        <View style={styles.earnGrid}>
+          <TouchableOpacity
+            style={styles.earnCard}
+            onPress={() => router.push('/walking')}
+          >
+            <Text style={styles.earnEmoji}>
+              🚶
+            </Text>
+
+            <Text style={styles.earnTitle}>
+              WALK
+            </Text>
+
+            <Text style={styles.earnDescription}>
+              Keep moving every day.
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.earnCard}
+            onPress={() =>
+              router.push('/missions')
+            }
+          >
+            <Text style={styles.earnEmoji}>
+              🎯
+            </Text>
+
+            <Text style={styles.earnTitle}>
+              MISSIONS
+            </Text>
+
+            <Text style={styles.earnDescription}>
+              Complete healthy actions.
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.earnCard}>
+            <Text style={styles.earnEmoji}>
+              🔥
+            </Text>
+
+            <Text style={styles.earnTitle}>
+              STREAK
+            </Text>
+
+            <Text style={styles.earnDescription}>
+              Stay consistent for bonuses.
+            </Text>
+          </View>
+
+          <View style={styles.earnCard}>
+            <Text style={styles.earnEmoji}>
+              ❤️
+            </Text>
+
+            <Text style={styles.earnTitle}>
+              HEALTH
+            </Text>
+
+            <Text style={styles.earnDescription}>
+              Build better daily habits.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.earnCard,
+              adBusy && styles.earnCardDisabled,
+            ]}
+            onPress={watchAdForCoins}
+            activeOpacity={0.84}
+            disabled={adBusy}
+          >
+            <Text style={styles.earnEmoji}>
+              📺
+            </Text>
+
+            <Text style={styles.earnTitle}>
+              WATCH AD
+            </Text>
+
+            <Text style={styles.earnDescription}>
+              {adBusy
+                ? 'Verifying your reward...'
+                : adReady
+                  ? 'Watch a short ad and earn +25 Coins.'
+                  : 'Loading a rewarded ad...'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* WALLET ACTIVITY */}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitleNoMargin}>
+            COIN ACTIVITY
+          </Text>
+
+          <TouchableOpacity
+            onPress={showAllHistory}
+          >
+            <Text style={styles.viewAll}>
+              VIEW ALL
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.activityCard}>
+          {recentHistory.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>
+                ✨
+              </Text>
+
+              <Text style={styles.emptyTitle}>
+                Your wallet is ready
+              </Text>
+
+              <Text style={styles.emptyText}>
+                Complete a walking mission or
+                healthy challenge and your activity
+                will appear here.
+              </Text>
+            </View>
+          ) : (
+            recentHistory.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.activityRow,
+                  index ===
+                    recentHistory.length - 1 &&
+                    styles.lastActivityRow,
+                ]}
+              >
+                <View style={styles.activityIcon}>
+                  <Text>
+                    {item.amount >= 0
+                      ? '🟢'
+                      : '🔴'}
+                  </Text>
+                </View>
+
+                <View style={styles.activityMiddle}>
+                  <Text style={styles.activityTitle}>
+                    {item.title}
+                  </Text>
+
+                  <Text
+                    style={styles.activityDescription}
+                    numberOfLines={1}
+                  >
+                    {item.type.replace(
+                      /_/g,
+                      ' '
+                    )}
+                  </Text>
+
+                  <Text style={styles.activityDate}>
+                    {formatLocalDateTime(
+                      item.timestamp
+                    )}
+                  </Text>
+                </View>
+
+                <Text
+                  style={[
+                    styles.activityAmount,
+                    item.amount < 0 &&
+                      styles.negativeAmount,
+                  ]}
+                >
+                  {item.amount > 0
+                    ? `+${item.amount}`
+                    : item.amount}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* REWARDS */}
+
+        <Text style={styles.sectionTitle}>
+          REDEEM REWARDS
+        </Text>
+
+        {rewards.map(reward => {
+          const alreadyClaimed =
+            claimed.includes(reward.id);
+
+          const affordable =
+            points >= reward.cost;
+
+          const rewardProgress = Math.min(
+            100,
+            (points / reward.cost) * 100
+          );
+
+          return (
+            <View
+              key={reward.id}
+              style={styles.rewardCard}
+            >
+              <View
+                style={[
+                  styles.rewardIcon,
+                  affordable &&
+                    styles.rewardIconActive,
+                ]}
+              >
+                <Text style={styles.rewardEmoji}>
+                  {reward.emoji}
+                </Text>
+              </View>
+
+              <View style={styles.rewardBody}>
+                <View style={styles.rewardHeader}>
+                  <Text style={styles.rewardCategory}>
+                    {reward.category}
+                  </Text>
+
+                  {alreadyClaimed && (
+                    <Text style={styles.claimed}>
+                      CLAIMED ✓
+                    </Text>
+                  )}
+                </View>
+
+                <Text style={styles.rewardTitle}>
+                  {reward.title}
+                </Text>
+
+                <Text style={styles.rewardDescription}>
+                  {reward.description}
+                </Text>
+
+                <View style={styles.rewardTrack}>
+                  <View
+                    style={[
+                      styles.rewardFill,
+                      {
+                        width: `${rewardProgress}%`,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.rewardBottom}>
+                  <Text style={styles.cost}>
+                    {points.toLocaleString(
+                      'en-IN'
+                    )}{' '}
+                    /{' '}
+                    {reward.cost.toLocaleString(
+                      'en-IN'
+                    )}
+                  </Text>
+
+                  <TouchableOpacity
+                    disabled={
+                      !affordable ||
+                      alreadyClaimed
+                    }
+                    onPress={() =>
+                      claimReward(reward)
+                    }
+                    style={[
+                      styles.redeemButton,
+                      affordable &&
+                        !alreadyClaimed &&
+                        styles.redeemButtonActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.redeemText,
+                        affordable &&
+                          !alreadyClaimed &&
+                          styles.redeemTextActive,
+                      ]}
+                    >
+                      {alreadyClaimed
+                        ? 'CLAIMED'
+                        : affordable
+                        ? 'REDEEM'
+                        : 'LOCKED'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+
+        {/* SHOP */}
+
+        <TouchableOpacity
+          style={styles.shopCard}
+          onPress={() => router.push('/shop')}
+        >
+          <Text style={styles.shopEmoji}>
+            🛍️
+          </Text>
+
+          <View style={styles.shopBody}>
+            <Text style={styles.shopEyebrow}>
+              COMING TO CHALEGA
+            </Text>
+
+            <Text style={styles.shopTitle}>
+              HEALTH SHOP
+            </Text>
+
+            <Text style={styles.shopText}>
+              Use your healthy habits to unlock
+              exclusive products and partner offers.
+            </Text>
+          </View>
+
+          <Text style={styles.shopArrow}>
+            ›
+          </Text>
+        </TouchableOpacity>
+
+        {/* SPONSOR AREA */}
+
+        <View style={styles.sponsorCard}>
+          <Text style={styles.sponsorEyebrow}>
+            CHALEGA PARTNERS
+          </Text>
+
+          <Text style={styles.sponsorTitle}>
+            HEALTHY PEOPLE.
+            {'\n'}
+            LOCAL BUSINESSES.
+            {'\n'}
+            ONE COMMUNITY.
+          </Text>
+
+          <Text style={styles.sponsorText}>
+            Sponsored missions and partner rewards
+            will eventually allow businesses to
+            reward people for healthy behaviour.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.sponsorButton}
+            onPress={() => router.push('/partner')}
+          >
+            <Text style={styles.sponsorButtonText}>
+              PARTNER WITH CHALEGA
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* FOOTER */}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerBrand}>
+            CHALEGA KOLKATA
+          </Text>
+
+          <Text style={styles.footerText}>
+            WALK • EARN • UNLOCK • REPEAT
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: BRAND.cream,
+  },
+
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 70,
+  },
+
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  loadingEmoji: {
+    fontSize: 40,
+  },
+
+  loadingText: {
+    marginTop: 12,
+    color: '#777777',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  backText: {
+    color: '#111111',
+    fontSize: 31,
+    fontWeight: '300',
+  },
+
+  headerCenter: {
+    alignItems: 'center',
+  },
+
+  headerSpacer: {
+    width: 42,
+  },
+
+  brand: {
+    color: BRAND.teal,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+
+  headerTitle: {
+    color: '#111111',
+    fontSize: 21,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+
+  hero: {
+    backgroundColor: BRAND.teal,
+    borderRadius: 28,
+    padding: 25,
+    alignItems: 'center',
+  },
+
+  heroIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  heroEmoji: {
+    fontSize: 34,
+  },
+
+  heroEyebrow: {
+    color: '#DDEAFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    marginTop: 14,
+  },
+
+  points: {
+    color: '#FFFFFF',
+    fontSize: 52,
+    fontWeight: '900',
+    marginTop: 1,
+  },
+
+  pointsLabel: {
+    color: '#DDEAFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.3,
+  },
+
+  levelBadge: {
+    backgroundColor: '#111111',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    marginTop: 15,
+  },
+
+  levelBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
+    marginTop: 13,
+  },
+
+  levelTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  smallLabel: {
+    color: '#999999',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+
+  levelTitle: {
+    color: '#111111',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+
+  percent: {
+    color: BRAND.teal,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  progressTrack: {
+    height: 9,
+    backgroundColor: '#E7ECF3',
+    borderRadius: 5,
+    overflow: 'hidden',
+    marginTop: 16,
+  },
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: BRAND.teal,
+    borderRadius: 5,
+  },
+
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+
+  progressLabel: {
+    color: '#999999',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  sectionTitle: {
+    color: '#111111',
+    fontSize: 19,
+    fontWeight: '900',
+    marginTop: 28,
+    marginBottom: 12,
+  },
+
+  sectionTitleNoMargin: {
+    color: '#111111',
+    fontSize: 19,
+    fontWeight: '900',
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 28,
+    marginBottom: 12,
+  },
+
+  viewAll: {
+    color: BRAND.teal,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+
+  earnGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+
+  earnCard: {
+    width: '48%',
+    minHeight: 125,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 19,
+    padding: 16,
+    marginBottom: 11,
+  },
+
+  earnEmoji: {
+    fontSize: 25,
+  },
+
+  earnTitle: {
+    color: '#111111',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 7,
+  },
+
+  earnDescription: {
+    color: '#888888',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 3,
+  },
+
+  earnCardDisabled: {
+    opacity: 0.65,
+  },
+
+  activityCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 21,
+    paddingHorizontal: 16,
+  },
+
+  empty: {
+    alignItems: 'center',
+    paddingVertical: 28,
+  },
+
+  emptyEmoji: {
+    fontSize: 31,
+  },
+
+  emptyTitle: {
+    color: '#111111',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 8,
+  },
+
+  emptyText: {
+    color: '#888888',
+    fontSize: 10,
+    lineHeight: 15,
+    textAlign: 'center',
+    maxWidth: 280,
+    marginTop: 5,
+  },
+
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF1F5',
+  },
+
+  lastActivityRow: {
+    borderBottomWidth: 0,
+  },
+
+  activityIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F5F7FA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  activityMiddle: {
+    flex: 1,
+    paddingLeft: 11,
+  },
+
+  activityTitle: {
+    color: '#111111',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+
+  activityDescription: {
+    color: '#888888',
+    fontSize: 9,
+    marginTop: 2,
+    textTransform: 'capitalize',
+  },
+
+  activityDate: {
+    color: '#AAAAAA',
+    fontSize: 8,
+    marginTop: 2,
+  },
+
+  activityAmount: {
+    color: '#228B45',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  negativeAmount: {
+    color: '#D64545',
+  },
+
+  rewardCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 21,
+    padding: 17,
+    marginBottom: 12,
+    flexDirection: 'row',
+  },
+
+  rewardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 17,
+    backgroundColor: '#F0F2F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  rewardIconActive: {
+    backgroundColor: BRAND.greenLight,
+  },
+
+  rewardEmoji: {
+    fontSize: 29,
+  },
+
+  rewardBody: {
+    flex: 1,
+    paddingLeft: 13,
+  },
+
+  rewardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  rewardCategory: {
+    color: '#999999',
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  claimed: {
+    color: BRAND.teal,
+    fontSize: 7,
+    fontWeight: '900',
+  },
+
+  rewardTitle: {
+    color: '#111111',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  rewardDescription: {
+    color: '#777777',
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 3,
+  },
+
+  rewardTrack: {
+    height: 7,
+    backgroundColor: '#E8EDF3',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+
+  rewardFill: {
+    height: '100%',
+    backgroundColor: BRAND.teal,
+    borderRadius: 4,
+  },
+
+  rewardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 9,
+  },
+
+  cost: {
+    color: '#888888',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  redeemButton: {
+    backgroundColor: '#E8ECF2',
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
+
+  redeemButtonActive: {
+    backgroundColor: '#111111',
+  },
+
+  redeemText: {
+    color: '#777777',
+    fontSize: 8,
+    fontWeight: '900',
+  },
+
+  redeemTextActive: {
+    color: '#FFFFFF',
+  },
+
+  shopCard: {
+    backgroundColor: BRAND.greenLight,
+    borderRadius: 22,
+    padding: 18,
+    marginTop: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  shopEmoji: {
+    fontSize: 30,
+  },
+
+  shopBody: {
+    flex: 1,
+    paddingLeft: 12,
+  },
+
+  shopEyebrow: {
+    color: BRAND.teal,
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1.1,
+  },
+
+  shopTitle: {
+    color: '#111111',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  shopText: {
+    color: '#777777',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 3,
+  },
+
+  shopArrow: {
+    color: BRAND.teal,
+    fontSize: 28,
+  },
+
+  sponsorCard: {
+    backgroundColor: '#111111',
+    borderRadius: 23,
+    padding: 21,
+    marginTop: 15,
+  },
+
+  sponsorEyebrow: {
+    color: '#7DB3FF',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+
+  sponsorTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 23,
+    fontWeight: '900',
+    marginTop: 8,
+  },
+
+  sponsorText: {
+    color: '#AAAAAA',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 7,
+  },
+
+  sponsorButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+
+  sponsorButtonText: {
+    color: '#111111',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+
+  footer: {
+    alignItems: 'center',
+    marginTop: 35,
+  },
+
+  footerBrand: {
+    color: BRAND.teal,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 2.5,
+  },
+
+  footerText: {
+    color: '#999999',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    marginTop: 5,
+  },
+});

@@ -1,0 +1,1015 @@
+import { BRAND } from '@/lib/brand';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import {
+  useFocusEffect,
+  useRouter,
+} from 'expo-router';
+
+import { supabase } from '../lib/supabase';
+
+type PointsTransaction = {
+  id: string;
+  amount: number;
+  balance_after: number;
+  transaction_type: string;
+  transaction_key: string;
+  description: string;
+  created_at: string;
+  title: string;
+  type: string;
+  timestamp: string;
+};
+
+import {
+  formatLocalDateTime,
+} from '../lib/date';
+
+export default function PointsActivityScreen() {
+  const router = useRouter();
+
+  const [points, setPoints] =
+    useState(0);
+
+  const [history, setHistory] =
+    useState<PointsTransaction[]>(
+      []
+    );
+
+  const [loading, setLoading] =
+    useState(true);
+
+  /*
+   * ----------------------------------------------------
+   * LOAD ACTIVITY
+   * ----------------------------------------------------
+   */
+  const loadActivity =
+    useCallback(async () => {
+      try {
+        setLoading(true);
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user) {
+          throw new Error(
+            'Please sign in to view your Chalega Coins activity.'
+          );
+        }
+
+        const [
+          { data: profile, error: profileError },
+          { data: transactions, error: transactionsError },
+        ] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('points')
+            .eq('id', user.id)
+            .single(),
+          supabase.rpc('get_my_points_transactions'),
+        ]);
+
+        if (profileError) throw profileError;
+        if (transactionsError) throw transactionsError;
+
+        setPoints(
+          Math.max(0, Number(profile?.points) || 0)
+        );
+
+        const serverHistory = (transactions ?? []) as Array<{
+          id: string;
+          amount: number;
+          balance_after: number;
+          transaction_type: string;
+          transaction_key: string;
+          description: string;
+          created_at: string;
+        }>;
+
+        setHistory(
+          serverHistory.map(item => ({
+            ...item,
+            title:
+              item.transaction_type === 'health_checkin'
+                ? 'Health Check-in'
+                : item.transaction_type === 'reward_redemption'
+                  ? 'Reward Redeemed'
+                  : item.transaction_type === 'competition_reward'
+                    ? 'Competition Reward'
+                    : item.description,
+            type: item.transaction_type,
+            timestamp: item.created_at,
+          }))
+        );
+      } catch (error) {
+        console.log(
+          'Could not load Chalega Coins Activity:',
+          error
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, []);
+
+  /*
+   * ----------------------------------------------------
+   * INITIAL LOAD
+   * ----------------------------------------------------
+   */
+  useEffect(() => {
+    loadActivity();
+  }, [loadActivity]);
+
+  /*
+   * ----------------------------------------------------
+   * REFRESH WHEN SCREEN OPENS
+   * ----------------------------------------------------
+   */
+  useFocusEffect(
+    useCallback(() => {
+      loadActivity();
+    }, [loadActivity])
+  );
+
+  /*
+   * ----------------------------------------------------
+   * TOTAL EARNED
+   * ----------------------------------------------------
+   */
+  const earnedPoints =
+    history
+      .filter(
+        item =>
+          item.amount > 0
+      )
+      .reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          item.amount,
+        0
+      );
+
+  /*
+   * ----------------------------------------------------
+   * TOTAL SPENT
+   * ----------------------------------------------------
+   */
+  const spentPoints =
+    history
+      .filter(
+        item =>
+          item.amount < 0
+      )
+      .reduce(
+        (
+          total,
+          item
+        ) =>
+          total +
+          Math.abs(
+            item.amount
+          ),
+        0
+      );
+
+  /*
+   * ----------------------------------------------------
+   * LOADING SCREEN
+   * ----------------------------------------------------
+   */
+  if (loading) {
+    return (
+      <SafeAreaView
+        style={
+          styles.container
+        }
+      >
+        <View
+          style={
+            styles.loading
+          }
+        >
+          <Text
+            style={
+              styles.loadingEmoji
+            }
+          >
+            ✨
+          </Text>
+
+          <Text
+            style={
+              styles.loadingTitle
+            }
+          >
+            Loading your activity...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /*
+   * ----------------------------------------------------
+   * MAIN SCREEN
+   * ----------------------------------------------------
+   */
+  return (
+    <SafeAreaView
+      style={
+        styles.container
+      }
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={
+          false
+        }
+        contentContainerStyle={
+          styles.content
+        }
+      >
+        {/* HEADER */}
+
+        <View
+          style={
+            styles.header
+          }
+        >
+          <TouchableOpacity
+            style={
+              styles.backButton
+            }
+            onPress={() =>
+              router.back()
+            }
+            activeOpacity={
+              0.8
+            }
+          >
+            <Text
+              style={
+                styles.backText
+              }
+            >
+              ‹
+            </Text>
+          </TouchableOpacity>
+
+          <View
+            style={
+              styles.headerCenter
+            }
+          >
+            <Text
+              style={
+                styles.brand
+              }
+            >
+              CHALEGA KOLKATA
+            </Text>
+
+            <Text
+              style={
+                styles.headerTitle
+              }
+            >
+              Points Activity
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.headerSpacer
+            }
+          />
+        </View>
+
+        {/* WALLET */}
+
+        <View
+          style={
+            styles.walletCard
+          }
+        >
+          <Text
+            style={
+              styles.walletLabel
+            }
+          >
+            YOUR CHALEGA WALLET
+          </Text>
+
+          <Text
+            style={
+              styles.walletPoints
+            }
+          >
+            {points}
+          </Text>
+
+          <Text
+            style={
+              styles.walletSub
+            }
+          >
+            CHALEGA COINS
+          </Text>
+        </View>
+
+        {/* SUMMARY */}
+
+        <View
+          style={
+            styles.summaryRow
+          }
+        >
+          <View
+            style={
+              styles.summaryCard
+            }
+          >
+            <Text
+              style={
+                styles.summaryIcon
+              }
+            >
+              ↗
+            </Text>
+
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              EARNED
+            </Text>
+
+            <Text
+              style={
+                styles.earnedValue
+              }
+            >
+              +{earnedPoints}
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.summaryCard
+            }
+          >
+            <Text
+              style={
+                styles.summaryIcon
+              }
+            >
+              ↘
+            </Text>
+
+            <Text
+              style={
+                styles.summaryLabel
+              }
+            >
+              SPENT
+            </Text>
+
+            <Text
+              style={
+                styles.spentValue
+              }
+            >
+              −{spentPoints}
+            </Text>
+          </View>
+        </View>
+
+        {/* SECTION HEADER */}
+
+        <View
+          style={
+            styles.sectionHeader
+          }
+        >
+          <Text
+            style={
+              styles.sectionTitle
+            }
+          >
+            ALL ACTIVITY
+          </Text>
+
+          <Text
+            style={
+              styles.activityCount
+            }
+          >
+            {history.length}{' '}
+            {history.length ===
+            1
+              ? 'transaction'
+              : 'transactions'}
+          </Text>
+        </View>
+
+        {/* ACTIVITY LIST */}
+
+        <View
+          style={
+            styles.activityCard
+          }
+        >
+          {history.length ===
+          0 ? (
+            <View
+              style={
+                styles.empty
+              }
+            >
+              <Text
+                style={
+                  styles.emptyEmoji
+                }
+              >
+                ✨
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyTitle
+                }
+              >
+                No activity yet
+              </Text>
+
+              <Text
+                style={
+                  styles.emptyText
+                }
+              >
+                Complete a walking mission
+                or healthy challenge and
+                your Chalega Coins activity
+                will appear here.
+              </Text>
+            </View>
+          ) : (
+            history.map(
+              (
+                item,
+                index
+              ) => {
+                const positive =
+                  item.amount >
+                  0;
+
+                return (
+                  <View
+                    key={
+                      item.id
+                    }
+                    style={[
+                      styles.activityRow,
+                      index ===
+                        history.length -
+                          1 &&
+                        styles.lastActivityRow,
+                    ]}
+                  >
+                    {/* ICON */}
+
+                    <View
+                      style={[
+                        styles.activityIcon,
+                        positive
+                          ? styles.positiveIcon
+                          : styles.negativeIcon,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.iconText,
+                          positive
+                            ? styles.positiveText
+                            : styles.negativeText,
+                        ]}
+                      >
+                        {positive
+                          ? '↑'
+                          : '↓'}
+                      </Text>
+                    </View>
+
+                    {/* DETAILS */}
+
+                    <View
+                      style={
+                        styles.activityMiddle
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.activityTitle
+                        }
+                        numberOfLines={
+                          2
+                        }
+                      >
+                        {
+                          item.title
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.activityType
+                        }
+                        numberOfLines={
+                          1
+                        }
+                      >
+                        {item.type.replace(
+                          /_/g,
+                          ' '
+                        )}
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.activityDescription
+                        }
+                      >
+                        {
+                          item.description
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.activityDate
+                        }
+                      >
+                        {formatLocalDateTime(
+                          item.timestamp
+                        )}
+                      </Text>
+                    </View>
+
+                    {/* AMOUNT */}
+
+                    <Text
+                      style={[
+                        styles.activityAmount,
+                        positive
+                          ? styles.positiveAmount
+                          : styles.negativeAmount,
+                      ]}
+                    >
+                      {positive
+                        ? `+${item.amount}`
+                        : `${item.amount}`}
+                    </Text>
+                  </View>
+                );
+              }
+            )
+          )}
+        </View>
+
+        {/* BACK BUTTON */}
+
+        <TouchableOpacity
+          style={
+            styles.backToRewards
+          }
+          onPress={() =>
+            router.back()
+          }
+          activeOpacity={
+            0.85
+          }
+        >
+          <Text
+            style={
+              styles.backToRewardsText
+            }
+          >
+            ← BACK TO REWARDS
+          </Text>
+        </TouchableOpacity>
+
+        {/* FOOTER */}
+
+        <View
+          style={
+            styles.footer
+          }
+        >
+          <Text
+            style={
+              styles.footerBrand
+            }
+          >
+            CHALEGA
+          </Text>
+
+          <Text
+            style={
+              styles.footerText
+            }
+          >
+            MOVE PEOPLE • HEALTHY COMMUNITIES
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+/*
+ * ======================================================
+ * STYLES
+ * ======================================================
+ */
+
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        BRAND.cream,
+    },
+
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 40,
+    },
+
+    header: {
+      minHeight: 76,
+      flexDirection:
+        'row',
+      alignItems:
+        'center',
+      marginBottom: 8,
+    },
+
+    backButton: {
+      width: 46,
+      height: 46,
+      borderRadius: 16,
+      backgroundColor:
+        BRAND.white,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+    },
+
+    backText: {
+      color: BRAND.teal,
+      fontSize: 38,
+      lineHeight: 42,
+      fontWeight: '600',
+      marginTop: -4,
+    },
+
+    headerCenter: {
+      flex: 1,
+      alignItems:
+        'center',
+    },
+
+    headerSpacer: {
+      width: 46,
+    },
+
+    brand: {
+      color: BRAND.teal,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 4,
+      marginBottom: 5,
+    },
+
+    headerTitle: {
+      color: BRAND.ink,
+      fontSize: 25,
+      fontWeight: '900',
+    },
+
+    walletCard: {
+      backgroundColor:
+        BRAND.teal,
+      borderRadius: 30,
+      paddingVertical: 30,
+      paddingHorizontal: 20,
+      alignItems:
+        'center',
+      marginBottom: 16,
+    },
+
+    walletLabel: {
+      color: BRAND.white,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 2,
+      marginBottom: 8,
+    },
+
+    walletPoints: {
+      color: BRAND.white,
+      fontSize: 54,
+      lineHeight: 60,
+      fontWeight: '900',
+    },
+
+    walletSub: {
+      color: BRAND.white,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 2,
+    },
+
+    summaryRow: {
+      flexDirection:
+        'row',
+      gap: 12,
+      marginBottom: 28,
+    },
+
+    summaryCard: {
+      flex: 1,
+      backgroundColor:
+        BRAND.white,
+      borderRadius: 22,
+      padding: 18,
+      minHeight: 112,
+    },
+
+    summaryIcon: {
+      color: BRAND.teal,
+      fontSize: 22,
+      fontWeight: '900',
+      marginBottom: 5,
+    },
+
+    summaryLabel: {
+      color: '#777777',
+      fontSize: 9,
+      fontWeight: '900',
+      letterSpacing: 1.4,
+    },
+
+    earnedValue: {
+      color: BRAND.green,
+      fontSize: 22,
+      fontWeight: '900',
+      marginTop: 4,
+    },
+
+    spentValue: {
+      color: '#B23A48',
+      fontSize: 22,
+      fontWeight: '900',
+      marginTop: 4,
+    },
+
+    sectionHeader: {
+      flexDirection:
+        'row',
+      alignItems:
+        'center',
+      justifyContent:
+        'space-between',
+      marginBottom: 12,
+    },
+
+    sectionTitle: {
+      color: BRAND.ink,
+      fontSize: 19,
+      fontWeight: '900',
+    },
+
+    activityCount: {
+      color: BRAND.teal,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    activityCard: {
+      backgroundColor:
+        BRAND.white,
+      borderRadius: 24,
+      paddingHorizontal: 16,
+      overflow: 'hidden',
+    },
+
+    activityRow: {
+      minHeight: 105,
+      flexDirection:
+        'row',
+      alignItems:
+        'center',
+      paddingVertical: 17,
+      borderBottomWidth: 1,
+      borderBottomColor:
+        '#E9EDF3',
+    },
+
+    lastActivityRow: {
+      borderBottomWidth: 0,
+    },
+
+    activityIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 14,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      marginRight: 13,
+    },
+
+    positiveIcon: {
+      backgroundColor:
+        '#E9F8EF',
+    },
+
+    negativeIcon: {
+      backgroundColor:
+        '#FDEEEE',
+    },
+
+    iconText: {
+      fontSize: 22,
+      fontWeight: '900',
+    },
+
+    positiveText: {
+      color: BRAND.green,
+    },
+
+    negativeText: {
+      color: '#B23A48',
+    },
+
+    activityMiddle: {
+      flex: 1,
+      paddingRight: 10,
+    },
+
+    activityTitle: {
+      color: BRAND.ink,
+      fontSize: 14,
+      fontWeight: '900',
+      marginBottom: 3,
+    },
+
+    activityType: {
+      color: '#777777',
+      fontSize: 10,
+      fontWeight: '700',
+      textTransform:
+        'capitalize',
+      marginBottom: 2,
+    },
+
+    activityDescription: {
+      color: '#8B8B8B',
+      fontSize: 10,
+      marginBottom: 4,
+    },
+
+    activityDate: {
+      color: '#9A9A9A',
+      fontSize: 10,
+    },
+
+    activityAmount: {
+      fontSize: 15,
+      fontWeight: '900',
+      minWidth: 52,
+      textAlign: 'right',
+    },
+
+    positiveAmount: {
+      color: BRAND.green,
+    },
+
+    negativeAmount: {
+      color: '#B23A48',
+    },
+
+    empty: {
+      minHeight: 260,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      paddingHorizontal: 35,
+      paddingVertical: 35,
+    },
+
+    emptyEmoji: {
+      fontSize: 34,
+      marginBottom: 12,
+    },
+
+    emptyTitle: {
+      color: BRAND.ink,
+      fontSize: 18,
+      fontWeight: '900',
+      marginBottom: 8,
+    },
+
+    emptyText: {
+      color: '#777777',
+      fontSize: 12,
+      lineHeight: 18,
+      textAlign: 'center',
+    },
+
+    backToRewards: {
+      height: 56,
+      borderRadius: 18,
+      borderWidth: 2,
+      borderColor:
+        BRAND.teal,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      marginTop: 20,
+      backgroundColor:
+        BRAND.white,
+    },
+
+    backToRewardsText: {
+      color: BRAND.teal,
+      fontSize: 13,
+      fontWeight: '900',
+      letterSpacing: 0.4,
+    },
+
+    footer: {
+      alignItems:
+        'center',
+      paddingTop: 35,
+    },
+
+    footerBrand: {
+      color: BRAND.teal,
+      fontSize: 13,
+      fontWeight: '900',
+      letterSpacing: 5,
+    },
+
+    footerText: {
+      color: '#888888',
+      fontSize: 11,
+      marginTop: 8,
+    },
+
+    loading: {
+      flex: 1,
+      alignItems:
+        'center',
+      justifyContent:
+        'center',
+      paddingHorizontal: 30,
+    },
+
+    loadingEmoji: {
+      fontSize: 38,
+      marginBottom: 12,
+    },
+
+    loadingTitle: {
+      color: BRAND.ink,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+  });
