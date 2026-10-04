@@ -194,6 +194,14 @@ export default function AdminDashboard() {
           onPress: () => router.push('/admin-payouts'),
         })}
 
+        {card({
+          icon: 'people-outline',
+          title: 'Delivery Partners',
+          subtitle: 'Approve partners, monitor availability and review performance.',
+          tone: 'teal',
+          onPress: () => router.push('/admin-delivery-partners'),
+        })}
+
         <Text style={styles.section}>NEXT ADMIN MODULES</Text>
 
         <View style={styles.plannedCard}>
