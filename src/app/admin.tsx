@@ -151,7 +151,7 @@ export default function AdminDashboard() {
           <Text style={styles.eyebrow}>ADMINISTRATION</Text>
           <Text style={styles.title}>Operations Dashboard</Text>
           <Text style={styles.body}>
-            One place to manage orders, delivery operations and partner payouts.
+            One place to manage customers, orders, delivery operations and partner payouts.
           </Text>
         </View>
 
@@ -167,6 +167,14 @@ export default function AdminDashboard() {
         </View>
 
         <Text style={styles.section}>OPERATIONS</Text>
+
+        {card({
+          icon: 'people-outline',
+          title: 'Customers',
+          subtitle: 'Review customer accounts, order activity and Chalega Points.',
+          tone: 'teal',
+          onPress: () => router.push('/admin-customers'),
+        })}
 
         {card({
           icon: 'receipt-outline',
@@ -195,7 +203,7 @@ export default function AdminDashboard() {
         })}
 
         {card({
-          icon: 'people-outline',
+          icon: 'person-outline',
           title: 'Delivery Partners',
           subtitle: 'Approve partners, monitor availability and review performance.',
           tone: 'teal',
@@ -205,26 +213,6 @@ export default function AdminDashboard() {
         <Text style={styles.section}>NEXT ADMIN MODULES</Text>
 
         <View style={styles.plannedCard}>
-          <View style={styles.plannedRow}>
-            <Ionicons name="people-outline" size={20} color={BRAND.teal} />
-            <View style={styles.plannedText}>
-              <Text style={styles.plannedTitle}>Customers</Text>
-              <Text style={styles.plannedSubtitle}>
-                Customer accounts, activity and support tools.
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.plannedRow}>
-            <Ionicons name="person-outline" size={20} color={BRAND.teal} />
-            <View style={styles.plannedText}>
-              <Text style={styles.plannedTitle}>Delivery Partners</Text>
-              <Text style={styles.plannedSubtitle}>
-                Approvals, availability and partner performance.
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.plannedRow}>
             <Ionicons name="stats-chart-outline" size={20} color={BRAND.teal} />
             <View style={styles.plannedText}>
