@@ -40,6 +40,9 @@ export default function GardenScreen() {
   const [loading, setLoading] = useState(true);
   const [nickname, setNickname] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    typeof params.addProductId === 'string' ? params.addProductId : null,
+  );
 
   const loadGarden = useCallback(async () => {
     try {
@@ -105,6 +108,7 @@ export default function GardenScreen() {
 
   useEffect(() => {
     if (params.addProductId) {
+      setSelectedProductId(params.addProductId);
       setShowAdd(true);
     }
   }, [params.addProductId]);
@@ -186,23 +190,31 @@ export default function GardenScreen() {
         {showAdd && (
           <View style={styles.addCard}>
             <Text style={styles.cardTitle}>Choose a plant</Text>
-            {availablePlants.map(product => (
+            {availablePlants
+              .filter(product => !selectedProductId || product.id === selectedProductId)
+              .map(product => (
               <TouchableOpacity
                 key={product.id}
                 style={styles.plantChoice}
-                onPress={() => {
-                  if (params.addProductId && product.id !== params.addProductId) return;
-                  addPlant(product.id);
-                }}
+                onPress={() => setSelectedProductId(product.id)}
               >
                 <Text style={styles.choiceEmoji}>{product.emoji}</Text>
                 <View style={styles.choiceBody}>
                   <Text style={styles.choiceName}>{product.name}</Text>
                   <Text style={styles.choiceMeta}>₹{product.price.toLocaleString('en-IN')} / {product.unit}</Text>
                 </View>
-                <Text style={styles.choiceArrow}>ADD →</Text>
+                <Text style={styles.choiceArrow}>
+                  {selectedProductId === product.id ? 'SELECTED' : 'SELECT →'}
+                </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={[styles.primary, !selectedProductId && { opacity: 0.45 }]}
+              disabled={!selectedProductId}
+              onPress={() => selectedProductId && addPlant(selectedProductId)}
+            >
+              <Text style={styles.primaryText}>ADD TO MY GARDEN</Text>
+            </TouchableOpacity>
             <TextInput
               value={nickname}
               onChangeText={setNickname}
