@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { BRAND } from '@/lib/brand';
+import { getAdminDeliveryPayouts } from '@/services/adminService';
 import {
   AdminDeliveryPartner,
   getAdminDeliveryPartners,
@@ -37,7 +38,22 @@ export default function AdminDeliveryPartners() {
     try {
       if (refresh) setRefreshing(true);
       else setLoading(true);
-      setPartners(await getAdminDeliveryPartners());
+      const [partnerRows, payoutRows] = await Promise.all([
+        getAdminDeliveryPartners(),
+        getAdminDeliveryPayouts(),
+      ]);
+      const pendingByPartner = payoutRows.reduce<Record<string, number>>((acc, payout) => {
+        if (payout.status === 'pending') {
+          acc[payout.partner_id] = (acc[payout.partner_id] || 0) + Number(payout.amount || 0);
+        }
+        return acc;
+      }, {});
+      setPartners(
+        partnerRows.map(partner => ({
+          ...partner,
+          pending_payout: pendingByPartner[partner.id] || 0,
+        }))
+      );
     } catch (error: any) {
       alert(error?.message || 'Could not load delivery partners.');
     } finally {
