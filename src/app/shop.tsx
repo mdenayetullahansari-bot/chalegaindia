@@ -68,6 +68,11 @@ const CATEGORIES: {
     emoji: '🚶',
     subtitle: 'Walk & live better',
   },
+  {
+    name: 'Nursery & Plants',
+    emoji: '🪴',
+    subtitle: 'Plants & gardening',
+  },
 ];
 
 export default function ShopScreen() {
