@@ -106,7 +106,7 @@ export default function CommunityMarketScreen() {
               <Text style={styles.grower}>👩‍🌾 {listing.grower_display_name}{listing.locality ? ` · ${listing.locality}` : ''}</Text>
               {listing.notes ? <Text style={styles.notes}>{listing.notes}</Text> : null}
               <Text style={styles.stock}>{listing.quantity_available} available · CHALLEGA pickup</Text>
-              <TouchableOpacity style={styles.orderButton} onPress={() => Alert.alert('Community order', 'This community listing is approved. The next marketplace release will connect it directly to the existing CHALLEGA cart and checkout.')}>
+              <TouchableOpacity style={styles.orderButton} onPress={() => router.push({ pathname: '/community-checkout', params: { listingId: listing.id } })}>
                 <Text style={styles.orderButtonText}>ORDER THROUGH CHALLEGA →</Text>
               </TouchableOpacity>
             </View>
