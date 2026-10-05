@@ -157,7 +157,7 @@ export default function GrowerScreen() {
     }
 
     await load();
-    Alert.alert('Welcome to GardenVerse', 'You are now a CHALLEGA Community Grower. You can start listing what you grow.');
+    Alert.alert('Welcome to GardenVerse', 'You are now a CHALEGA Community Grower. You can start listing what you grow.');
   };
 
   const addListing = async () => {
@@ -207,7 +207,7 @@ export default function GrowerScreen() {
     setNotes('');
     setSelectedProductId(null);
     await load();
-    Alert.alert('Listing submitted', 'CHALLEGA will review the listing and then make it available in the Community Market.');
+    Alert.alert('Listing submitted', 'CHALEGA will review the listing and then make it available in the Community Market.');
   };
 
   const pauseListing = async (listing: GrowerListing) => {
@@ -244,7 +244,7 @@ export default function GrowerScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
           <Text style={styles.bigEmoji}>🌱</Text>
-          <Text style={styles.centerTitle}>Grow with CHALLEGA</Text>
+          <Text style={styles.centerTitle}>Grow with CHALEGA</Text>
           <Text style={styles.centerText}>Sign in to turn your balcony, terrace or garden into part of Kolkata's community marketplace.</Text>
         </View>
       </SafeAreaView>
@@ -258,21 +258,21 @@ export default function GrowerScreen() {
           <TouchableOpacity style={styles.back} onPress={() => router.back()}>
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.eyebrow}>CHALLEGA GARDENVERSE</Text>
+          <Text style={styles.eyebrow}>CHALEGA GARDENVERSE</Text>
           <Text style={styles.title}>GROW & EARN</Text>
           <Text style={styles.subtitle}>Every home can grow. Every resident can participate.</Text>
 
           <View style={styles.heroBox}>
             <Text style={styles.heroBoxTitle}>🌌 FROM A BALCONY TO THE UNIVERSE</Text>
             <Text style={styles.heroBoxText}>
-              Grow plants, seedlings, flowers or edible greens at home. CHALLEGA brings the customers, collection and delivery network.
+              Grow plants, seedlings, flowers or edible greens at home. CHALEGA brings the customers, collection and delivery network.
             </Text>
           </View>
         </View>
 
         <View style={styles.flowCard}>
-          <Text style={styles.cardTitle}>The CHALLEGA Green Loop</Text>
-          <Text style={styles.flow}>🌱 YOU GROW  →  📦 YOU LIST  →  🛒 CUSTOMER ORDERS  →  🚚 CHALLEGA COLLECTS  →  💰 YOU EARN</Text>
+          <Text style={styles.cardTitle}>The CHALEGA Green Loop</Text>
+          <Text style={styles.flow}>🌱 YOU GROW  →  📦 YOU LIST  →  🛒 CUSTOMER ORDERS  →  🚚 CHALEGA COLLECTS  →  💰 YOU EARN</Text>
           <Text style={styles.smallText}>You do not need a nursery. A balcony, terrace or small garden can be your starting point.</Text>
         </View>
 
@@ -329,7 +329,7 @@ export default function GrowerScreen() {
               <Text style={styles.sectionTitle}>List something you grow</Text>
               <Text style={styles.sectionText}>Every new listing is reviewed before it becomes visible to customers.</Text>
 
-              <Text style={styles.label}>QUICK START FROM CHALLEGA NURSERY</Text>
+              <Text style={styles.label}>QUICK START FROM CHALEGA NURSERY</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontal}>
                 {nurseryChoices.map(product => (
                   <TouchableOpacity key={product.id} style={[styles.productChip, selectedProductId === product.id && styles.productChipSelected]} onPress={() => {
@@ -365,7 +365,7 @@ export default function GrowerScreen() {
               <TextInput value={notes} onChangeText={setNotes} placeholder="Care method, variety, expected ready date..." placeholderTextColor="#8794A0" style={[styles.input, styles.textArea]} multiline />
 
               <TouchableOpacity style={styles.primary} onPress={addListing} disabled={saving}>
-                <Text style={styles.primaryText}>{saving ? 'SUBMITTING...' : 'LIST ON CHALLEGA'}</Text>
+                <Text style={styles.primaryText}>{saving ? 'SUBMITTING...' : 'LIST ON CHALEGA'}</Text>
               </TouchableOpacity>
             </View>
 
@@ -399,7 +399,7 @@ export default function GrowerScreen() {
 
             <View style={styles.futureCard}>
               <Text style={styles.futureTitle}>🚀 WHAT COMES NEXT</Text>
-              <Text style={styles.futureText}>Grow-to-order missions • Plant Passports • CHALLEGA pickup • automatic stock updates • seller earnings • CHALLEGA Coins • Green Map • Kolkata Green League.</Text>
+              <Text style={styles.futureText}>Grow-to-order missions • Plant Passports • CHALEGA pickup • automatic stock updates • seller earnings • CHALEGA Coins • Green Map • Kolkata Green League.</Text>
             </View>
           </>
         )}
