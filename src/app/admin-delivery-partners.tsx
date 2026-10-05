@@ -33,6 +33,7 @@ export default function AdminDeliveryPartners() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [action, setAction] = useState('');
+  const [pendingPayoutByPartner, setPendingPayoutByPartner] = useState<Record<string, number>>({});
 
   const load = useCallback(async (refresh = false) => {
     try {
@@ -48,12 +49,8 @@ export default function AdminDeliveryPartners() {
         }
         return acc;
       }, {});
-      setPartners(
-        partnerRows.map(partner => ({
-          ...partner,
-          pending_payout: pendingByPartner[partner.id] || 0,
-        }))
-      );
+      setPendingPayoutByPartner(pendingByPartner);
+      setPartners(partnerRows);
     } catch (error: any) {
       alert(error?.message || 'Could not load delivery partners.');
     } finally {
@@ -184,7 +181,7 @@ export default function AdminDeliveryPartners() {
                   <Detail label="AREA" value={partner.city_area || '—'} />
                   <Detail label="AVAILABILITY" value={partner.availability.toUpperCase()} />
                   <Detail label="DELIVERED" value={String(partner.delivered_jobs_count)} />
-                  <Detail label="PENDING PAYOUT" value={'₹' + Number(partner.pending_payout || 0).toFixed(0)} />
+                  <Detail label="PENDING PAYOUT" value={'₹' + Number(pendingPayoutByPartner[partner.id] || 0).toFixed(0)} />
                 </View>
 
                 <View style={styles.actions}>
