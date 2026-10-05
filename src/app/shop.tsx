@@ -994,6 +994,36 @@ export default function ShopScreen() {
           </View>
         )}
 
+        {(selectedCategory === 'Nursery & Plants' || selectedCategory === 'Gardening') && (
+          <View style={styles.gardenMissionCard}>
+            <View style={styles.gardenMissionTop}>
+              <View style={styles.gardenMissionIcon}>
+                <Text style={styles.gardenMissionEmoji}>🍅</Text>
+              </View>
+              <View style={styles.gardenMissionBody}>
+                <Text style={styles.gardenMissionEyebrow}>GARDENVERSE · MISSION 01</Text>
+                <Text style={styles.gardenMissionTitle}>Grow your first tomato</Text>
+                <Text style={styles.gardenMissionText}>
+                  Start with a tomato plant, grow bag, cocopeat and vermicompost. Add it to My Garden and track the journey.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.gardenMissionProducts}>
+              <Text style={styles.gardenMissionProduct}>🌱 Tomato Plant · ₹89</Text>
+              <Text style={styles.gardenMissionProduct}>🪴 Grow Bag · ₹129</Text>
+              <Text style={styles.gardenMissionProduct}>🥥 Cocopeat · ₹99</Text>
+              <Text style={styles.gardenMissionProduct}>🌿 Vermicompost · ₹179</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.gardenMissionButton}
+              onPress={() => router.push({ pathname: '/garden', params: { addProductId: 'nursery-tomato' } })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.gardenMissionButtonText}>START IN MY GARDEN →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View
           style={styles.productHeader}
         >
@@ -1637,6 +1667,91 @@ const styles = StyleSheet.create({
     color: '#4F7058',
   },
 
+  gardenMissionCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    marginBottom: 4,
+    padding: 16,
+    borderRadius: 22,
+    backgroundColor: '#F1F8F2',
+    borderWidth: 1,
+    borderColor: '#C9E5D1',
+  },
+
+  gardenMissionTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  gardenMissionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  gardenMissionEmoji: {
+    fontSize: 28,
+  },
+
+  gardenMissionBody: {
+    flex: 1,
+  },
+
+  gardenMissionEyebrow: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    color: '#24633A',
+  },
+
+  gardenMissionTitle: {
+    marginTop: 3,
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#123C25',
+  },
+
+  gardenMissionText: {
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#4C6B57',
+  },
+
+  gardenMissionProducts: {
+    marginTop: 12,
+    padding: 11,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+
+  gardenMissionProduct: {
+    fontSize: 10,
+    lineHeight: 18,
+    color: '#425C4A',
+    fontWeight: '700',
+  },
+
+  gardenMissionButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: BRAND.midnight,
+  },
+
+  gardenMissionButtonText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
+  },
+
   productHeader: {
     marginTop: 8,
     marginBottom: 10,
@@ -1998,208 +2113,3 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 8,
   },
-
-  cartItemName: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#20364A',
-  },
-
-  cartItemUnit: {
-    marginTop: 3,
-    fontSize: 11,
-    color: '#74818C',
-    fontWeight: '700',
-  },
-
-  removeText: {
-    marginTop: 7,
-    fontSize: 10,
-    color: '#B23A48',
-    fontWeight: '800',
-  },
-
-  cartItemRight: {
-    alignItems: 'flex-end',
-  },
-
-  cartItemTotal: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#18324A',
-  },
-
-  quantityRow: {
-    marginTop: 8,
-    height: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    backgroundColor: BRAND.greenLight,
-  },
-
-  quantityButton: {
-    width: 31,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  quantityButtonText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: BRAND.teal,
-  },
-
-  quantityNumber: {
-    minWidth: 23,
-    textAlign: 'center',
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#20364A',
-  },
-
-  freeDeliveryCard: {
-    marginHorizontal: 18,
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: '#FFF9E9',
-    borderWidth: 1,
-    borderColor: '#F1DA9C',
-  },
-
-  freeDeliveryTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#6B4A00',
-  },
-
-  freeDeliveryText: {
-    marginTop: 3,
-    fontSize: 11,
-    color: '#7B6430',
-  },
-
-  summaryCard: {
-    marginHorizontal: 18,
-    marginTop: 14,
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E9EE',
-  },
-
-  summaryRow: {
-    minHeight: 29,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  summaryLabel: {
-    fontSize: 13,
-    color: '#6D7985',
-    fontWeight: '700',
-  },
-
-  summaryValue: {
-    fontSize: 13,
-    color: '#20364A',
-    fontWeight: '800',
-  },
-
-  freeValue: {
-    color: '#2B7A42',
-  },
-
-  summaryDivider: {
-    height: 1,
-    marginVertical: 5,
-    backgroundColor: '#E9EDF1',
-  },
-
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#182B3D',
-  },
-
-  totalValue: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: BRAND.midnight,
-  },
-
-  checkoutButton: {
-    marginHorizontal: 18,
-    marginTop: 16,
-    minHeight: 58,
-    paddingHorizontal: 18,
-    borderRadius: 17,
-    backgroundColor: BRAND.teal,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  checkoutButtonText: {
-    fontSize: 14,
-    letterSpacing: 0.5,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-
-  checkoutButtonTotal: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-
-  emptyCart: {
-    marginHorizontal: 18,
-    marginTop: 80,
-    padding: 30,
-    borderRadius: 24,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E9EE',
-  },
-
-  emptyCartEmoji: {
-    fontSize: 45,
-  },
-
-  emptyCartTitle: {
-    marginTop: 15,
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#13283D',
-  },
-
-  emptyCartText: {
-    marginTop: 7,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-    color: '#6F7C87',
-  },
-
-  primaryButton: {
-    marginTop: 18,
-    minHeight: 46,
-    paddingHorizontal: 18,
-    borderRadius: 13,
-    backgroundColor: BRAND.teal,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  primaryButtonText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-});
