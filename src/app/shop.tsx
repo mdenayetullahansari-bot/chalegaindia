@@ -844,6 +844,16 @@ export default function ShopScreen() {
           </View>
         </View>
 
+        <TouchableOpacity style={styles.gardenCard} onPress={() => router.push('/garden')} activeOpacity={0.9}>
+          <View style={styles.gardenCardIcon}><Text style={styles.gardenCardEmoji}>🌌</Text></View>
+          <View style={styles.gardenCardBody}>
+            <Text style={styles.gardenCardEyebrow}>CHALLEGA GARDENVERSE</Text>
+            <Text style={styles.gardenCardTitle}>MY GARDEN</Text>
+            <Text style={styles.gardenCardText}>Turn your home into a tiny living ecosystem.</Text>
+          </View>
+          <Text style={styles.gardenCardArrow}>OPEN →</Text>
+        </TouchableOpacity>
+
         <View
           style={styles.searchCard}
         >
@@ -1115,6 +1125,15 @@ export default function ShopScreen() {
                     )}{' '}
                     / {product.unit}
                   </Text>
+
+                  {product.category === 'Nursery & Plants' && (
+                    <TouchableOpacity
+                      style={styles.gardenAddButton}
+                      onPress={() => router.push({ pathname: '/garden', params: { addProductId: product.id } })}
+                    >
+                      <Text style={styles.gardenAddButtonText}>🌱 MY GARDEN</Text>
+                    </TouchableOpacity>
+                  )}
 
                   <View
                     style={
@@ -1479,6 +1498,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#53606C',
   },
+
+  gardenCard: { marginHorizontal: 18, marginTop: 14, padding: 15, borderRadius: 20, backgroundColor: '#EAF7EE', borderWidth: 1, borderColor: '#C9E5D1', flexDirection: 'row', alignItems: 'center' },
+  gardenCardIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  gardenCardEmoji: { fontSize: 25 },
+  gardenCardBody: { flex: 1 },
+  gardenCardEyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 1, color: '#24633A' },
+  gardenCardTitle: { marginTop: 2, fontSize: 18, fontWeight: '900', color: '#123C25' },
+  gardenCardText: { marginTop: 2, fontSize: 11, lineHeight: 15, color: '#4C6B57' },
+  gardenCardArrow: { marginLeft: 8, fontSize: 10, fontWeight: '900', color: '#1A7040' },
+  gardenAddButton: { marginBottom: 7, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11, backgroundColor: '#EAF7EE', borderWidth: 1, borderColor: '#C9E5D1' },
+  gardenAddButtonText: { fontSize: 9, fontWeight: '900', color: '#1C6337' },
 
   searchCard: {
     marginHorizontal: 18,
