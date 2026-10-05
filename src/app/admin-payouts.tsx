@@ -118,7 +118,7 @@ export default function AdminPayouts() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       >
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.back} onPress={() => router.replace('/admin')}>
             <Ionicons name="chevron-back" size={23} color={BRAND.midnight} />
           </TouchableOpacity>
           <Text style={styles.topTitle}>ADMIN PAYOUTS</Text>
