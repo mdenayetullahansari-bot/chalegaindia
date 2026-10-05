@@ -98,7 +98,7 @@ export default function AdminPayouts() {
             This area is restricted to authorised Chalega administrators.
           </Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <TouchableOpacity style={styles.secondary} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.secondary} onPress={() => router.replace('/admin')}>
             <Text style={styles.secondaryText}>GO BACK</Text>
           </TouchableOpacity>
         </View>
