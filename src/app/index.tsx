@@ -350,6 +350,10 @@ export default function HomeScreen() {
     router.push('/shop');
   };
 
+  const openGarden = () => {
+    router.push('/garden');
+  };
+
   const openOrders = () => {
     router.push('/orders');
   };
@@ -473,6 +477,23 @@ export default function HomeScreen() {
               </Text>
             </View>
           </View>
+        </TouchableOpacity>
+
+        {/* GARDENVERSE */}
+        <TouchableOpacity
+          style={styles.gardenVerseCard}
+          onPress={openGarden}
+          activeOpacity={0.9}
+        >
+          <View style={styles.gardenVerseIcon}>
+            <Text style={styles.gardenVerseEmoji}>🌌</Text>
+          </View>
+          <View style={styles.gardenVerseBody}>
+            <Text style={styles.gardenVerseEyebrow}>CHALLEGA GARDENVERSE</Text>
+            <Text style={styles.gardenVerseTitle}>Grow your own little universe.</Text>
+            <Text style={styles.gardenVerseText}>Add a plant, care for it and make your home part of a greener Kolkata.</Text>
+          </View>
+          <Text style={styles.gardenVerseArrow}>OPEN →</Text>
         </TouchableOpacity>
 
         {/* TODAY'S MISSION */}
@@ -1030,6 +1051,59 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+
+  gardenVerseCard: {
+    marginTop: 14,
+    padding: 15,
+    borderRadius: 20,
+    backgroundColor: '#EAF7EE',
+    borderWidth: 1,
+    borderColor: '#C9E5D1',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  gardenVerseIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+
+  gardenVerseEmoji: { fontSize: 24 },
+
+  gardenVerseBody: { flex: 1 },
+
+  gardenVerseEyebrow: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    color: '#24633A',
+  },
+
+  gardenVerseTitle: {
+    marginTop: 2,
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#123C25',
+  },
+
+  gardenVerseText: {
+    marginTop: 2,
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#4C6B57',
+  },
+
+  gardenVerseArrow: {
+    marginLeft: 8,
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#1A7040',
   },
 
   scoreCard: {
