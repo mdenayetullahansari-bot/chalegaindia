@@ -182,8 +182,29 @@ export default function GardenScreen() {
           <Text style={styles.missionText}>
             Add a plant, name it, care for it and watch your home become part of Kolkata's green network.
           </Text>
-          <TouchableOpacity style={styles.primary} onPress={() => setShowAdd(true)}>
-            <Text style={styles.primaryText}>+ ADD A PLANT</Text>
+          <View style={styles.missionActions}>
+            <TouchableOpacity style={styles.primary} onPress={() => setShowAdd(true)}>
+              <Text style={styles.primaryText}>+ ADD A PLANT</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondary} onPress={() => router.push('/grower')}>
+              <Text style={styles.secondaryText}>🌱 GROW & EARN</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.networkCard}>
+          <View style={styles.networkBody}>
+            <Text style={styles.networkEyebrow}>THE NEXT LEVEL OF GARDENVERSE</Text>
+            <Text style={styles.networkTitle}>Grow for yourself. Grow to sell.</Text>
+            <Text style={styles.networkText}>
+              Turn your balcony, terrace or garden into a tiny community nursery. List what you grow and let CHALLEGA connect you to customers.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.networkButton} onPress={() => router.push('/grower')}>
+            <Text style={styles.networkButtonText}>BECOME A GROWER →</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.marketLink} onPress={() => router.push('/community-market')}>
+            <Text style={styles.marketLinkText}>SHOP COMMUNITY-GROWN →</Text>
           </TouchableOpacity>
         </View>
 
@@ -286,8 +307,20 @@ const styles = StyleSheet.create({
   missionEyebrow: { color: '#24633A', fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   missionTitle: { marginTop: 5, color: '#123C25', fontSize: 21, fontWeight: '900' },
   missionText: { marginTop: 6, color: '#4C6B57', fontSize: 13, lineHeight: 19 },
+  missionActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   primary: { marginTop: 14, alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 11, borderRadius: 15, backgroundColor: BRAND.midnight },
   primaryText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.6 },
+  secondary: { marginTop: 14, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B9DCC3' },
+  secondaryText: { color: '#1C6337', fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
+  networkCard: { marginHorizontal: 18, marginBottom: 8, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: BRAND.line },
+  networkBody: {},
+  networkEyebrow: { color: '#24633A', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  networkTitle: { marginTop: 4, color: BRAND.ink, fontSize: 19, fontWeight: '900' },
+  networkText: { marginTop: 5, color: BRAND.muted, fontSize: 12, lineHeight: 18 },
+  networkButton: { marginTop: 12, alignSelf: 'flex-start', paddingHorizontal: 13, paddingVertical: 9, borderRadius: 12, backgroundColor: BRAND.midnight },
+  networkButtonText: { color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
+  marketLink: { marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 2, paddingVertical: 5 },
+  marketLinkText: { color: '#1A7040', fontSize: 9, fontWeight: '900', letterSpacing: 0.4 },
   addCard: { marginHorizontal: 18, marginBottom: 12, padding: 15, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: BRAND.line },
   cardTitle: { color: BRAND.ink, fontSize: 18, fontWeight: '900', marginBottom: 8 },
   plantChoice: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#EEF1F4' },
