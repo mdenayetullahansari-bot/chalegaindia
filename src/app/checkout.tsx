@@ -97,8 +97,7 @@ export default function CheckoutScreen() {
     cart: cartParam,
     items: itemsParam,
   } = useLocalSearchParams<{
-    cart?: string;
-    items?: string;
+    cart?: string;    items?: string;
   }>();
 
   const cart = useMemo<Cart>(() => {
@@ -198,7 +197,6 @@ export default function CheckoutScreen() {
         longitude: current.coords.longitude,
         accuracy: current.coords.accuracy ?? null,
       });
-
       Alert.alert(
         'Location pinned',
         'Your current GPS location will be used for delivery matching.'
@@ -297,8 +295,7 @@ export default function CheckoutScreen() {
       !createdOrder?.id ||
       !createdOrder?.order_id
     ) {
-      throw new Error(
-        'The order was created but its database ID was missing.',
+      throw new Error(        'The order was created but its database ID was missing.',
       );
     }
 
@@ -397,8 +394,7 @@ export default function CheckoutScreen() {
         RazorpayModule?.default ||
         RazorpayModule;
     } catch (error) {
-      console.error(
-        'Razorpay native module unavailable:',
+      console.error(        'Razorpay native module unavailable:',
         error,
       );
 
@@ -498,7 +494,6 @@ export default function CheckoutScreen() {
         payment.razorpay_payment_id,
     };
   };
-
   const placeOrder = async () => {
     if (selectedProducts.length === 0) {
       Alert.alert(
@@ -597,8 +592,7 @@ export default function CheckoutScreen() {
       if (
         message
           .toLowerCase()
-          .includes('cancel')
-      ) {
+          .includes('cancel')      ) {
         Alert.alert(
           'Payment Cancelled',
           'Your order was not placed. You can choose another payment method and try again.',
@@ -697,8 +691,7 @@ export default function CheckoutScreen() {
 
               <Text
                 style={styles.promiseText}
-              >
-                Your fresh order will be
+              >                Your fresh order will be
                 delivered within 24 hours
                 of order placement.
               </Text>
@@ -797,8 +790,7 @@ export default function CheckoutScreen() {
               }
               placeholder="6-digit PIN code"
               placeholderTextColor="#88939D"
-              keyboardType="number-pad"
-              maxLength={6}
+              keyboardType="number-pad"              maxLength={6}
               style={styles.input}
             />
 
@@ -897,8 +889,7 @@ export default function CheckoutScreen() {
                       ₹
                       {(
                         product.price *
-                        (product.quantity ||
-                          0)
+                        (product.quantity ||                          0)
                       ).toLocaleString(
                         'en-IN',
                       )}
@@ -997,8 +988,7 @@ export default function CheckoutScreen() {
               <Text
                 style={
                   styles.summaryValue
-                }
-              >
+                }              >
                 ₹
                 {subtotal.toLocaleString(
                   'en-IN',
@@ -1097,8 +1087,7 @@ export default function CheckoutScreen() {
                 )
               }
             >
-              <View
-                style={
+              <View                style={
                   styles.onlineIcon
                 }
               >
@@ -1197,8 +1186,7 @@ export default function CheckoutScreen() {
 
               <View
                 style={[
-                  styles.radioOuter,
-                  paymentMethod ===
+                  styles.radioOuter,                  paymentMethod ===
                     'cod' &&
                     styles.radioOuterSelected,
                 ]}
@@ -1297,8 +1285,7 @@ export default function CheckoutScreen() {
 
           <Text
             style={styles.orderNote}
-          >
-            {itemsParam || itemCount}{' '}
+          >            {itemsParam || itemCount}{' '}
             item
             {itemCount === 1 ? '' : 's'} •
             Fresh order • Chalega 24-hour
@@ -1397,7 +1384,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-
   promiseIconText: {
     fontSize: 23,
   },
@@ -1497,7 +1483,6 @@ const styles = StyleSheet.create({
     borderColor: '#E3E8ED',
     overflow: 'hidden',
   },
-
   productRow: {
     padding: 13,
     flexDirection: 'row',
@@ -1597,4 +1582,244 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2FA84F',
     alignItems: 'center',
+    justifyContent: 'center',  },
+
+  selectedRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2FA84F',
+  },
+
+  summaryCard: {
+    marginHorizontal: 18,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+  },
+
+  summaryRow: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  summaryLabel: {
+    fontSize: 13,
+    color: '#687681',
+    fontWeight: '700',
+  },
+
+  summaryValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1B2934',
+  },
+
+  freeValue: {
+    color: '#25773D',
+  },
+
+  freeDeliveryNote: {
+    marginTop: 6,
+    fontSize: 11,
+    color: '#6A6F57',
+    fontWeight: '700',
+  },
+
+  summaryDivider: {
+    height: 1,
+    marginVertical: 6,
+    backgroundColor: '#E8ECEF',
+  },
+
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#1A2731',
+  },
+
+  totalValue: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: BRAND.midnight,
+  },
+
+  paymentCard: {
+    marginHorizontal: 18,
+    marginTop: 2,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: '#E3E8ED',
+  },
+
+  paymentTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#172630',
+    marginBottom: 11,
+  },
+
+  paymentOption: {
+    padding: 12,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFB',
+    borderWidth: 1,
+    borderColor: '#E4E8EC',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 9,
+  },
+
+  paymentOptionLast: {
+    marginBottom: 0,
+  },
+
+  paymentOptionSelected: {
+    borderColor: '#2FA84F',    backgroundColor: '#F4FAF5',
+  },
+
+  onlineIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BRAND.greenLight,
+    alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  onlineIconText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: BRAND.teal,
+  },
+
+  codIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: BRAND.greenLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+
+  paymentBody: {
+    flex: 1,
+  },
+
+  paymentOptionTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#263540',
+  },
+
+  paymentOptionText: {
+    marginTop: 2,
+    fontSize: 10,
+    lineHeight: 15,
+    color: '#77838D',
+  },
+
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#B8C2C9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  radioOuterSelected: {
+    borderColor: '#2FA84F',
+  },
+
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2FA84F',
+  },
+
+  onlineNote: {
+    marginTop: 11,
+    padding: 12,
+    borderRadius: 13,
+    backgroundColor: '#F1F6FF',
+    borderWidth: 1,
+    borderColor: '#D6E4FA',
+  },
+
+  onlineNoteTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#245B9B',
+  },
+
+  onlineNoteText: {
+    marginTop: 4,
+    fontSize: 10,
+    lineHeight: 15,
+    color: '#5A708A',
+    fontWeight: '600',
+  },
+
+  placeOrderButton: {
+    marginHorizontal: 18,
+    marginTop: 17,
+    minHeight: 60,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: BRAND.teal,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',  },
+
+  placeOrderDisabled: {
+    opacity: 0.65,
+  },
+
+  placeOrderText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: BRAND.white,
+    letterSpacing: 0.4,
+  },
+
+  placeOrderSubtext: {
+    marginTop: 3,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#DCEAFF',
+  },
+
+  placeOrderTotal: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: BRAND.white,
+  },
+
+  orderNote: {
+    marginHorizontal: 18,
+    marginTop: 12,
+    textAlign: 'center',
+    fontSize: 10,
+    color: '#7B8791',
+    fontWeight: '700',
+  },
+
+  footer: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 10,
+    letterSpacing: 3,
+    color: '#8A96A0',
+  },
+});
