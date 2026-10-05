@@ -73,6 +73,11 @@ const CATEGORIES: {
     emoji: '🪴',
     subtitle: 'Plants & gardening',
   },
+  {
+    name: 'Gardening',
+    emoji: '🌿',
+    subtitle: 'Grow your own',
+  },
 ];
 
 export default function ShopScreen() {
