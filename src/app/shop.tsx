@@ -758,7 +758,7 @@ export default function ShopScreen() {
           <Text
             style={styles.heroTitle}
           >
-            Chalega Fresh
+            CHALLEGA KOLKATA
           </Text>
 
           <Text
@@ -1251,7 +1251,7 @@ export default function ShopScreen() {
           <Text
             style={styles.footerText}
           >
-            Chalega Fresh connects
+            CHALLEGA KOLKATA connects
             everyday shopping with
             healthy living and community
             impact.
