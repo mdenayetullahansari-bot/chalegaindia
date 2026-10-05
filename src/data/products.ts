@@ -5,7 +5,8 @@ export type ProductCategory =
   | 'Seasonal'
   | "Today's Fresh Market"
   | 'Wellness & Fitness'
-  | 'Nursery & Plants';
+  | 'Nursery & Plants'
+  | 'Gardening';
 
 export type ProductUnit =
   | 'kg'
@@ -725,5 +726,105 @@ export const products: Product[] = [
     featuredToday: true,
   },
 
-];
+  // --------------------------------------------------
+  // GARDENING — HOME & BALCONY GARDEN ESSENTIALS
+  // --------------------------------------------------
 
+  {
+    id: 'garden-neem-cake',
+    name: 'Neem Cake',
+    price: 149,
+    unit: 'pack',
+    category: 'Gardening',
+    emoji: '🌿',
+    description: 'Natural soil amendment for everyday home gardening.',
+    available: true,
+    seasonal: false,
+    featuredToday: false,
+  },
+  {
+    id: 'garden-cocopeat',
+    name: 'Cocopeat',
+    price: 99,
+    unit: 'pack',
+    category: 'Gardening',
+    emoji: '🥥',
+    description: 'Lightweight growing medium for pots and balcony gardens.',
+    available: true,
+    seasonal: false,
+    featuredToday: true,
+  },
+  {
+    id: 'garden-vermicompost',
+    name: 'Vermicompost',
+    price: 179,
+    unit: 'pack',
+    category: 'Gardening',
+    emoji: '🌱',
+    description: 'Nutrient-rich compost for healthy home plants.',
+    available: true,
+    seasonal: false,
+    featuredToday: true,
+  },
+  {
+    id: 'garden-grow-bag',
+    name: 'Grow Bag',
+    price: 129,
+    unit: 'piece',
+    category: 'Gardening',
+    emoji: '🪴',
+    description: 'Lightweight grow bag for vegetables, herbs and flowers.',
+    available: true,
+    seasonal: false,
+    featuredToday: false,
+  },
+  {
+    id: 'garden-hand-tools',
+    name: 'Home Gardening Tool Set',
+    price: 299,
+    unit: 'pack',
+    category: 'Gardening',
+    emoji: '🛠️',
+    description: 'Basic hand tools for planting, potting and everyday garden care.',
+    available: true,
+    seasonal: false,
+    featuredToday: true,
+  },
+  {
+    id: 'garden-seed-pack',
+    name: 'Balcony Vegetable Seed Pack',
+    price: 149,
+    unit: 'pack',
+    category: 'Gardening',
+    emoji: '🥕',
+    description: 'Beginner-friendly seeds for a small balcony kitchen garden.',
+    available: true,
+    seasonal: true,
+    featuredToday: true,
+  },
+  {
+    id: 'garden-watering-can',
+    name: 'Watering Can',
+    price: 249,
+    unit: 'piece',
+    category: 'Gardening',
+    emoji: '🚿',
+    description: 'Compact watering can for balcony and terrace plants.',
+    available: true,
+    seasonal: false,
+    featuredToday: false,
+  },
+  {
+    id: 'garden-plant-support',
+    name: 'Plant Support Sticks',
+    price: 99,
+    unit: 'pack',
+    category: 'Gardening',
+    emoji: '🎋',
+    description: 'Simple supports for climbing and growing plants.',
+    available: true,
+    seasonal: false,
+    featuredToday: false,
+  },
+
+];
