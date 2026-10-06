@@ -56,7 +56,7 @@ export default function AuthScreen() {
 
     if (Platform.OS !== 'web') {
       Alert.alert(
-        type === 'success' ? 'Chaliga' : 'Error',
+        type === 'success' ? 'Chalega' : 'Error',
         text
       );
     }
@@ -157,7 +157,7 @@ export default function AuthScreen() {
           );
         } else {
           showMessage(
-            'Email confirmed successfully. Welcome to Chaliga!',
+            'Email confirmed successfully. Welcome to Chalega!',
             'success'
           );
         }
@@ -194,7 +194,7 @@ export default function AuthScreen() {
             );
           } else {
             showMessage(
-              'Email confirmed successfully. Welcome to Chaliga!',
+              'Email confirmed successfully. Welcome to Chalega!',
               'success'
             );
           }
@@ -331,7 +331,7 @@ export default function AuthScreen() {
         }
 
         showMessage(
-          'Login successful. Welcome back to Chaliga!',
+          'Login successful. Welcome back to Chalega!',
           'success'
         );
 
@@ -524,7 +524,7 @@ export default function AuthScreen() {
             </View>
 
             <Text style={styles.brand}>
-              CHALIGA KOLKATA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -532,7 +532,7 @@ export default function AuthScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              Choose a new password for your Chaliga account.
+              Choose a new password for your Chalega account.
             </Text>
 
             <View style={styles.field}>
@@ -624,13 +624,13 @@ export default function AuthScreen() {
           </View>
 
           <Text style={styles.brand}>
-            CHALIGA KOLKATA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.title}>
             {isLogin
               ? 'Welcome back 👋'
-              : 'Join Chaliga'}
+              : 'Join Chalega'}
           </Text>
 
           <Text style={styles.subtitle}>
@@ -773,7 +773,7 @@ export default function AuthScreen() {
           <View style={styles.switchRow}>
             <Text style={styles.switchText}>
               {isLogin
-                ? "Don't have a Chaliga account?"
+                ? "Don't have a Chalega account?"
                 : 'Already have an account?'}
             </Text>
 
@@ -816,7 +816,7 @@ export default function AuthScreen() {
           )}
 
           <Text style={styles.footer}>
-            Your Chaliga profile, steps, points
+            Your Chalega profile, steps, points
             and achievements will stay connected
             to your account.
           </Text>

@@ -266,7 +266,7 @@ export default function TrackOrderScreen() {
 
           <View>
             <Text style={styles.brand}>
-              CHALIGA KOLKATA
+              CHALEGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -662,7 +662,7 @@ export default function TrackOrderScreen() {
             </Text>
 
             <Text style={styles.deliveryText}>
-              Chaliga delivery
+              Chalega delivery
             </Text>
           </View>
         </View>
@@ -692,7 +692,7 @@ export default function TrackOrderScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footer}>
-          CHALIGA KOLKATA
+          CHALEGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>

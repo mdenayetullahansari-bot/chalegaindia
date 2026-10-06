@@ -81,7 +81,7 @@ export default function KmcWardScreen() {
       if (permission.status !== 'granted') {
         Alert.alert(
           'Location permission needed',
-          'Chaliga needs your location permission to find your KMC ward.',
+          'Chalega needs your location permission to find your KMC ward.',
         );
         return;
       }
@@ -259,7 +259,7 @@ export default function KmcWardScreen() {
             </Text>
 
             <Text style={styles.privacyText}>
-              Chaliga uses your current location
+              Chalega uses your current location
               only to determine your KMC ward. Your
               precise GPS coordinates are not permanently
               stored in your profile.
@@ -454,7 +454,7 @@ export default function KmcWardScreen() {
 
           <Text style={styles.nextText}>
             {wardAssignment
-              ? 'Your KMC ward has been saved to your Chaliga profile. Your precise GPS coordinates are not stored as part of the ward assignment.'
+              ? 'Your KMC ward has been saved to your Chalega profile. Your precise GPS coordinates are not stored as part of the ward assignment.'
               : 'Your location is matched against the official KMC ward boundary data. The server determines the matching ward before assigning it to your profile.'}
           </Text>
 
@@ -496,7 +496,7 @@ export default function KmcWardScreen() {
             number="1"
             icon="location-outline"
             title="Allow location"
-            text="Give Chaliga temporary access to your current location."
+            text="Give Chalega temporary access to your current location."
           />
 
           <Step
@@ -517,14 +517,14 @@ export default function KmcWardScreen() {
             number="4"
             icon="people-outline"
             title="Join your community"
-            text="Your ward can then connect you with the relevant Chaliga community."
+            text="Your ward can then connect you with the relevant Chalega community."
           />
         </View>
 
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALIGA KOLKATA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.footerTagline}>

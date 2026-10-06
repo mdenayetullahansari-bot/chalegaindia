@@ -19,7 +19,7 @@ const categories = [
   },
   {
     icon: '👕',
-    title: 'Chaliga',
+    title: 'Chalega',
     subtitle: 'Official merchandise',
   },
   {
@@ -37,12 +37,12 @@ const categories = [
 const products = [
   {
     icon: '💧',
-    name: 'Chaliga Water Bottle',
+    name: 'Chalega Water Bottle',
     price: '₹399',
   },
   {
     icon: '👕',
-    name: 'Chaliga Walking T-Shirt',
+    name: 'Chalega Walking T-Shirt',
     price: '₹699',
   },
   {
@@ -59,7 +59,7 @@ export default function ShopScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.smallTitle}>CHALIGA KOLKATA</Text>
+      <Text style={styles.smallTitle}>CHALEGA KOLKATA</Text>
       <Text style={styles.title}>Health Shop</Text>
 
       <Text style={styles.subtitle}>
@@ -75,7 +75,7 @@ export default function ShopScreen() {
           </Text>
 
           <Text style={styles.bannerText}>
-            Discover healthy food, walking essentials and Chaliga
+            Discover healthy food, walking essentials and Chalega
             merchandise.
           </Text>
         </View>

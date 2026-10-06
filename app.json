@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Chaliga Kolkata",
+    "name": "Chalega Kolkata",
     "slug": "WalkWard54",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -43,8 +43,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Chaliga Kolkata to use your location for delivery matching.",
-          "locationAlwaysAndWhenInUsePermission": "Allow Chaliga Kolkata to use your location to match delivery jobs while you are online.",
+          "locationWhenInUsePermission": "Allow Chalega Kolkata to use your location for delivery matching.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Chalega Kolkata to use your location to match delivery jobs while you are online.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true,
           "isIosBackgroundLocationEnabled": true

@@ -1,9 +1,9 @@
 export const BRAND = {
   // Master brand
-  name: 'CHALIGA',
+  name: 'CHALEGA',
   city: 'Kolkata',
   cityLabel: 'KOLKATA',
-  lockup: 'CHALIGA KOLKATA',
+  lockup: 'CHALEGA KOLKATA',
 
   // Core palette
   midnight: '#061B2E',

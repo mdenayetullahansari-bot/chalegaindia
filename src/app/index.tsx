@@ -201,7 +201,7 @@ export default function HomeScreen() {
         Math.max(0, Number(missionRows?.steps) || 0) >= dailyGoal,
       );
     } catch (error) {
-      console.log('Could not load Chaliga home data:', error);
+      console.log('Could not load Chalega home data:', error);
     }
   };
 
@@ -456,7 +456,7 @@ export default function HomeScreen() {
 
           <View style={styles.competitionText}>
             <Text style={styles.competitionEyebrow}>
-              CHALIGA COMPETITION
+              CHALEGA COMPETITION
             </Text>
 
             <Text style={styles.competitionTitle}>
@@ -489,7 +489,7 @@ export default function HomeScreen() {
             <Text style={styles.gardenVerseEmoji}>🌌</Text>
           </View>
           <View style={styles.gardenVerseBody}>
-            <Text style={styles.gardenVerseEyebrow}>CHALIGA GARDENVERSE</Text>
+            <Text style={styles.gardenVerseEyebrow}>CHALEGA GARDENVERSE</Text>
             <Text style={styles.gardenVerseTitle}>Grow your own little universe.</Text>
             <Text style={styles.gardenVerseText}>Add a plant, care for it and make your home part of a greener Kolkata.</Text>
           </View>
@@ -598,7 +598,7 @@ export default function HomeScreen() {
 
           <View style={styles.connectedText}>
             <Text style={styles.connectedTitle}>
-              CHALIGA SYSTEM CONNECTED
+              CHALEGA SYSTEM CONNECTED
             </Text>
 
             <Text style={styles.connectedSubtitle}>
@@ -799,7 +799,7 @@ export default function HomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            CHALIGA COMMUNITY
+            CHALEGA COMMUNITY
           </Text>
 
           <Text style={styles.sectionTitle}>
@@ -892,7 +892,7 @@ export default function HomeScreen() {
           <View style={styles.shopPromoText}>
 
             <Text style={styles.shopPromoEyebrow}>
-              CHALIGA KOLKATA HEALTH SHOP
+              CHALEGA KOLKATA HEALTH SHOP
             </Text>
 
             <Text style={styles.shopPromoTitle}>
@@ -929,7 +929,7 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={styles.ordersSubtitle}>
-              Track your Chaliga purchases
+              Track your Chalega purchases
             </Text>
           </View>
 
@@ -944,7 +944,7 @@ export default function HomeScreen() {
         <View style={styles.footer}>
 
           <Text style={styles.footerBrand}>
-            CHALIGA
+            CHALEGA
           </Text>
 
           <Text style={styles.footerTagline}>

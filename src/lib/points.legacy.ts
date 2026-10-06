@@ -68,7 +68,7 @@ function normalizePoints(value: unknown): number {
  * VERIFIED ACCOUNT RECOVERY
  * -------------------------------------------------------
  *
- * The original verified account had 525 Chaliga Points.
+ * The original verified account had 525 Chalega Points.
  *
  * This recovery is now explicitly tied to the verified
  * Supabase Auth user ID.
@@ -108,7 +108,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
 
     if (userError || !user) {
       console.log(
-        '[Chaliga Points] Recovery skipped: no authenticated user.'
+        '[Chalega Points] Recovery skipped: no authenticated user.'
       );
 
       return;
@@ -119,7 +119,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
       VERIFIED_RECOVERY_USER_ID
     ) {
       console.log(
-        '[Chaliga Points] Recovery skipped: account is not the verified recovery account.'
+        '[Chalega Points] Recovery skipped: account is not the verified recovery account.'
       );
 
       return;
@@ -131,7 +131,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
      */
     if (user.is_anonymous) {
       console.log(
-        '[Chaliga Points] Recovery skipped: anonymous account.'
+        '[Chalega Points] Recovery skipped: anonymous account.'
       );
 
       return;
@@ -150,7 +150,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
 
     if (legacyMigrated !== 'true') {
       console.log(
-        '[Chaliga Points] Recovery skipped: legacy migration marker not found.'
+        '[Chalega Points] Recovery skipped: legacy migration marker not found.'
       );
 
       return;
@@ -178,7 +178,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
       );
 
       console.log(
-        '[Chaliga Points] Recovery skipped: account already has points.'
+        '[Chalega Points] Recovery skipped: account already has points.'
       );
 
       return;
@@ -237,7 +237,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
       );
 
       console.log(
-        '[Chaliga Points] Recovery transaction already exists.'
+        '[Chalega Points] Recovery transaction already exists.'
       );
 
       return;
@@ -266,7 +266,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
         type:
           'verified_account_recovery',
         title:
-          'Verified Chaliga Points Recovery',
+          'Verified Chalega Points Recovery',
         description:
           VERIFIED_RECOVERY_DESCRIPTION,
         timestamp:
@@ -294,14 +294,14 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
     );
 
     console.log(
-      '[Chaliga Points] Verified account recovery completed: 525 points restored.'
+      '[Chalega Points] Verified account recovery completed: 525 points restored.'
     );
   } catch (error) {
     /*
      * Recovery failure must never crash the wallet.
      */
     console.warn(
-      '[Chaliga Points] Could not complete verified account recovery:',
+      '[Chalega Points] Could not complete verified account recovery:',
       error
     );
   }
@@ -312,7 +312,7 @@ async function recoverVerifiedAccountOnce(): Promise<void> {
  * GET POINTS
  * -------------------------------------------------------
  *
- * Single source of truth for the Chaliga Points balance.
+ * Single source of truth for the Chalega Points balance.
  */
 export async function getPoints(): Promise<number> {
   try {
@@ -335,14 +335,14 @@ export async function getPoints(): Promise<number> {
     );
 
     console.log(
-      '[Chaliga Points] getPoints:',
+      '[Chalega Points] getPoints:',
       balance
     );
 
     return balance;
   } catch (error) {
     console.warn(
-      '[Chaliga Points] Could not read balance:',
+      '[Chalega Points] Could not read balance:',
       error
     );
 
@@ -367,7 +367,7 @@ export async function setPoints(
   );
 
   console.log(
-    '[Chaliga Points] setPoints:',
+    '[Chalega Points] setPoints:',
     safeAmount
   );
 
@@ -415,7 +415,7 @@ export async function addPoints(
   });
 
   console.log(
-    '[Chaliga Points] addPoints:',
+    '[Chalega Points] addPoints:',
     {
       current,
       added: safeAmount,
@@ -467,7 +467,7 @@ export async function subtractPoints(
   });
 
   console.log(
-    '[Chaliga Points] subtractPoints:',
+    '[Chalega Points] subtractPoints:',
     {
       current,
       subtracted: safeAmount,
@@ -529,7 +529,7 @@ export async function addTransaction(
     );
   } catch (error) {
     console.warn(
-      '[Chaliga Points] Could not save transaction:',
+      '[Chalega Points] Could not save transaction:',
       error
     );
   }
@@ -572,7 +572,7 @@ export async function getPointsHistory(): Promise<
     );
   } catch (error) {
     console.warn(
-      '[Chaliga Points] Could not read history:',
+      '[Chalega Points] Could not read history:',
       error
     );
 
@@ -609,7 +609,7 @@ export async function hasTransaction(
  * Central idempotent reward function.
  *
  * This remains the single mechanism used by missions,
- * streaks and other Chaliga reward flows.
+ * streaks and other Chalega reward flows.
  */
 export async function awardOnce(
   transactionType: string,
@@ -732,7 +732,7 @@ async function migrateLegacyBalance(
         type:
           'starting_balance',
         title:
-          'Existing Chaliga Points',
+          'Existing Chalega Points',
         description:
           'Starting wallet balance',
         timestamp:
@@ -752,11 +752,11 @@ async function migrateLegacyBalance(
     );
 
     console.log(
-      `[Chaliga Points] Migrated existing ${currentBalance} points into Points Activity.`
+      `[Chalega Points] Migrated existing ${currentBalance} points into Points Activity.`
     );
   } catch (error) {
     console.warn(
-      '[Chaliga Points] Could not migrate legacy balance:',
+      '[Chalega Points] Could not migrate legacy balance:',
       error
     );
   }

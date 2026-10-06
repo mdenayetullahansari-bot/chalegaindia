@@ -61,7 +61,7 @@ export default function CommunityMarketScreen() {
           <TouchableOpacity style={styles.back} onPress={() => router.back()}>
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.eyebrow}>CHALIGA GARDENVERSE</Text>
+          <Text style={styles.eyebrow}>CHALEGA GARDENVERSE</Text>
           <Text style={styles.title}>COMMUNITY MARKET</Text>
           <Text style={styles.subtitle}>What Kolkata residents grow, Kolkata residents can discover.</Text>
           <View style={styles.heroStat}>
@@ -72,14 +72,14 @@ export default function CommunityMarketScreen() {
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>🌱 BUY LOCAL. HELP A NEIGHBOUR GROW.</Text>
-          <Text style={styles.infoText}>Every listing comes from a resident grower. CHALIGA is building the marketplace and last-mile network around Kolkata's home growers.</Text>
+          <Text style={styles.infoText}>Every listing comes from a resident grower. CHALEGA is building the marketplace and last-mile network around Kolkata's home growers.</Text>
         </View>
 
         <TouchableOpacity style={styles.growButton} onPress={() => router.push('/grower')}>
           <View style={styles.growBody}>
             <Text style={styles.growEyebrow}>HAVE A BALCONY, TERRACE OR GARDEN?</Text>
             <Text style={styles.growTitle}>Become a Community Grower →</Text>
-            <Text style={styles.growText}>Grow something. List it. Let CHALIGA help you reach customers.</Text>
+            <Text style={styles.growText}>Grow something. List it. Let CHALEGA help you reach customers.</Text>
           </View>
         </TouchableOpacity>
 
@@ -105,9 +105,9 @@ export default function CommunityMarketScreen() {
               <Text style={styles.price}>₹{Number(listing.price).toLocaleString('en-IN')} / {listing.unit}</Text>
               <Text style={styles.grower}>👩‍🌾 {listing.grower_display_name}{listing.locality ? ` · ${listing.locality}` : ''}</Text>
               {listing.notes ? <Text style={styles.notes}>{listing.notes}</Text> : null}
-              <Text style={styles.stock}>{listing.quantity_available} available · CHALIGA pickup</Text>
+              <Text style={styles.stock}>{listing.quantity_available} available · CHALEGA pickup</Text>
               <TouchableOpacity style={styles.orderButton} onPress={() => router.push({ pathname: '/community-checkout', params: { listingId: listing.id } })}>
-                <Text style={styles.orderButtonText}>ORDER THROUGH CHALIGA →</Text>
+                <Text style={styles.orderButtonText}>ORDER THROUGH CHALEGA →</Text>
               </TouchableOpacity>
             </View>
           </View>

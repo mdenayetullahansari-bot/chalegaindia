@@ -17,7 +17,7 @@ import { BRAND } from '@/lib/brand';
 import {
   AdminDeliveryPayout,
   getAdminDeliveryPayouts,
-  isChaligaAdmin,
+  isChalegaAdmin,
   markDeliveryPayoutPaid,
 } from '@/services/adminService';
 
@@ -33,7 +33,7 @@ export default function AdminPayouts() {
   const load = useCallback(async () => {
     try {
       setError('');
-      const allowed = await isChaligaAdmin();
+      const allowed = await isChalegaAdmin();
       setAdmin(allowed);
 
       if (!allowed) {
@@ -95,7 +95,7 @@ export default function AdminPayouts() {
           </View>
           <Text style={styles.title}>Admin access required</Text>
           <Text style={styles.body}>
-            This area is restricted to authorised Chaliga administrators.
+            This area is restricted to authorised Chalega administrators.
           </Text>
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <TouchableOpacity style={styles.secondary} onPress={() => router.replace('/admin')}>
@@ -128,7 +128,7 @@ export default function AdminPayouts() {
         </View>
 
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CHALIGA ADMIN</Text>
+          <Text style={styles.eyebrow}>CHALEGA ADMIN</Text>
           <Text style={styles.title}>Delivery payouts</Text>
           <Text style={styles.body}>
             Review completed delivery earnings and mark partner payouts as paid.

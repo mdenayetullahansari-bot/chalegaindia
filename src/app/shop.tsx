@@ -404,7 +404,7 @@ export default function ShopScreen() {
                       styles.deliveryPromiseTitle
                     }
                   >
-                    CHALIGA 24-HOUR DELIVERY
+                    CHALEGA 24-HOUR DELIVERY
                   </Text>
 
                   <Text
@@ -763,7 +763,7 @@ export default function ShopScreen() {
           <Text
             style={styles.heroTitle}
           >
-            CHALIGA KOLKATA
+            CHALEGA KOLKATA
           </Text>
 
           <Text
@@ -838,7 +838,7 @@ export default function ShopScreen() {
               style={styles.impactText}
             >
               Your purchase supports
-              Chaliga's community food
+              Chalega's community food
               initiatives.
             </Text>
           </View>
@@ -847,7 +847,7 @@ export default function ShopScreen() {
         <TouchableOpacity style={styles.gardenCard} onPress={() => router.push('/garden')} activeOpacity={0.9}>
           <View style={styles.gardenCardIcon}><Text style={styles.gardenCardEmoji}>🌌</Text></View>
           <View style={styles.gardenCardBody}>
-            <Text style={styles.gardenCardEyebrow}>CHALIGA GARDENVERSE</Text>
+            <Text style={styles.gardenCardEyebrow}>CHALEGA GARDENVERSE</Text>
             <Text style={styles.gardenCardTitle}>MY GARDEN</Text>
             <Text style={styles.gardenCardText}>Turn your home into a tiny living ecosystem.</Text>
           </View>
@@ -1306,7 +1306,7 @@ export default function ShopScreen() {
           <Text
             style={styles.footerText}
           >
-            CHALIGA KOLKATA connects
+            CHALEGA KOLKATA connects
             everyday shopping with
             healthy living and community
             impact.
@@ -1314,7 +1314,7 @@ export default function ShopScreen() {
         </View>
 
         <Text style={styles.footer}>
-          CHALIGA KOLKATA
+          CHALEGA KOLKATA
         </Text>
       </ScrollView>
 

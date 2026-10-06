@@ -99,7 +99,7 @@ export function CustomTabList(props: TabListProps) {
           type="smallBold"
           style={styles.brandText}
         >
-          Chaliga
+          Chalega
         </ThemedText>
 
         {props.children}

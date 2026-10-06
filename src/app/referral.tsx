@@ -78,12 +78,12 @@ export default function ReferralScreen() {
 
       await Share.share({
         message:
-          'Join me on Chaliga Kolkata - walk, compete and connect.\n\n' +
+          'Join me on Chalega Kolkata - walk, compete and connect.\n\n' +
           'Join using my referral link:\n' +
           referralLink +
           '\n\nReferral code: ' +
           referralCode +
-          '\n\nChaliga Kolkata',
+          '\n\nChalega Kolkata',
       });
     } catch (error) {
       console.log('Referral sharing failed:', error);
@@ -106,7 +106,7 @@ export default function ReferralScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerText}>
-          <Text style={styles.eyebrow}>CHALIGA KOLKATA</Text>
+          <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
           <Text style={styles.title}>Refer & Grow</Text>
         </View>
       </View>
@@ -122,7 +122,7 @@ export default function ReferralScreen() {
           </View>
 
           <Text style={styles.heroTitle}>
-            Bring your people to Chaliga
+            Bring your people to Chalega
           </Text>
 
           <Text style={styles.heroText}>
@@ -148,7 +148,7 @@ export default function ReferralScreen() {
               </Text>
 
               <Text style={styles.codeHint}>
-                Share this code with someone joining Chaliga.
+                Share this code with someone joining Chalega.
               </Text>
             </>
           )}
@@ -219,7 +219,7 @@ export default function ReferralScreen() {
               Share your personal referral code with
               someone you know. When they join through
               your referral and complete the first 1,000 steps,
-              both of you receive 25 Chaliga Coins.
+              both of you receive 25 Chalega Coins.
             </Text>
           </View>
         </View>

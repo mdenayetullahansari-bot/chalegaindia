@@ -62,7 +62,7 @@ export default function DeliveryPartnerOnboarding() {
 
       Alert.alert(
         'Application Submitted',
-        'Your Chaliga Delivery Partner application has been received. Your account will remain offline until it is approved.',
+        'Your Chalega Delivery Partner application has been received. Your account will remain offline until it is approved.',
         [{ text: 'Done', onPress: () => router.replace('/delivery-dashboard') }]
       );
     } catch (error: any) {
@@ -98,10 +98,10 @@ export default function DeliveryPartnerOnboarding() {
             <View style={styles.heroIcon}>
               <Ionicons name="bicycle" size={31} color={BRAND.teal} />
             </View>
-            <Text style={styles.eyebrow}>CHALIGA KOLKATA</Text>
+            <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
             <Text style={styles.title}>Earn while you move.</Text>
             <Text style={styles.subtitle}>
-              Join the local Chaliga delivery network and take delivery jobs when you are available.
+              Join the local Chalega delivery network and take delivery jobs when you are available.
             </Text>
           </View>
 

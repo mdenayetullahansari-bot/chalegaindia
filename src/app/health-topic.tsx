@@ -302,7 +302,7 @@ export default function HealthTopicScreen() {
           <Text style={styles.missionText}>
             You have taken a moment to learn about
             healthy habits. Complete today's check-in
-            and earn 10 Chaliga Points.
+            and earn 10 Chalega Points.
           </Text>
 
           <TouchableOpacity

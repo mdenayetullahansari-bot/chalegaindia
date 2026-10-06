@@ -543,7 +543,7 @@ export const products: Product[] = [
 
   {
     id: 'wellness-water-bottle',
-    name: 'Chaliga Kolkata Water Bottle',
+    name: 'Chalega Kolkata Water Bottle',
     price: 399,
     unit: 'piece',
     category: 'Wellness & Fitness',
@@ -555,7 +555,7 @@ export const products: Product[] = [
   },
   {
     id: 'wellness-walking-tshirt',
-    name: 'Chaliga Kolkata Walking T-Shirt',
+    name: 'Chalega Kolkata Walking T-Shirt',
     price: 699,
     unit: 'piece',
     category: 'Wellness & Fitness',

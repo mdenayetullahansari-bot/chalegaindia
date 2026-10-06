@@ -300,7 +300,7 @@ export default function DeliveryDashboard() {
           </View>
           <Text style={styles.title}>Delivery Partner Login</Text>
           <Text style={styles.body}>
-            Sign in with the account linked to your approved Chaliga delivery partner profile.
+            Sign in with the account linked to your approved Chalega delivery partner profile.
           </Text>
           <View style={styles.loginCard}>
             <Text style={styles.loginLabel}>EMAIL</Text>
@@ -357,7 +357,7 @@ export default function DeliveryDashboard() {
           </View>
           <Text style={styles.title}>Become a Delivery Partner</Text>
           <Text style={styles.body}>
-            Deliver Chaliga orders around Kolkata and earn from completed jobs.
+            Deliver Chalega orders around Kolkata and earn from completed jobs.
           </Text>
           <TouchableOpacity
             style={styles.primary}
@@ -391,7 +391,7 @@ export default function DeliveryDashboard() {
         </View>
 
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CHALIGA DELIVERY</Text>
+          <Text style={styles.eyebrow}>CHALEGA DELIVERY</Text>
           <Text style={styles.title}>Your delivery dashboard</Text>
           <View style={styles.statusRow}>
             <View style={[styles.dot, approved && styles.dotApproved]} />

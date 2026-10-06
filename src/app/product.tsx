@@ -173,7 +173,7 @@ export default function ProductScreen() {
 
             <View style={styles.promiseBody}>
               <Text style={styles.promiseTitle}>
-                CHALIGA 24-HOUR DELIVERY
+                CHALEGA 24-HOUR DELIVERY
               </Text>
 
               <Text style={styles.promiseText}>
@@ -266,7 +266,7 @@ export default function ProductScreen() {
               </Text>
 
               <Text style={styles.impactText}>
-                Your purchase supports Chaliga's
+                Your purchase supports Chalega's
                 community food initiatives.
               </Text>
             </View>
