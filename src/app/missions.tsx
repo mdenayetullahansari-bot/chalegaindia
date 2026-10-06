@@ -594,7 +594,7 @@ const saveMissionState = useCallback(
           ) {
             Alert.alert(
               'Already Completed',
-              `You've already earned today's +${mission.points} Chalega Coins for this mission.`
+              `You've already earned today's +${mission.points} Chaliga Coins for this mission.`
             );
 
             return;
@@ -602,9 +602,9 @@ const saveMissionState = useCallback(
 
           Alert.alert(
             'Mission Complete!',
-            `+${mission.points} Chalega Coins\n\nYour total is now ${result.balance.toLocaleString(
+            `+${mission.points} Chaliga Coins\n\nYour total is now ${result.balance.toLocaleString(
               'en-IN'
-            )} Chalega Coins.`,
+            )} Chaliga Coins.`,
             [
               {
                 text: 'CONTINUE',
@@ -874,7 +874,7 @@ const saveMissionState = useCallback(
                 styles.brand
               }
             >
-              CHALEGA KOLKATA
+              CHALIGA KOLKATA
             </Text>
 
             <Text
@@ -941,7 +941,7 @@ const saveMissionState = useCallback(
               styles.heroLabel
             }
           >
-            TODAY'S CHALEGA
+            TODAY'S CHALIGA
           </Text>
 
           <Text
@@ -965,7 +965,7 @@ const saveMissionState = useCallback(
               styles.heroSubtitle
             }
           >
-            Complete healthy actions today and earn Chalega Coins.
+            Complete healthy actions today and earn Chaliga Coins.
           </Text>
 
           {/* HERO STATS */}
@@ -1409,7 +1409,7 @@ const saveMissionState = useCallback(
                 styles.completeText
               }
             >
-              You completed every mission today and earned all {totalPossible} available Chalega Coins.
+              You completed every mission today and earned all {totalPossible} available Chaliga Coins.
             </Text>
 
             <View
@@ -1517,7 +1517,7 @@ const saveMissionState = useCallback(
             }
             onPress={() =>
               Alert.alert(
-                'Chalega Health Partners',
+                'Chaliga Health Partners',
                 'Partner opportunities will be available soon.'
               )
             }
@@ -1595,7 +1595,7 @@ const saveMissionState = useCallback(
               styles.footerBrand
             }
           >
-            CHALEGA KOLKATA
+            CHALIGA KOLKATA
           </Text>
 
           <Text
