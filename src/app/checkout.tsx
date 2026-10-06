@@ -24,7 +24,7 @@ import { clearCart } from '@/lib/cart';
 
 type Cart = Record<string, number>;
 
-type DeliveryType = 'Chalega 24-Hour';
+type DeliveryType = 'Chaliga 24-Hour';
 
 type PaymentMethod = 'cod' | 'online';
 
@@ -170,7 +170,7 @@ export default function CheckoutScreen() {
   const [locating, setLocating] = useState(false);
 
   const [delivery, setDelivery] =
-    useState<DeliveryType>('Chalega 24-Hour');
+    useState<DeliveryType>('Chaliga 24-Hour');
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('cod');
@@ -399,7 +399,7 @@ export default function CheckoutScreen() {
       );
 
       throw new Error(
-        'Online payment is available only in the Chalega development build, not Expo Go.',
+        'Online payment is available only in the Chaliga development build, not Expo Go.',
       );
     }
 
@@ -418,8 +418,8 @@ export default function CheckoutScreen() {
         amount: serverAmount,
         currency: order.currency || 'INR',
         order_id: order.id,
-        name: 'Chalega',
-        description: 'Chalega Fresh order',
+        name: 'Chaliga',
+        description: 'Chaliga Fresh order',
         prefill: {
           name: name.trim(),
           contact: phone.trim(),
@@ -483,7 +483,7 @@ export default function CheckoutScreen() {
 
       throw new Error(
         verification?.error ||
-          'Payment verification failed. Please contact Chalega support before trying again.',
+          'Payment verification failed. Please contact Chaliga support before trying again.',
       );
     }
 
@@ -686,7 +686,7 @@ export default function CheckoutScreen() {
               <Text
                 style={styles.promiseTitle}
               >
-                CHALEGA 24-HOUR DELIVERY
+                CHALIGA 24-HOUR DELIVERY
               </Text>
 
               <Text
@@ -810,7 +810,7 @@ export default function CheckoutScreen() {
             </TouchableOpacity>
 
             <Text style={styles.locationHint}>
-              GPS helps Chalega match your order with nearby delivery partners.
+              GPS helps Chaliga match your order with nearby delivery partners.
             </Text>
           </View>
 
@@ -914,7 +914,7 @@ export default function CheckoutScreen() {
             activeOpacity={0.85}
             onPress={() =>
               setDelivery(
-                'Chalega 24-Hour',
+                'Chaliga 24-Hour',
               )
             }
           >
@@ -938,7 +938,7 @@ export default function CheckoutScreen() {
                   styles.deliveryOptionTitle
                 }
               >
-                Chalega 24-Hour Delivery
+                Chaliga 24-Hour Delivery
               </Text>
 
               <Text
@@ -1223,7 +1223,7 @@ export default function CheckoutScreen() {
                 >
                   Your payment is processed
                   securely through Razorpay.
-                  Chalega verifies
+                  Chaliga verifies
                   the payment before
                   confirming your order.
                 </Text>
@@ -1288,14 +1288,14 @@ export default function CheckoutScreen() {
           >            {itemsParam || itemCount}{' '}
             item
             {itemCount === 1 ? '' : 's'} •
-            Fresh order • Chalega 24-hour
+            Fresh order • Chaliga 24-hour
             delivery
           </Text>
 
           <Text
             style={styles.footer}
           >
-            CHALEGA KOLKATA
+            CHALIGA KOLKATA
             ♥
           </Text>
         </ScrollView>
