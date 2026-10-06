@@ -70,7 +70,7 @@ export default function OrderConfirmedScreen() {
         </Text>
 
         <Text style={styles.subtitle}>
-          Thank you for choosing Chalega.
+          Thank you for choosing Chaliga.
         </Text>
 
         {customerName ? (
@@ -252,7 +252,7 @@ export default function OrderConfirmedScreen() {
         </TouchableOpacity>
 
         <Text style={styles.footer}>
-          CHALEGA KOLKATA
+          CHALIGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
