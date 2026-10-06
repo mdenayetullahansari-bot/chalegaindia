@@ -139,7 +139,7 @@ export default function RewardsScreen() {
       );
     } catch (error) {
       console.log(
-        'Could not load Chalega wallet:',
+        'Could not load Chaliga wallet:',
         error
       );
     } finally {
@@ -190,7 +190,7 @@ export default function RewardsScreen() {
       if (Platform.OS === 'web') {
         Alert.alert(
           'Watch Ads on Mobile',
-          'Rewarded ads are available in the Chalega mobile app.'
+          'Rewarded ads are available in the Chaliga mobile app.'
         );
       }
       return;
@@ -205,7 +205,7 @@ export default function RewardsScreen() {
 
       Alert.alert(
         '🎉 Coins Added',
-        'Your 25 Chalega Coins were verified and added to your wallet.'
+        'Your 25 Chaliga Coins were verified and added to your wallet.'
       );
     } catch (error) {
       console.warn('[REWARDED AD] Error:', error);
@@ -242,8 +242,8 @@ export default function RewardsScreen() {
     'New Walker',
     'Active Walker',
     'Healthy Walker',
-    'Chalega Pro',
-    'Chalega Champion',
+    'Chaliga Pro',
+    'Chaliga Champion',
   ][level - 1];
 
   const levelStart = [
@@ -293,7 +293,7 @@ export default function RewardsScreen() {
         'Keep Walking 🚶',
         `You need ${(
           reward.cost - points
-        ).toLocaleString('en-IN')} more Chalega Coins.`
+        ).toLocaleString('en-IN')} more Chaliga Coins.`
       );
       return;
     }
@@ -332,7 +332,7 @@ export default function RewardsScreen() {
         } else {
           Alert.alert(
             '🎉 Reward Redeemed!',
-            `${reward.title} has been added to your Chalega rewards history.`,
+            `${reward.title} has been added to your Chaliga rewards history.`,
             [
               {
                 text: 'KEEP GOING',
@@ -362,7 +362,7 @@ export default function RewardsScreen() {
     const message =
       `Use ${reward.cost.toLocaleString(
         'en-IN'
-      )} Chalega Coins for ${reward.title}?`;
+      )} Chaliga Coins for ${reward.title}?`;
 
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(
@@ -405,7 +405,7 @@ export default function RewardsScreen() {
           </Text>
 
           <Text style={styles.loadingText}>
-            Loading your Chalega wallet...
+            Loading your Chaliga wallet...
           </Text>
         </View>
       </SafeAreaView>
@@ -432,7 +432,7 @@ export default function RewardsScreen() {
 
           <View style={styles.headerCenter}>
             <Text style={styles.brand}>
-              CHALEGA KOLKATA
+              CHALIGA KOLKATA
             </Text>
 
             <Text style={styles.headerTitle}>
@@ -453,7 +453,7 @@ export default function RewardsScreen() {
           </View>
 
           <Text style={styles.heroEyebrow}>
-            YOUR CHALEGA WALLET
+            YOUR CHALIGA WALLET
           </Text>
 
           <Text style={styles.points}>
@@ -461,7 +461,7 @@ export default function RewardsScreen() {
           </Text>
 
           <Text style={styles.pointsLabel}>
-            CHALEGA COINS
+            CHALIGA COINS
           </Text>
 
           <View style={styles.levelBadge}>
@@ -830,7 +830,7 @@ export default function RewardsScreen() {
 
           <View style={styles.shopBody}>
             <Text style={styles.shopEyebrow}>
-              COMING TO CHALEGA
+              COMING TO CHALIGA
             </Text>
 
             <Text style={styles.shopTitle}>
@@ -852,7 +852,7 @@ export default function RewardsScreen() {
 
         <View style={styles.sponsorCard}>
           <Text style={styles.sponsorEyebrow}>
-            CHALEGA PARTNERS
+            CHALIGA PARTNERS
           </Text>
 
           <Text style={styles.sponsorTitle}>
@@ -874,7 +874,7 @@ export default function RewardsScreen() {
             onPress={() => router.push('/partner')}
           >
             <Text style={styles.sponsorButtonText}>
-              PARTNER WITH CHALEGA
+              PARTNER WITH CHALIGA
             </Text>
           </TouchableOpacity>
         </View>
@@ -883,7 +883,7 @@ export default function RewardsScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA KOLKATA
+            CHALIGA KOLKATA
           </Text>
 
           <Text style={styles.footerText}>
