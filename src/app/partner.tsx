@@ -103,7 +103,7 @@ export default function PartnerScreen() {
 
       Alert.alert(
         'Application received',
-        'Thank you for your interest in partnering with Chalega Kolkata. Our team will get in touch with you.',
+        'Thank you for your interest in partnering with Chaliga Kolkata. Our team will get in touch with you.',
         [
           {
             text: 'Done',
@@ -158,7 +158,7 @@ export default function PartnerScreen() {
 
             <View style={styles.headerText}>
               <Text style={styles.eyebrow}>
-                CHALEGA KOLKATA
+                CHALIGA KOLKATA
               </Text>
               <Text style={styles.title}>
                 Partner With Us
@@ -180,7 +180,7 @@ export default function PartnerScreen() {
             </Text>
 
             <Text style={styles.heroText}>
-              Partner with Chalega Kolkata to sponsor
+              Partner with Chaliga Kolkata to sponsor
               missions, support challenges, offer rewards
               or create meaningful community programmes.
             </Text>
@@ -195,7 +195,7 @@ export default function PartnerScreen() {
 
             <Text style={styles.infoBody}>
               Tell us a little about your organisation and
-              how you would like to work with Chalega.
+              how you would like to work with Chaliga.
             </Text>
           </View>
 
