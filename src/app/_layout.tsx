@@ -134,7 +134,8 @@ export default function RootLayout() {
     !session &&
     !guestMode &&
     !isDeliveryRoute &&
-    pathname !== '/auth'
+    pathname !== '/auth' &&
+    pathname !== '/reset-password'
   ) {
     return (
       <Redirect
@@ -452,6 +453,15 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="reset-password"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: 'none' },
         }}
       />
 
