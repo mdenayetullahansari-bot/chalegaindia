@@ -428,7 +428,7 @@ export default function CompetitionsScreen() {
       if (!user) {
         Alert.alert(
           'Sign in required',
-          'Please sign in to join a Chalega competition.'
+          'Please sign in to join a Chaliga competition.'
         );
         return;
       }
@@ -554,7 +554,7 @@ export default function CompetitionsScreen() {
           </Pressable>
 
           <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
+            <Text style={styles.eyebrow}>CHALIGA KOLKATA</Text>
             <Text style={styles.title}>Competition HQ</Text>
           </View>
 
@@ -589,13 +589,13 @@ export default function CompetitionsScreen() {
               ? isWardCompetition
                 ? `${competition.name} is active across participating wards. Verified walking activity determines each ward's position.`
                 : `${competition.name} is active for the ${displayCategory} category. Your verified walking performance determines your position.`
-              : 'Chalega competitions connect your verified walking performance with real rankings and rewards.'}
+              : 'Chaliga competitions connect your verified walking performance with real rankings and rewards.'}
           </Text>
 
           <View style={styles.heroRule}>
             <Text style={styles.ruleText}>1st • 2nd • 3rd</Text>
             <Text style={styles.ruleSubtext}>
-              Earn Chalega Points and redeem eligible rewards.
+              Earn Chaliga Points and redeem eligible rewards.
             </Text>
           </View>
         </View>
@@ -970,7 +970,7 @@ export default function CompetitionsScreen() {
                     >
                       {row.user_id === profile?.id
                         ? 'You'
-                        : row.full_name || 'Chalega Walker'}
+                        : row.full_name || 'Chaliga Walker'}
                     </Text>
                     <Text style={styles.leaderboardMeta}>
                       {row.rank === 1
@@ -1024,10 +1024,10 @@ export default function CompetitionsScreen() {
 
           <View style={styles.rewardContent}>
             <Text style={styles.rewardEyebrow}>REWARDS</Text>
-            <Text style={styles.rewardTitle}>Win Chalega Points</Text>
+            <Text style={styles.rewardTitle}>Win Chaliga Points</Text>
             <Text style={styles.rewardCopy}>
               Competition winners can earn Points that may be redeemed for
-              eligible Chalega products and fruit rewards.
+              eligible Chaliga products and fruit rewards.
             </Text>
           </View>
         </Pressable>
@@ -1037,14 +1037,14 @@ export default function CompetitionsScreen() {
           <View style={styles.infoText}>
             <Text style={styles.infoTitle}>Verified walking comes first</Text>
             <Text style={styles.infoCopy}>
-              Chalega competitions use verified walking results and published
+              Chaliga competitions use verified walking results and published
               competition rules. Rankings are not based on unverified claims.
             </Text>
           </View>
         </View>
 
         <Text style={styles.footerTagline}>WALK • COMPETE • WIN • REPEAT</Text>
-        <Text style={styles.footerBrand}>CHALEGA KOLKATA™</Text>
+        <Text style={styles.footerBrand}>CHALIGA KOLKATA™</Text>
       </ScrollView>
     </SafeAreaView>
   );
