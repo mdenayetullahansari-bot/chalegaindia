@@ -505,7 +505,7 @@ export default function DailyHealthCheckIn() {
       if (result.awarded) {
         Alert.alert(
           '❤️ Health Check-in Complete!',
-          `+10 Chalega Coins\n\nToday's wellness score is ${healthScore}/100.\n\nYour check-in has been saved for your Health History.`
+          `+10 Chaliga Coins\n\nToday's wellness score is ${healthScore}/100.\n\nYour check-in has been saved for your Health History.`
         );
       } else {
         Alert.alert(
@@ -605,7 +605,7 @@ export default function DailyHealthCheckIn() {
 
           <View style={styles.headerTextWrap}>
             <Text style={styles.eyebrow}>
-              CHALEGA KOLKATA • DAILY WELLNESS
+              CHALIGA KOLKATA • DAILY WELLNESS
             </Text>
 
             <Text style={styles.title}>
