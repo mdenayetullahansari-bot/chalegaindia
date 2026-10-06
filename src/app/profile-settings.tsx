@@ -62,7 +62,7 @@ export default function ProfileSettingsScreen() {
       if (!user) {
         Alert.alert(
           'Sign in required',
-          'Please sign in to edit your Chalega profile.',
+          'Please sign in to edit your Chaliga profile.',
           [{ text: 'OK', onPress: () => router.replace('/auth') }]
         );
         return;
@@ -271,7 +271,7 @@ export default function ProfileSettingsScreen() {
 
       Alert.alert(
         'Profile Updated',
-        'Your Chalega profile has been updated successfully.',
+        'Your Chaliga profile has been updated successfully.',
         [{ text: 'Done', onPress: () => router.back() }]
       );
     } catch (error) {
@@ -333,7 +333,7 @@ export default function ProfileSettingsScreen() {
 
           <View style={styles.intro}>
             <Text style={styles.introEyebrow}>
-              YOUR CHALEGA KOLKATA PROFILE
+              YOUR CHALIGA KOLKATA PROFILE
             </Text>
             <Text style={styles.introTitle}>Make it yours.</Text>
             <Text style={styles.introText}>
@@ -540,13 +540,13 @@ export default function ProfileSettingsScreen() {
           </TouchableOpacity>
 
           <Text style={styles.bottomNote}>
-            Your Chalega Coins, walking history and
+            Your Chaliga Coins, walking history and
             Chalega activity are not changed
             when you edit your profile.
           </Text>
 
           <View style={styles.footer}>
-            <Text style={styles.footerBrand}>CHALEGA KOLKATA™</Text>
+            <Text style={styles.footerBrand}>CHALIGA KOLKATA™</Text>
             <Text style={styles.footerTagline}>
               WALK • COMPETE • WIN • REPEAT
             </Text>
