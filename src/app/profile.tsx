@@ -188,7 +188,7 @@ export default function ProfileScreen() {
   const displayName =
     profile?.full_name?.trim() ||
     profile?.username?.trim() ||
-    'Chalega Member';
+    'Chaliga Member';
 
   const username = profile?.username
     ? `@${profile.username.replace(
@@ -259,11 +259,11 @@ export default function ProfileScreen() {
           </View>
 
           <Text style={styles.emptyTitle}>
-            Create your Chalega profile
+            Create your Chaliga profile
           </Text>
 
           <Text style={styles.emptyText}>
-            Join Chalega to save your
+            Join Chaliga to save your
             progress, choose your KMC ward
             and build your healthy journey.
           </Text>
@@ -515,7 +515,7 @@ export default function ProfileScreen() {
               }
             >
               Your ward will connect you
-              with local Chalega
+              with local Chaliga
               community activity and
               impact.
             </Text>
@@ -733,7 +733,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* CHALEGA CIRCLE */}
+        {/* CHALIGA CIRCLE */}
 
         <View style={styles.nextCard}>
           <Text
@@ -745,7 +745,7 @@ export default function ProfileScreen() {
           <Text
             style={styles.nextTitle}
           >
-            CHALEGA CIRCLE
+            CHALIGA CIRCLE
           </Text>
 
           <Text
@@ -798,7 +798,7 @@ export default function ProfileScreen() {
             <Text
               style={styles.nextRowText}
             >
-              Use credit in Chalega Shop
+              Use credit in Chaliga Shop
             </Text>
           </View>
         </View>
@@ -809,7 +809,7 @@ export default function ProfileScreen() {
           <Text
             style={styles.footerBrand}
           >
-            CHALEGA KOLKATA™
+            CHALIGA KOLKATA™
           </Text>
 
           <Text
