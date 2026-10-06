@@ -126,10 +126,16 @@ export default function RootLayout() {
     );
   }
 
+  const isDeliveryRoute =
+    pathname === '/delivery-dashboard' ||
+    pathname === '/delivery-partner';
+
   if (
     !session &&
     !guestMode &&
-    pathname !== '/auth'
+    !isDeliveryRoute &&
+    pathname !== '/auth' &&
+    pathname !== '/reset-password'
   ) {
     return (
       <Redirect
@@ -141,6 +147,7 @@ export default function RootLayout() {
   if (
     !session &&
     !guestMode &&
+    !isDeliveryRoute &&
     pathname === '/auth'
   ) {
     return (
@@ -157,7 +164,8 @@ export default function RootLayout() {
           name="auth"
           options={{
             href: null,
-          }}
+
+          tabBarItemStyle: { display: 'none' },}}
         />
       </Tabs>
     );
@@ -308,111 +316,136 @@ export default function RootLayout() {
         name="competitions"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarButton: () => null,
-        }}
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="profile-settings"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="rewards"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="points-activity"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="missions"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="product"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="checkout"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="order-confirmed"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="track-order"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="orders"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="customer-orders"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="health-topic"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="daily-health-checkin"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="entally"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="auth"
         options={{
           href: null,
+
+        }}
+      />
+
+      <Tabs.Screen
+        name="reset-password"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },
         }}
       />
 
@@ -421,22 +454,144 @@ export default function RootLayout() {
         name="delivery-partner"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="delivery-dashboard"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-payouts"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
         name="kmc-ward"
         options={{
           href: null,
-        }}
+
+          tabBarItemStyle: { display: 'none' },}}
       />
+      <Tabs.Screen
+        name="admin-business"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-community"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-customers"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-delivery-partners"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-orders"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-partner-applications"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin-competitions"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="admin"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="community-checkout"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="community-market"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="garden"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="grower"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="partner"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
+        name="referral"
+        options={{
+          href: null,
+
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
     </Tabs>
   );
 }

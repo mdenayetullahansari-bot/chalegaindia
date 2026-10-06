@@ -18,15 +18,19 @@ import {
 } from '@/lib/guest-session';
 
 import { BRAND } from '@/lib/brand';
+import { isChalegaAdmin } from '@/services/adminService';
+import { supabase } from '@/lib/supabase';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function MoreScreen() {
   const router = useRouter();
   const [guestMode, setGuestMode] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     hydrateGuestMode().then(setGuestMode);
+    isChalegaAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
 
     return subscribeToGuestMode(setGuestMode);
   }, []);
@@ -41,6 +45,17 @@ export default function MoreScreen() {
 
   const createAccount = async () => {
     await endGuestSession();
+    router.replace('/auth');
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      Alert.alert('Sign out failed', error.message);
+      return;
+    }
+
     router.replace('/auth');
   };
 
@@ -252,6 +267,26 @@ export default function MoreScreen() {
           onPress={() => goTo('/delivery-dashboard')}
           tone="green"
         />
+
+        {isAdmin && (
+          <>
+            <MenuRow
+              icon="grid-outline"
+              title="Admin Dashboard"
+              subtitle="Manage orders, delivery operations and partner payouts."
+              onPress={() => goTo('/admin')}
+              tone="gold"
+            />
+
+            <MenuRow
+              icon="cash-outline"
+              title="Admin Payouts"
+              subtitle="Review and settle delivery partner payouts."
+              onPress={() => goTo('/admin-payouts')}
+              tone="gold"
+            />
+          </>
+        )}
 
         {/* COMMUNITY */}
         <Text style={styles.sectionTitle}>
@@ -465,6 +500,19 @@ export default function MoreScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* ACCOUNT */}
+        <Text style={styles.sectionTitle}>
+          ACCOUNT
+        </Text>
+
+        <MenuRow
+          icon="log-out-outline"
+          title="Sign Out"
+          subtitle="Sign out of your Chalega account on this device."
+          onPress={signOut}
+          tone="grey"
+        />
 
         {/* FOOTER */}
         <View style={styles.footer}>

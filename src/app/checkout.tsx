@@ -1,5 +1,6 @@
 import { BRAND } from '@/lib/brand';
 import React, { useMemo, useState } from 'react';
+import * as Location from 'expo-location';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -96,8 +97,7 @@ export default function CheckoutScreen() {
     cart: cartParam,
     items: itemsParam,
   } = useLocalSearchParams<{
-    cart?: string;
-    items?: string;
+    cart?: string;    items?: string;
   }>();
 
   const cart = useMemo<Cart>(() => {
@@ -162,6 +162,12 @@ export default function CheckoutScreen() {
   const [address, setAddress] = useState('');
   const [area, setArea] = useState('');
   const [pin, setPin] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number | null;
+  } | null>(null);
+  const [locating, setLocating] = useState(false);
 
   const [delivery, setDelivery] =
     useState<DeliveryType>('Chalega 24-Hour');
@@ -170,6 +176,40 @@ export default function CheckoutScreen() {
     useState<PaymentMethod>('cod');
 
   const [saving, setSaving] = useState(false);
+
+  const pinCurrentLocation = async () => {
+    try {
+      setLocating(true);
+
+      const permission = await Location.requestForegroundPermissionsAsync();
+
+      if (!permission.granted) {
+        throw new Error('Location permission is required to pin your delivery location.');
+      }
+
+      const current = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        mayShowUserSettingsDialog: true,
+      });
+
+      setDeliveryLocation({
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+        accuracy: current.coords.accuracy ?? null,
+      });
+      Alert.alert(
+        'Location pinned',
+        'Your current GPS location will be used for delivery matching.'
+      );
+    } catch (error: any) {
+      Alert.alert(
+        'Could not get location',
+        error?.message || 'Please turn on Location Services and try again.'
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const finishOrder = async ({
     orderId,
@@ -221,6 +261,8 @@ export default function CheckoutScreen() {
           paymentMethod === 'online'
             ? 'Razorpay'
             : 'COD',
+        p_latitude: deliveryLocation?.latitude ?? null,
+        p_longitude: deliveryLocation?.longitude ?? null,
       },
     );
 
@@ -253,8 +295,7 @@ export default function CheckoutScreen() {
       !createdOrder?.id ||
       !createdOrder?.order_id
     ) {
-      throw new Error(
-        'The order was created but its database ID was missing.',
+      throw new Error(        'The order was created but its database ID was missing.',
       );
     }
 
@@ -353,8 +394,7 @@ export default function CheckoutScreen() {
         RazorpayModule?.default ||
         RazorpayModule;
     } catch (error) {
-      console.error(
-        'Razorpay native module unavailable:',
+      console.error(        'Razorpay native module unavailable:',
         error,
       );
 
@@ -454,7 +494,6 @@ export default function CheckoutScreen() {
         payment.razorpay_payment_id,
     };
   };
-
   const placeOrder = async () => {
     if (selectedProducts.length === 0) {
       Alert.alert(
@@ -522,18 +561,10 @@ export default function CheckoutScreen() {
   });
 
       if (paymentMethod === 'online') {
-        const payment =
-          await startOnlinePayment({
-            chalegaOrderId: dbOrder.id,
-            publicOrderId: dbOrder.order_id,
-          });
-
-        await finishOrder({
-          orderId: dbOrder.order_id,
-          total: dbOrder.total,
-          deliveryDeadline: dbOrder.delivery_deadline,
+        await startOnlinePayment({
+          chalegaOrderId: dbOrder.id,
+          publicOrderId: dbOrder.order_id,
         });
-
       }
 
       await finishOrder({
@@ -553,8 +584,7 @@ export default function CheckoutScreen() {
       if (
         message
           .toLowerCase()
-          .includes('cancel')
-      ) {
+          .includes('cancel')      ) {
         Alert.alert(
           'Payment Cancelled',
           'Your order was not placed. You can choose another payment method and try again.',
@@ -594,7 +624,7 @@ export default function CheckoutScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() =>
-                router.back()
+                router.replace('/shop')
               }
             >
               <Text
@@ -653,8 +683,7 @@ export default function CheckoutScreen() {
 
               <Text
                 style={styles.promiseText}
-              >
-                Your fresh order will be
+              >                Your fresh order will be
                 delivered within 24 hours
                 of order placement.
               </Text>
@@ -753,10 +782,28 @@ export default function CheckoutScreen() {
               }
               placeholder="6-digit PIN code"
               placeholderTextColor="#88939D"
-              keyboardType="number-pad"
-              maxLength={6}
+              keyboardType="number-pad"              maxLength={6}
               style={styles.input}
             />
+
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={pinCurrentLocation}
+              disabled={locating}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.locationButtonText}>
+                {locating
+                  ? 'GETTING LOCATION...'
+                  : deliveryLocation
+                  ? '✓ DELIVERY LOCATION PINNED'
+                  : 'USE MY CURRENT LOCATION'}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.locationHint}>
+              GPS helps Chalega match your order with nearby delivery partners.
+            </Text>
           </View>
 
           <Text
@@ -834,8 +881,7 @@ export default function CheckoutScreen() {
                       ₹
                       {(
                         product.price *
-                        (product.quantity ||
-                          0)
+                        (product.quantity ||                          0)
                       ).toLocaleString(
                         'en-IN',
                       )}
@@ -934,8 +980,7 @@ export default function CheckoutScreen() {
               <Text
                 style={
                   styles.summaryValue
-                }
-              >
+                }              >
                 ₹
                 {subtotal.toLocaleString(
                   'en-IN',
@@ -1034,8 +1079,7 @@ export default function CheckoutScreen() {
                 )
               }
             >
-              <View
-                style={
+              <View                style={
                   styles.onlineIcon
                 }
               >
@@ -1134,8 +1178,7 @@ export default function CheckoutScreen() {
 
               <View
                 style={[
-                  styles.radioOuter,
-                  paymentMethod ===
+                  styles.radioOuter,                  paymentMethod ===
                     'cod' &&
                     styles.radioOuterSelected,
                 ]}
@@ -1234,8 +1277,7 @@ export default function CheckoutScreen() {
 
           <Text
             style={styles.orderNote}
-          >
-            {itemsParam || itemCount}{' '}
+          >            {itemsParam || itemCount}{' '}
             item
             {itemCount === 1 ? '' : 's'} •
             Fresh order • Chalega 24-hour
@@ -1334,7 +1376,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-
   promiseIconText: {
     fontSize: 23,
   },
@@ -1401,6 +1442,31 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
+  locationButton: {
+    minHeight: 44,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: BRAND.teal,
+    backgroundColor: '#F2FBF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+
+  locationButtonText: {
+    color: BRAND.teal,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+
+  locationHint: {
+    color: '#7A8791',
+    fontSize: 9,
+    lineHeight: 14,
+    marginTop: 6,
+  },
+
   productsCard: {
     marginHorizontal: 18,
     borderRadius: 20,
@@ -1409,7 +1475,6 @@ const styles = StyleSheet.create({
     borderColor: '#E3E8ED',
     overflow: 'hidden',
   },
-
   productRow: {
     padding: 13,
     flexDirection: 'row',
@@ -1509,8 +1574,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#2FA84F',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center',  },
 
   selectedRadioDot: {
     width: 10,
@@ -1609,8 +1673,7 @@ const styles = StyleSheet.create({
   },
 
   paymentOptionSelected: {
-    borderColor: '#2FA84F',
-    backgroundColor: '#F4FAF5',
+    borderColor: '#2FA84F',    backgroundColor: '#F4FAF5',
   },
 
   onlineIcon: {
@@ -1709,8 +1772,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.teal,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+    justifyContent: 'space-between',  },
 
   placeOrderDisabled: {
     opacity: 0.65,

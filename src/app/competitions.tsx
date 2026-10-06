@@ -75,6 +75,12 @@ type WardLeaderboardRow = {
   activity_score: number;
 };
 
+type WardPrizeDistribution = {
+  points_amount: number;
+  status: 'pending' | 'issued' | 'cancelled' | string;
+  issued_at: string | null;
+};
+
 function getIndiaDateKey(date = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
@@ -115,6 +121,8 @@ export default function CompetitionsScreen() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [wardLeaderboard, setWardLeaderboard] = useState<WardLeaderboardRow[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [wardPrizeDistribution, setWardPrizeDistribution] =
+    useState<WardPrizeDistribution | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -195,60 +203,57 @@ export default function CompetitionsScreen() {
           }
         }
 
+        let loadedCategory: Category | null = null;
+
         if (
-          typeof loadedProfile.age !== 'number' ||
-          !loadedProfile.gender
+          typeof loadedProfile.age === 'number' &&
+          !!loadedProfile.gender
         ) {
-          if (mounted) {
-            setLoading(false);
+          const age = loadedProfile.age;
+          const gender = loadedProfile.gender.toLowerCase();
+
+          const { data: categoryRows, error: categoryError } = await supabase
+            .from('competition_categories')
+            .select('id, code, gender, age_min, age_max, label')
+            .eq('gender', gender)
+            .eq('active', true)
+            .order('age_min', { ascending: true });
+
+          if (categoryError) {
+            throw categoryError;
           }
-          return;
-        }
 
-        const age = loadedProfile.age;
-        const gender = loadedProfile.gender.toLowerCase();
+          loadedCategory =
+            (categoryRows as Category[] | null)?.find(
+              (candidate) =>
+                age >= candidate.age_min &&
+                (candidate.age_max === null || age <= candidate.age_max)
+            ) || null;
 
-        const { data: categoryRows, error: categoryError } = await supabase
-          .from('competition_categories')
-          .select('id, code, gender, age_min, age_max, label')
-          .eq('gender', gender)
-          .eq('active', true)
-          .order('age_min', { ascending: true });
-
-        if (categoryError) {
-          throw categoryError;
-        }
-
-        const categoryData =
-          (categoryRows as Category[] | null)?.find(
-            (candidate) =>
-              age >= candidate.age_min &&
-              (candidate.age_max === null || age <= candidate.age_max)
-          ) || null;
-
-        if (!categoryData) {
           if (mounted) {
-            setLoading(false);
+            setCategory(loadedCategory);
           }
-          return;
         }
 
-        const loadedCategory = categoryData as Category;
+        let competitionQuery = supabase
+          .from('competitions')
+          .select(
+            'id, name, competition_type, scope, status, scoring_method, starts_at, ends_at, first_place_points, second_place_points, third_place_points, rules_version, category_id'
+          )
+          .eq('status', 'active');
 
-        if (mounted) {
-          setCategory(loadedCategory);
+        if (loadedCategory) {
+          competitionQuery = competitionQuery.or(
+            `category_id.eq.${loadedCategory.id},and(category_id.is.null,scope.eq.global)`
+          );
+        } else {
+          competitionQuery = competitionQuery
+            .is('category_id', null)
+            .eq('scope', 'global');
         }
 
         const { data: competitionData, error: competitionError } =
-          await supabase
-            .from('competitions')
-            .select(
-              'id, name, competition_type, scope, status, scoring_method, starts_at, ends_at, first_place_points, second_place_points, third_place_points, rules_version, category_id'
-            )
-            .eq('status', 'active')
-            .or(
-              `category_id.eq.${loadedCategory.id},and(category_id.is.null,scope.eq.global)`
-            )
+          await competitionQuery
             .order('starts_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -260,6 +265,26 @@ export default function CompetitionsScreen() {
         if (mounted && competitionData) {
           const loadedCompetition = competitionData as Competition;
           setCompetition(loadedCompetition);
+
+          if (
+            loadedCompetition.category_id === null &&
+            loadedCompetition.scope === 'global'
+          ) {
+            const { data: prizeData, error: prizeError } = await supabase
+              .from('ward_competition_prize_distributions')
+              .select('points_amount, status, issued_at')
+              .eq('competition_id', loadedCompetition.id)
+              .maybeSingle();
+
+            if (prizeError) {
+              console.log(
+                '[COMPETITIONS] Ward prize lookup error:',
+                prizeError
+              );
+            } else if (mounted && prizeData) {
+              setWardPrizeDistribution(prizeData as WardPrizeDistribution);
+            }
+          }
 
           const { data: participationData, error: participationError } =
             await supabase
@@ -1014,6 +1039,65 @@ export default function CompetitionsScreen() {
           )}
         </View>
 
+        {isWardCompetition ? (
+          <View style={styles.wardGuideCard}>
+            <View style={styles.wardGuideHeader}>
+              <View style={styles.wardGuideIcon}>
+                <Ionicons name="walk" size={22} color="#1769E0" />
+              </View>
+              <View style={styles.wardGuideHeaderText}>
+                <Text style={styles.wardGuideEyebrow}>HOW THE WARD CHAMPIONSHIP WORKS</Text>
+                <Text style={styles.wardGuideTitle}>Every verified walk helps your ward</Text>
+              </View>
+            </View>
+            <Text style={styles.wardGuideCopy}>
+              Join the competition, keep walking, and submit your daily result. Only verified walking activity is used for ward rankings.
+            </Text>
+            <View style={styles.wardGuideStep}>
+              <Text style={styles.wardGuideNumber}>1</Text>
+              <View style={styles.wardGuideStepText}>
+                <Text style={styles.wardGuideStepTitle}>Walk regularly</Text>
+                <Text style={styles.wardGuideStepCopy}>Your walking activity builds your contribution to your ward.</Text>
+              </View>
+            </View>
+            <View style={styles.wardGuideStep}>
+              <Text style={styles.wardGuideNumber}>2</Text>
+              <View style={styles.wardGuideStepText}>
+                <Text style={styles.wardGuideStepTitle}>Submit verified results</Text>
+                <Text style={styles.wardGuideStepCopy}>Unverified claims do not determine the ward ranking.</Text>
+              </View>
+            </View>
+            <View style={styles.wardGuideStep}>
+              <Text style={styles.wardGuideNumber}>3</Text>
+              <View style={styles.wardGuideStepText}>
+                <Text style={styles.wardGuideStepTitle}>Prize distribution follows the final result</Text>
+                <Text style={styles.wardGuideStepCopy}>If your ward qualifies for a prize, individual shares are shown here when the distribution is created.</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {isWardCompetition && wardPrizeDistribution ? (
+          <View style={styles.wardPrizeShareCard}>
+            <View style={styles.wardPrizeShareIcon}>
+              <Ionicons name="gift" size={23} color="#1769E0" />
+            </View>
+            <View style={styles.wardPrizeShareContent}>
+              <Text style={styles.wardPrizeShareEyebrow}>YOUR WARD PRIZE SHARE</Text>
+              <Text style={styles.wardPrizeShareTitle}>
+                {wardPrizeDistribution.points_amount.toLocaleString('en-IN')} Chalega Points
+              </Text>
+              <Text style={styles.wardPrizeShareCopy}>
+                {wardPrizeDistribution.status === 'issued'
+                  ? 'Your share has been added to your Chalega Points wallet.'
+                  : wardPrizeDistribution.status === 'pending'
+                    ? 'Your ward has qualified for a prize. Your share is being processed.'
+                    : 'The ward prize distribution is currently cancelled.'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         <Pressable
           style={styles.rewardCard}
           onPress={() => router.push('/rewards')}
@@ -1651,6 +1735,119 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.6,
     marginTop: 2,
+  },
+  wardGuideCard: {
+    backgroundColor: BRAND.white,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#D9E5F2',
+  },
+  wardGuideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  wardGuideIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#EEF5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  wardGuideHeaderText: {
+    flex: 1,
+  },
+  wardGuideEyebrow: {
+    color: '#1769E0',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  wardGuideTitle: {
+    color: '#0B2239',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  wardGuideCopy: {
+    color: '#667788',
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 12,
+  },
+  wardGuideStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 13,
+  },
+  wardGuideNumber: {
+    width: 27,
+    height: 27,
+    borderRadius: 9,
+    backgroundColor: '#EEF5FF',
+    color: '#1769E0',
+    fontSize: 11,
+    fontWeight: '900',
+    textAlign: 'center',
+    paddingTop: 6,
+    marginRight: 10,
+  },
+  wardGuideStepText: {
+    flex: 1,
+  },
+  wardGuideStepTitle: {
+    color: '#0B2239',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  wardGuideStepCopy: {
+    color: '#6C7A88',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  wardPrizeShareCard: {
+    backgroundColor: '#EEF5FF',
+    borderRadius: 20,
+    padding: 17,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#BFD5F4',
+  },
+  wardPrizeShareIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: BRAND.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  wardPrizeShareContent: {
+    flex: 1,
+  },
+  wardPrizeShareEyebrow: {
+    color: '#1769E0',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  wardPrizeShareTitle: {
+    color: '#0B2239',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  wardPrizeShareCopy: {
+    color: '#667788',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 4,
   },
   rewardCard: {
     backgroundColor: '#1769E0',

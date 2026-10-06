@@ -30,6 +30,10 @@ export type DeliveryPartner = {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  location_accuracy_m: number | null;
+  location_updated_at: string | null;
 };
 
 export type DeliveryPartnerApplication = {
@@ -56,7 +60,7 @@ export async function getMyDeliveryPartner(): Promise<DeliveryPartner | null> {
   const { data, error } = await supabase
     .from('chalega_delivery_partners')
     .select(
-      'id,user_id,status,availability,vehicle_type,vehicle_number,phone,city_area,approved_at,created_at,updated_at'
+      'id,user_id,status,availability,vehicle_type,vehicle_number,phone,city_area,approved_at,created_at,updated_at,latitude,longitude,location_accuracy_m,location_updated_at'
     )
     .eq('user_id', user.id)
     .maybeSingle();
@@ -123,7 +127,7 @@ export async function getMyDeliveryAssignments() {
   const { data, error } = await supabase
     .from('chalega_delivery_assignments')
     .select(
-      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,drop_address,drop_area,drop_pin,delivery_fee,partner_earnings,distance_km,waiting_minutes,demand_bonus,community_bonus,tip_amount,earnings_breakdown,batch_id,sequence_in_batch)'
+      'id,job_id,partner_id,status,offered_at,accepted_at,rejected_at,job:chalega_delivery_jobs(id,order_id,status,pickup_address,pickup_area,pickup_pin,pickup_latitude,pickup_longitude,drop_address,drop_area,drop_pin,drop_latitude,drop_longitude,delivery_fee,partner_earnings,distance_km,waiting_minutes,demand_bonus,community_bonus,tip_amount,earnings_breakdown,batch_id,sequence_in_batch)'
     )
     .eq('partner_id', partner.id)
     .order('offered_at', { ascending: false });
@@ -132,7 +136,39 @@ export async function getMyDeliveryAssignments() {
     throw error;
   }
 
-  return data ?? [];
+  const rows = data ?? [];
+  const orderIds = rows
+    .map((item: any) => item.job?.order_id)
+    .filter(Boolean);
+
+  if (orderIds.length === 0) {
+    return rows;
+  }
+
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('order_id,total,payment_method,payment_status')
+    .in('order_id', orderIds);
+
+  if (ordersError) {
+    throw ordersError;
+  }
+
+  const orderMap = new Map(
+    (orders ?? []).map((order: any) => [order.order_id, order])
+  );
+
+  return rows.map((item: any) => ({
+    ...item,
+    job: item.job
+      ? {
+          ...item.job,
+          order_total: orderMap.get(item.job.order_id)?.total ?? null,
+          payment_method: orderMap.get(item.job.order_id)?.payment_method ?? null,
+          payment_status: orderMap.get(item.job.order_id)?.payment_status ?? null,
+        }
+      : item.job,
+  }));
 }
 
 export async function getMyDeliveryPayouts() {
@@ -188,6 +224,25 @@ export async function acceptMyDeliveryAssignment(
     assignment_id: string;
     job_id: string;
     status: string;
+  };
+}
+
+export async function markMyCODOrderCollected(
+  orderId: string
+): Promise<{ order_id: string; payment_status: string; amount: number }> {
+  const { data, error } = await supabase.rpc(
+    'mark_my_cod_order_collected',
+    { p_order_id: orderId }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data as {
+    order_id: string;
+    payment_status: string;
+    amount: number;
   };
 }
 

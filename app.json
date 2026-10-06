@@ -51,6 +51,16 @@
         }
       ],
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Chalega Kolkata to use your location for delivery matching.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Chalega Kolkata to use your location to match delivery jobs while you are online.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#061B2E",

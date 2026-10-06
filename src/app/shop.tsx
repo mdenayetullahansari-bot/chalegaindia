@@ -68,6 +68,16 @@ const CATEGORIES: {
     emoji: '🚶',
     subtitle: 'Walk & live better',
   },
+  {
+    name: 'Nursery & Plants',
+    emoji: '🪴',
+    subtitle: 'Plants & gardening',
+  },
+  {
+    name: 'Gardening',
+    emoji: '🌿',
+    subtitle: 'Grow your own',
+  },
 ];
 
 export default function ShopScreen() {
@@ -753,7 +763,7 @@ export default function ShopScreen() {
           <Text
             style={styles.heroTitle}
           >
-            Chalega Fresh
+            CHALEGA KOLKATA
           </Text>
 
           <Text
@@ -833,6 +843,16 @@ export default function ShopScreen() {
             </Text>
           </View>
         </View>
+
+        <TouchableOpacity style={styles.gardenCard} onPress={() => router.push('/garden')} activeOpacity={0.9}>
+          <View style={styles.gardenCardIcon}><Text style={styles.gardenCardEmoji}>🌌</Text></View>
+          <View style={styles.gardenCardBody}>
+            <Text style={styles.gardenCardEyebrow}>CHALEGA GARDENVERSE</Text>
+            <Text style={styles.gardenCardTitle}>MY GARDEN</Text>
+            <Text style={styles.gardenCardText}>Turn your home into a tiny living ecosystem.</Text>
+          </View>
+          <Text style={styles.gardenCardArrow}>OPEN →</Text>
+        </TouchableOpacity>
 
         <View
           style={styles.searchCard}
@@ -974,6 +994,37 @@ export default function ShopScreen() {
           </View>
         )}
 
+
+        {(selectedCategory === 'Nursery & Plants' || selectedCategory === 'Gardening') && (
+          <View style={styles.gardenMissionCard}>
+            <View style={styles.gardenMissionTop}>
+              <View style={styles.gardenMissionIcon}>
+                <Text style={styles.gardenMissionEmoji}>🍅</Text>
+              </View>
+              <View style={styles.gardenMissionBody}>
+                <Text style={styles.gardenMissionEyebrow}>GARDENVERSE · MISSION 01</Text>
+                <Text style={styles.gardenMissionTitle}>Grow your first tomato</Text>
+                <Text style={styles.gardenMissionText}>
+                  Start with a tomato plant, grow bag, cocopeat and vermicompost. Add it to My Garden and track the journey.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.gardenMissionProducts}>
+              <Text style={styles.gardenMissionProduct}>🌱 Tomato Plant · ₹89</Text>
+              <Text style={styles.gardenMissionProduct}>🪴 Grow Bag · ₹129</Text>
+              <Text style={styles.gardenMissionProduct}>🥥 Cocopeat · ₹99</Text>
+              <Text style={styles.gardenMissionProduct}>🌿 Vermicompost · ₹179</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.gardenMissionButton}
+              onPress={() => router.push({ pathname: '/garden', params: { addProductId: 'nursery-tomato' } })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.gardenMissionButtonText}>START IN MY GARDEN →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View
           style={styles.productHeader}
         >
@@ -1105,6 +1156,15 @@ export default function ShopScreen() {
                     )}{' '}
                     / {product.unit}
                   </Text>
+
+                  {product.category === 'Nursery & Plants' && (
+                    <TouchableOpacity
+                      style={styles.gardenAddButton}
+                      onPress={() => router.push({ pathname: '/garden', params: { addProductId: product.id } })}
+                    >
+                      <Text style={styles.gardenAddButtonText}>🌱 MY GARDEN</Text>
+                    </TouchableOpacity>
+                  )}
 
                   <View
                     style={
@@ -1246,7 +1306,7 @@ export default function ShopScreen() {
           <Text
             style={styles.footerText}
           >
-            Chalega Fresh connects
+            CHALEGA KOLKATA connects
             everyday shopping with
             healthy living and community
             impact.
@@ -1470,6 +1530,17 @@ const styles = StyleSheet.create({
     color: '#53606C',
   },
 
+  gardenCard: { marginHorizontal: 18, marginTop: 14, padding: 15, borderRadius: 20, backgroundColor: '#EAF7EE', borderWidth: 1, borderColor: '#C9E5D1', flexDirection: 'row', alignItems: 'center' },
+  gardenCardIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  gardenCardEmoji: { fontSize: 25 },
+  gardenCardBody: { flex: 1 },
+  gardenCardEyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 1, color: '#24633A' },
+  gardenCardTitle: { marginTop: 2, fontSize: 18, fontWeight: '900', color: '#123C25' },
+  gardenCardText: { marginTop: 2, fontSize: 11, lineHeight: 15, color: '#4C6B57' },
+  gardenCardArrow: { marginLeft: 8, fontSize: 10, fontWeight: '900', color: '#1A7040' },
+  gardenAddButton: { marginBottom: 7, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11, backgroundColor: '#EAF7EE', borderWidth: 1, borderColor: '#C9E5D1' },
+  gardenAddButtonText: { fontSize: 9, fontWeight: '900', color: '#1C6337' },
+
   searchCard: {
     marginHorizontal: 18,
     marginTop: 14,
@@ -1595,6 +1666,92 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     color: '#4F7058',
+  },
+
+
+  gardenMissionCard: {
+    marginHorizontal: 18,
+    marginTop: 14,
+    marginBottom: 4,
+    padding: 16,
+    borderRadius: 22,
+    backgroundColor: '#F1F8F2',
+    borderWidth: 1,
+    borderColor: '#C9E5D1',
+  },
+
+  gardenMissionTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  gardenMissionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  gardenMissionEmoji: {
+    fontSize: 28,
+  },
+
+  gardenMissionBody: {
+    flex: 1,
+  },
+
+  gardenMissionEyebrow: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+    color: '#24633A',
+  },
+
+  gardenMissionTitle: {
+    marginTop: 3,
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#123C25',
+  },
+
+  gardenMissionText: {
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#4C6B57',
+  },
+
+  gardenMissionProducts: {
+    marginTop: 12,
+    padding: 11,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+
+  gardenMissionProduct: {
+    fontSize: 10,
+    lineHeight: 18,
+    color: '#425C4A',
+    fontWeight: '700',
+  },
+
+  gardenMissionButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: BRAND.midnight,
+  },
+
+  gardenMissionButtonText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
 
   productHeader: {

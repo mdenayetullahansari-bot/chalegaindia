@@ -1,0 +1,1 @@
+revoke execute on function public.distribute_ward_competition_prize(uuid,integer) from public,anon,authenticated;

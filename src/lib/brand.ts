@@ -1,6 +1,6 @@
 export const BRAND = {
   // Master brand
-  name: 'Chalega',
+  name: 'CHALEGA',
   city: 'Kolkata',
   cityLabel: 'KOLKATA',
   lockup: 'CHALEGA KOLKATA',

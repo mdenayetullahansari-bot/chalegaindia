@@ -27,6 +27,7 @@ import { startGuestSession } from '@/lib/guest-session';
 import {
   applyPendingReferral,
   captureReferralCode,
+  savePendingReferralCode,
 } from '@/services/referralService';
 
 export default function AuthScreen() {
@@ -37,6 +38,7 @@ export default function AuthScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -75,6 +77,26 @@ export default function AuthScreen() {
     }
   }
 
+  function getAuthRedirectUrl(path = '/auth') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      const isLocal =
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0';
+
+      // Never let a Vercel preview deployment become the recovery callback.
+      // Password-reset emails must always return to the stable public Chalega URL.
+      const baseUrl = isLocal
+        ? window.location.origin
+        : 'https://chalegaindia.vercel.app';
+
+      return `${baseUrl}${path}`;
+    }
+
+    return Linking.createURL(path);
+  }
+
   async function handleAuthUrl(url: string | null) {
     if (!url) return;
 
@@ -82,8 +104,29 @@ export default function AuthScreen() {
       console.log('AUTH DEEP LINK:', url);
 
       const parsed = Linking.parse(url);
-      const params = parsed.queryParams || {};
-      const hash = url.includes('#') ? url.split('#')[1] : '';
+      let params: Record<string, any> = parsed.queryParams || {};
+      let hash = url.includes('#') ? url.split('#')[1] : '';
+
+      // On web, read the browser URL directly as well. Supabase recovery
+      // links can arrive as query/hash parameters before Expo Linking sees them.
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const browserUrl = window.location.href;
+        const browserQuery = new URLSearchParams(window.location.search);
+        const browserHash = window.location.hash.replace(/^#/, '');
+
+        params = {
+          ...params,
+          ...Object.fromEntries(browserQuery.entries()),
+        };
+
+        if (browserHash) {
+          hash = browserHash;
+          const hashParams = new URLSearchParams(browserHash);
+          for (const [key, value] of hashParams.entries()) {
+            if (!(key in params)) params[key] = value;
+          }
+        }
+      }
 
       const referralParam = params.ref
         ? String(params.ref)
@@ -304,6 +347,7 @@ export default function AuthScreen() {
           'success'
         );
 
+        router.replace('/');
         return;
       }
 
@@ -312,12 +356,18 @@ export default function AuthScreen() {
         cleanEmail
       );
 
+      const cleanReferralCode = referralCode.trim().toUpperCase();
+
+      if (cleanReferralCode) {
+        await savePendingReferralCode(cleanReferralCode);
+      }
+
       const { data, error } =
         await supabase.auth.signUp({
           email: cleanEmail,
           password,
           options: {
-            emailRedirectTo: Linking.createURL('/auth'),
+            emailRedirectTo: getAuthRedirectUrl('/auth'),
             data: {
               full_name: cleanName,
             },
@@ -378,7 +428,7 @@ export default function AuthScreen() {
     try {
       setLoading(true);
 
-      const redirectTo = Linking.createURL('/auth?type=recovery');
+      const redirectTo = getAuthRedirectUrl('/auth');
 
       console.log(
         'Password recovery redirect:',
@@ -398,7 +448,7 @@ export default function AuthScreen() {
       }
 
       showMessage(
-        'Password reset email sent. Open the email on this phone and follow the link.',
+        'Password reset email sent. Open the newest Chalega email and use that link. Older reset links are single-use and may no longer work.',
         'success'
       );
     } catch (error: any) {
@@ -618,6 +668,24 @@ export default function AuthScreen() {
             </View>
           )}
 
+          {!isLogin && (
+            <View style={styles.field}>
+              <Text style={styles.label}>
+                REFERRAL CODE (OPTIONAL)
+              </Text>
+
+              <TextInput
+                value={referralCode}
+                onChangeText={setReferralCode}
+                placeholder="Enter referral code"
+                placeholderTextColor="#999"
+                style={styles.input}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+            </View>
+          )}
+
           <View style={styles.field}>
             <Text style={styles.label}>
               EMAIL
@@ -727,6 +795,7 @@ export default function AuthScreen() {
                   (value) => !value
                 );
                 setPassword('');
+                setReferralCode('');
                 setMessage('');
                 setMessageType('');
               }}

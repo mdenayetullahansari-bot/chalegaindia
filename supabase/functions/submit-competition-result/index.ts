@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "npm:@supabase/server";
 
-const MAX_SUBMITTED_STEPS = 100_000;
+const MAX_SUBMITTED_STEPS = 200_000;
 const TIME_ZONE = "Asia/Kolkata";
 
 function getIndiaDateKey(date = new Date()): string {
@@ -47,7 +47,7 @@ export default {
 
         const { data: competition, error: competitionError } = await admin
           .from("competitions")
-          .select("id, name, competition_type, scope, status, starts_at, ends_at, category_id")
+          .select("id, name, competition_type, scope, ward_id, status, starts_at, ends_at, category_id")
           .eq("id", competitionId)
           .maybeSingle();
 
@@ -68,6 +68,50 @@ export default {
         const endsAt = new Date(competition.ends_at);
         if (now < startsAt || now >= endsAt) {
           return Response.json({ success: false, error: "This competition is outside its active time window." }, { status: 409 });
+        }
+
+        const { data: profile, error: profileError } = await admin
+          .from("profiles")
+          .select("age, gender, ward_id")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("[SUBMIT-COMPETITION] Profile lookup failed", profileError);
+          return Response.json({ success: false, error: "Unable to verify competition eligibility." }, { status: 500 });
+        }
+
+        if (!profile) {
+          return Response.json({ success: false, error: "Your Chalega profile could not be verified." }, { status: 403 });
+        }
+
+        if (competition.scope === "ward" && profile.ward_id !== competition.ward_id) {
+          return Response.json({ success: false, error: "This competition is restricted to the assigned ward." }, { status: 403 });
+        }
+
+        if (competition.category_id) {
+          const { data: category, error: categoryError } = await admin
+            .from("competition_categories")
+            .select("id, gender, age_min, age_max, active")
+            .eq("id", competition.category_id)
+            .maybeSingle();
+
+          if (categoryError) {
+            console.error("[SUBMIT-COMPETITION] Category lookup failed", categoryError);
+            return Response.json({ success: false, error: "Unable to verify competition category." }, { status: 500 });
+          }
+
+          if (
+            !category ||
+            !category.active ||
+            !profile.gender ||
+            typeof profile.age !== "number" ||
+            profile.age < category.age_min ||
+            (category.age_max !== null && profile.age > category.age_max) ||
+            profile.gender.toLowerCase() !== category.gender.toLowerCase()
+          ) {
+            return Response.json({ success: false, error: "Your profile is not eligible for this competition category." }, { status: 403 });
+          }
         }
 
         const { data: participant, error: participantError } = await admin
@@ -118,7 +162,7 @@ export default {
             competition_id: competitionId,
             user_id: userId,
             result_date: resultDate,
-            verified_steps: null,
+            verified_steps: 0,
             rank: null,
             status: "pending",
           })

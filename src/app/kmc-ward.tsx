@@ -46,6 +46,8 @@ export default function KmcWardScreen() {
     useState<Coordinates | null>(null);
   const [wardAssignment, setWardAssignment] =
     useState<WardAssignment | null>(null);
+  const [assignmentError, setAssignmentError] =
+    useState<string | null>(null);
 
   const goBackToProfileSettings = () => {
     router.replace('/profile-settings');
@@ -59,6 +61,7 @@ export default function KmcWardScreen() {
     try {
       setLocating(true);
       setWardAssignment(null);
+      setAssignmentError(null);
       setCoordinates(null);
 
       const servicesEnabled =
@@ -103,7 +106,7 @@ export default function KmcWardScreen() {
         longitude,
       });
 
-      const { data, error } = await supabase.rpc(
+      const rpcPromise = supabase.rpc(
         'assign_my_kmc_ward',
         {
           p_lat: latitude,
@@ -111,10 +114,32 @@ export default function KmcWardScreen() {
         },
       );
 
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                'Ward boundary matching is taking too long. Please try again.',
+              ),
+            ),
+          15000,
+        );
+      });
+
+      const { data, error } = await Promise.race([
+        rpcPromise,
+        timeoutPromise,
+      ]);
+
       if (error) {
         console.warn(
           '[KMC WARD] Ward assignment RPC error:',
           error,
+        );
+
+        setAssignmentError(
+          error.message ||
+            'Your location could not be matched to an active KMC ward.',
         );
 
         Alert.alert(
@@ -151,9 +176,16 @@ export default function KmcWardScreen() {
         error,
       );
 
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Please make sure Location Services are enabled and try again.';
+
+      setAssignmentError(message);
+
       Alert.alert(
         'Could not get your ward',
-        'Please make sure Location Services are enabled and try again.',
+        message,
       );
     } finally {
       setLocating(false);
@@ -331,6 +363,50 @@ export default function KmcWardScreen() {
                 Assigned using GPS and official KMC boundary data
               </Text>
             </View>
+          </View>
+        ) : assignmentError ? (
+          <View style={styles.resultCard}>
+            <View style={styles.resultHeader}>
+              <View style={styles.resultIconError}>
+                <Ionicons
+                  name="alert-circle"
+                  size={20}
+                  color="#B42318"
+                />
+              </View>
+
+              <View style={styles.resultHeaderText}>
+                <Text style={styles.resultTitle}>
+                  Ward matching could not be completed
+                </Text>
+
+                <Text style={styles.resultSubtitle}>
+                  Your location was captured, but the server could not complete the boundary check.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.resultDivider} />
+
+            <Text style={styles.waitingText}>
+              {assignmentError}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={findMyWard}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="refresh"
+                size={17}
+                color="#FFFFFF"
+              />
+
+              <Text style={styles.retryButtonText}>
+                TRY AGAIN
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : coordinates ? (
           <View style={styles.resultCard}>
@@ -661,6 +737,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  resultIconError: {
+    width: 43,
+    height: 43,
+    borderRadius: 14,
+    backgroundColor: '#FDECEC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   resultHeaderText: {
     flex: 1,
     paddingLeft: 12,
@@ -742,6 +827,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
     fontWeight: '600',
+  },
+
+  retryButton: {
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: COLORS.blue,
+    marginTop: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
 
   nextCard: {
