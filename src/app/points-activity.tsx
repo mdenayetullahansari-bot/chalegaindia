@@ -70,7 +70,7 @@ export default function PointsActivityScreen() {
         if (userError) throw userError;
         if (!user) {
           throw new Error(
-            'Please sign in to view your Chalega Coins activity.'
+            'Please sign in to view your Chaliga Coins activity.'
           );
         }
 
@@ -120,7 +120,7 @@ export default function PointsActivityScreen() {
         );
       } catch (error) {
         console.log(
-          'Could not load Chalega Coins Activity:',
+          'Could not load Chaliga Coins Activity:',
           error
         );
       } finally {
@@ -285,7 +285,7 @@ export default function PointsActivityScreen() {
                 styles.brand
               }
             >
-              CHALEGA KOLKATA
+              CHALIGA KOLKATA
             </Text>
 
             <Text
@@ -316,7 +316,7 @@ export default function PointsActivityScreen() {
               styles.walletLabel
             }
           >
-            YOUR CHALEGA WALLET
+            YOUR CHALIGA WALLET
           </Text>
 
           <Text
@@ -332,7 +332,7 @@ export default function PointsActivityScreen() {
               styles.walletSub
             }
           >
-            CHALEGA COINS
+            CHALIGA COINS
           </Text>
         </View>
 
@@ -469,7 +469,7 @@ export default function PointsActivityScreen() {
               >
                 Complete a walking mission
                 or healthy challenge and
-                your Chalega Coins activity
+                your Chaliga Coins activity
                 will appear here.
               </Text>
             </View>
@@ -630,7 +630,7 @@ export default function PointsActivityScreen() {
               styles.footerBrand
             }
           >
-            CHALEGA
+            CHALIGA
           </Text>
 
           <Text
