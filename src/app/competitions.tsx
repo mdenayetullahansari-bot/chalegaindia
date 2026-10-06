@@ -75,6 +75,12 @@ type WardLeaderboardRow = {
   activity_score: number;
 };
 
+type WardPrizeDistribution = {
+  points_amount: number;
+  status: 'pending' | 'issued' | 'cancelled' | string;
+  issued_at: string | null;
+};
+
 function getIndiaDateKey(date = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
@@ -115,6 +121,8 @@ export default function CompetitionsScreen() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [wardLeaderboard, setWardLeaderboard] = useState<WardLeaderboardRow[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [wardPrizeDistribution, setWardPrizeDistribution] =
+    useState<WardPrizeDistribution | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -260,6 +268,26 @@ export default function CompetitionsScreen() {
         if (mounted && competitionData) {
           const loadedCompetition = competitionData as Competition;
           setCompetition(loadedCompetition);
+
+          if (
+            loadedCompetition.category_id === null &&
+            loadedCompetition.scope === 'global'
+          ) {
+            const { data: prizeData, error: prizeError } = await supabase
+              .from('ward_competition_prize_distributions')
+              .select('points_amount, status, issued_at')
+              .eq('competition_id', loadedCompetition.id)
+              .maybeSingle();
+
+            if (prizeError) {
+              console.log(
+                '[COMPETITIONS] Ward prize lookup error:',
+                prizeError
+              );
+            } else if (mounted && prizeData) {
+              setWardPrizeDistribution(prizeData as WardPrizeDistribution);
+            }
+          }
 
           const { data: participationData, error: participationError } =
             await supabase
@@ -1014,6 +1042,27 @@ export default function CompetitionsScreen() {
           )}
         </View>
 
+        {isWardCompetition && wardPrizeDistribution ? (
+          <View style={styles.wardPrizeShareCard}>
+            <View style={styles.wardPrizeShareIcon}>
+              <Ionicons name="gift" size={23} color="#1769E0" />
+            </View>
+            <View style={styles.wardPrizeShareContent}>
+              <Text style={styles.wardPrizeShareEyebrow}>YOUR WARD PRIZE SHARE</Text>
+              <Text style={styles.wardPrizeShareTitle}>
+                {wardPrizeDistribution.points_amount.toLocaleString('en-IN')} Chalega Points
+              </Text>
+              <Text style={styles.wardPrizeShareCopy}>
+                {wardPrizeDistribution.status === 'issued'
+                  ? 'Your share has been added to your Chalega Points wallet.'
+                  : wardPrizeDistribution.status === 'pending'
+                    ? 'Your ward has qualified for a prize. Your share is being processed.'
+                    : 'The ward prize distribution is currently cancelled.'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         <Pressable
           style={styles.rewardCard}
           onPress={() => router.push('/rewards')}
@@ -1651,6 +1700,46 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.6,
     marginTop: 2,
+  },
+  wardPrizeShareCard: {
+    backgroundColor: '#EEF5FF',
+    borderRadius: 20,
+    padding: 17,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#BFD5F4',
+  },
+  wardPrizeShareIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: BRAND.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  wardPrizeShareContent: {
+    flex: 1,
+  },
+  wardPrizeShareEyebrow: {
+    color: '#1769E0',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  wardPrizeShareTitle: {
+    color: '#0B2239',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  wardPrizeShareCopy: {
+    color: '#667788',
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 4,
   },
   rewardCard: {
     backgroundColor: '#1769E0',
