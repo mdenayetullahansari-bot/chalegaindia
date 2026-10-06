@@ -944,7 +944,7 @@ export default function HomeScreen() {
         <View style={styles.footer}>
 
           <Text style={styles.footerBrand}>
-            CHALEGA
+            CHALEGA KOLKATA
           </Text>
 
           <Text style={styles.footerTagline}>
