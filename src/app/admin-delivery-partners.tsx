@@ -123,7 +123,7 @@ export default function AdminDeliveryPartners() {
           <TouchableOpacity style={styles.back} onPress={() => router.replace('/admin')}>
             <Ionicons name="chevron-back" size={23} color={BRAND.midnight} />
           </TouchableOpacity>
-          <Text style={styles.topTitle}>CHALEGA ADMIN</Text>
+          <Text style={styles.topTitle}>CHALIGA ADMIN</Text>
           <View style={styles.badge}>
             <Ionicons name="shield-checkmark" size={16} color={BRAND.teal} />
           </View>
