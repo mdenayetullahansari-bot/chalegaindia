@@ -530,6 +530,13 @@ export default function RootLayout() {
       />
 
       <Tabs.Screen
+        name="admin-competitions"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },}}
+      />
+
+      <Tabs.Screen
         name="admin"
         options={{
           href: null,
