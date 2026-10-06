@@ -493,7 +493,7 @@ Your rewards have been added to your account.`,
   const addSteps = (amount: number) => {
     const nextSteps = Math.min(
       steps + amount,
-      20000
+      200000
     );
 
     const nextWeek = [...week];
