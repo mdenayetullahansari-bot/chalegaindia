@@ -8,7 +8,7 @@ const LEGACY_MIGRATION_KEY = 'chalega_points_legacy_history_migrated';
  * Legacy local Coin helpers kept only for older screens/components.
  *
  * IMPORTANT:
- * The production Chalega Coins wallet is server-authoritative.
+ * The production Chaliga Coins wallet is server-authoritative.
  * New reward flows must use Supabase RPCs and the central ledger.
  * These local helpers do not write to the server wallet.
  */
@@ -39,7 +39,7 @@ function normalizePoints(value: unknown): number {
 
 /**
  * @deprecated Legacy local compatibility API.
- * Canonical Chalega Coins must come from the Supabase wallet.
+ * Canonical Chaliga Coins must come from the Supabase wallet.
  */
 export async function getPoints(): Promise<number> {
   try {
@@ -48,7 +48,7 @@ export async function getPoints(): Promise<number> {
     await migrateLegacyBalance(balance);
     return balance;
   } catch (error) {
-    console.warn('[Chalega Coins] Could not read legacy balance:', error);
+    console.warn('[Chaliga Coins] Could not read legacy balance:', error);
     return 0;
   }
 }
@@ -155,7 +155,7 @@ export async function addTransaction(
     const updated = [transaction, ...history].slice(0, 100);
     await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   } catch (error) {
-    console.warn('[Chalega Coins] Could not save legacy transaction:', error);
+    console.warn('[Chaliga Coins] Could not save legacy transaction:', error);
   }
 }
 
@@ -184,7 +184,7 @@ export async function getPointsHistory(): Promise<PointsTransaction[]> {
         typeof item.timestamp === 'string'
     );
   } catch (error) {
-    console.warn('[Chalega Coins] Could not read legacy history:', error);
+    console.warn('[Chaliga Coins] Could not read legacy history:', error);
     return [];
   }
 }
@@ -281,7 +281,7 @@ async function migrateLegacyBalance(
       id: `legacy-balance-${Date.now()}`,
       amount: currentBalance,
       type: 'starting_balance',
-      title: 'Existing Chalega Coins',
+      title: 'Existing Chaliga Coins',
       description: 'Starting legacy wallet balance',
       timestamp: getTransactionTimestamp(),
     };
@@ -296,6 +296,6 @@ async function migrateLegacyBalance(
       'true'
     );
   } catch (error) {
-    console.warn('[Chalega Coins] Could not migrate legacy balance:', error);
+    console.warn('[Chaliga Coins] Could not migrate legacy balance:', error);
   }
 }
