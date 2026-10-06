@@ -429,7 +429,7 @@ export default function ExploreScreen() {
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.eyebrow}>
-              CHALEGA KOLKATA
+              CHALIGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -880,7 +880,7 @@ export default function ExploreScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA KOLKATA
+            CHALIGA KOLKATA
           </Text>
 
           <Text style={styles.footerTagline}>
