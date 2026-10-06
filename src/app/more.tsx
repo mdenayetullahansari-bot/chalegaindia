@@ -19,6 +19,7 @@ import {
 
 import { BRAND } from '@/lib/brand';
 import { isChalegaAdmin } from '@/services/adminService';
+import { supabase } from '@/lib/supabase';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -44,6 +45,17 @@ export default function MoreScreen() {
 
   const createAccount = async () => {
     await endGuestSession();
+    router.replace('/auth');
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      Alert.alert('Sign out failed', error.message);
+      return;
+    }
+
     router.replace('/auth');
   };
 
@@ -488,6 +500,19 @@ export default function MoreScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* ACCOUNT */}
+        <Text style={styles.sectionTitle}>
+          ACCOUNT
+        </Text>
+
+        <MenuRow
+          icon="log-out-outline"
+          title="Sign Out"
+          subtitle="Sign out of your Chalega account on this device."
+          onPress={signOut}
+          tone="grey"
+        />
 
         {/* FOOTER */}
         <View style={styles.footer}>
