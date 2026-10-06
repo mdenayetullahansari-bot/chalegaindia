@@ -165,7 +165,7 @@ export default function GardenScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.back}>
             <Text style={styles.backText}>‹</Text>
           </TouchableOpacity>
-          <Text style={styles.eyebrow}>CHALEGA GARDENVERSE</Text>
+          <Text style={styles.eyebrow}>CHALIGA GARDENVERSE</Text>
           <Text style={styles.title}>MY GARDEN</Text>
           <Text style={styles.subtitle}>From a balcony to the universe.</Text>
 
@@ -197,7 +197,7 @@ export default function GardenScreen() {
             <Text style={styles.networkEyebrow}>THE NEXT LEVEL OF GARDENVERSE</Text>
             <Text style={styles.networkTitle}>Grow for yourself. Grow to sell.</Text>
             <Text style={styles.networkText}>
-              Turn your balcony, terrace or garden into a tiny community nursery. List what you grow and let CHALEGA connect you to customers.
+              Turn your balcony, terrace or garden into a tiny community nursery. List what you grow and let CHALIGA connect you to customers.
             </Text>
           </View>
           <TouchableOpacity style={styles.networkButton} onPress={() => router.push('/grower')}>
@@ -262,7 +262,7 @@ export default function GardenScreen() {
               <View style={styles.plantIcon}><Text style={styles.plantEmoji}>{plant.emoji}</Text></View>
               <View style={styles.plantBody}>
                 <Text style={styles.plantName}>{plant.nickname || plant.plant_name}</Text>
-                <Text style={styles.plantType}>{plant.nickname ? plant.plant_name : 'Your CHALEGA plant'}</Text>
+                <Text style={styles.plantType}>{plant.nickname ? plant.plant_name : 'Your CHALIGA plant'}</Text>
                 <Text style={styles.plantAge}>🌱 Growing for {daysSince(plant.planted_date)} day{daysSince(plant.planted_date) === 1 ? '' : 's'}</Text>
                 <View style={styles.actions}>
                   <TouchableOpacity style={styles.waterButton} onPress={() => waterPlant(plant)}>
@@ -282,7 +282,7 @@ export default function GardenScreen() {
         <View style={styles.futureCard}>
           <Text style={styles.futureTitle}>🌌 GARDENVERSE IS JUST STARTING</Text>
           <Text style={styles.futureText}>
-            Next: care reminders • harvest missions • CHALEGA Coins • community growers • Green Map • Kolkata Green League.
+            Next: care reminders • harvest missions • CHALIGA Coins • community growers • Green Map • Kolkata Green League.
           </Text>
         </View>
       </ScrollView>
