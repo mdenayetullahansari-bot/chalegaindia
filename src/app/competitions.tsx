@@ -203,60 +203,57 @@ export default function CompetitionsScreen() {
           }
         }
 
+        let loadedCategory: Category | null = null;
+
         if (
-          typeof loadedProfile.age !== 'number' ||
-          !loadedProfile.gender
+          typeof loadedProfile.age === 'number' &&
+          !!loadedProfile.gender
         ) {
-          if (mounted) {
-            setLoading(false);
+          const age = loadedProfile.age;
+          const gender = loadedProfile.gender.toLowerCase();
+
+          const { data: categoryRows, error: categoryError } = await supabase
+            .from('competition_categories')
+            .select('id, code, gender, age_min, age_max, label')
+            .eq('gender', gender)
+            .eq('active', true)
+            .order('age_min', { ascending: true });
+
+          if (categoryError) {
+            throw categoryError;
           }
-          return;
-        }
 
-        const age = loadedProfile.age;
-        const gender = loadedProfile.gender.toLowerCase();
+          loadedCategory =
+            (categoryRows as Category[] | null)?.find(
+              (candidate) =>
+                age >= candidate.age_min &&
+                (candidate.age_max === null || age <= candidate.age_max)
+            ) || null;
 
-        const { data: categoryRows, error: categoryError } = await supabase
-          .from('competition_categories')
-          .select('id, code, gender, age_min, age_max, label')
-          .eq('gender', gender)
-          .eq('active', true)
-          .order('age_min', { ascending: true });
-
-        if (categoryError) {
-          throw categoryError;
-        }
-
-        const categoryData =
-          (categoryRows as Category[] | null)?.find(
-            (candidate) =>
-              age >= candidate.age_min &&
-              (candidate.age_max === null || age <= candidate.age_max)
-          ) || null;
-
-        if (!categoryData) {
           if (mounted) {
-            setLoading(false);
+            setCategory(loadedCategory);
           }
-          return;
         }
 
-        const loadedCategory = categoryData as Category;
+        let competitionQuery = supabase
+          .from('competitions')
+          .select(
+            'id, name, competition_type, scope, status, scoring_method, starts_at, ends_at, first_place_points, second_place_points, third_place_points, rules_version, category_id'
+          )
+          .eq('status', 'active');
 
-        if (mounted) {
-          setCategory(loadedCategory);
+        if (loadedCategory) {
+          competitionQuery = competitionQuery.or(
+            `category_id.eq.${loadedCategory.id},and(category_id.is.null,scope.eq.global)`
+          );
+        } else {
+          competitionQuery = competitionQuery
+            .is('category_id', null)
+            .eq('scope', 'global');
         }
 
         const { data: competitionData, error: competitionError } =
-          await supabase
-            .from('competitions')
-            .select(
-              'id, name, competition_type, scope, status, scoring_method, starts_at, ends_at, first_place_points, second_place_points, third_place_points, rules_version, category_id'
-            )
-            .eq('status', 'active')
-            .or(
-              `category_id.eq.${loadedCategory.id},and(category_id.is.null,scope.eq.global)`
-            )
+          await competitionQuery
             .order('starts_at', { ascending: false })
             .limit(1)
             .maybeSingle();
