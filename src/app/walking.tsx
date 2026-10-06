@@ -107,7 +107,7 @@ export default function WalkingScreen() {
    * -------------------------------------------------------
    *
    * Walking progress is stored separately from the central
-   * Chalega Coins wallet.
+   * Chaliga Coins wallet.
    *
    * IMPORTANT:
    * data.points is intentionally NOT used as the wallet.
@@ -242,7 +242,7 @@ export default function WalkingScreen() {
         }
       } catch (error) {
         console.log(
-          'Could not refresh Chalega Coins:',
+          'Could not refresh Chaliga Coins:',
           error
         );
       }
@@ -456,7 +456,7 @@ export default function WalkingScreen() {
             'en-IN'
           )} steps today.
 
-+${WALK_MISSION_POINTS} Chalega Coins
++${WALK_MISSION_POINTS} Chaliga Coins
 +25 Streak Points
 
 Your rewards have been added to your account.`,
@@ -543,7 +543,7 @@ Your rewards have been added to your account.`,
       if (!available) {
         Alert.alert(
           'Step Tracking Unavailable',
-          'Your phone does not currently provide pedometer data to Chalega.'
+          'Your phone does not currently provide pedometer data to Chaliga.'
         );
         return;
       }
@@ -556,7 +556,7 @@ Your rewards have been added to your account.`,
 
         Alert.alert(
           'Permission Needed',
-          'Please allow physical activity access so Chalega can count your steps.'
+          'Please allow physical activity access so Chaliga can count your steps.'
         );
 
         return;
@@ -596,7 +596,7 @@ Your rewards have been added to your account.`,
 
       Alert.alert(
         'Step Tracking Error',
-        'Chalega could not access your step data right now. Please try again.'
+        'Chaliga could not access your step data right now. Please try again.'
       );
     }
   };
@@ -780,7 +780,7 @@ Your rewards have been added to your account.`,
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerBrand}>
-              CHALEGA KOLKATA
+              CHALIGA KOLKATA
             </Text>
 
             <Text style={styles.headerTitle}>
@@ -792,7 +792,7 @@ Your rewards have been added to your account.`,
             style={styles.pointsSmall}
             onPress={() =>
               Alert.alert(
-                'Chalega Coins',
+                'Chaliga Coins',
                 `You currently have ${points} points.`
               )
             }
@@ -974,7 +974,7 @@ Your rewards have been added to your account.`,
             <Text style={styles.missionText}>
               {walkMissionComplete
                 ? `+${WALK_MISSION_POINTS} points earned today`
-                : `Earn +${WALK_MISSION_POINTS} Chalega Coins`}
+                : `Earn +${WALK_MISSION_POINTS} Chaliga Coins`}
             </Text>
           </View>
 
@@ -1108,7 +1108,7 @@ Your rewards have been added to your account.`,
         <View style={styles.levelCard}>
           <View style={styles.levelTop}>
             <View>
-              <Text style={styles.levelEyebrow}>CHALEGA LEVEL</Text>
+              <Text style={styles.levelEyebrow}>CHALIGA LEVEL</Text>
               <Text style={styles.levelTitle}>Walker Level {level}</Text>
             </View>
 
@@ -1146,7 +1146,7 @@ Your rewards have been added to your account.`,
                 25,000 Step Challenge
               </Text>
               <Text style={styles.challengeText}>
-                Walk 25,000 steps this week and earn bonus Chalega Coins.
+                Walk 25,000 steps this week and earn bonus Chaliga Coins.
               </Text>
             </View>
           </View>
@@ -1181,7 +1181,7 @@ Your rewards have been added to your account.`,
           </View>
 
           <View style={styles.communityContent}>
-            <Text style={styles.communityEyebrow}>CHALEGA COMMUNITY</Text>
+            <Text style={styles.communityEyebrow}>CHALIGA COMMUNITY</Text>
             <Text style={styles.communityTitle}>
               You're not walking alone.
             </Text>
@@ -1213,7 +1213,7 @@ Your rewards have been added to your account.`,
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA
+            CHALIGA
           </Text>
 
           <Text style={styles.footerTagline}>
