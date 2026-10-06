@@ -164,7 +164,8 @@ export default function RootLayout() {
           options={{
             href: null,
             tabBarButton: () => null,
-          }}
+          
+          tabBarItemStyle: { display: 'none' },}}
         />
       </Tabs>
     );
@@ -316,7 +317,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -324,7 +326,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -332,7 +335,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -340,7 +344,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -348,7 +353,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -356,7 +362,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -364,7 +371,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -372,7 +380,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -380,7 +389,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -388,7 +398,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -396,7 +407,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -404,7 +416,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -412,7 +425,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -420,7 +434,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -428,7 +443,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -445,7 +461,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -453,7 +470,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -461,7 +479,8 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -469,14 +488,16 @@ export default function RootLayout() {
         options={{
           href: null,
             tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
       <Tabs.Screen
         name="admin-business"
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -484,7 +505,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -492,7 +514,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -500,7 +523,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -508,7 +532,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -516,7 +541,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -524,7 +550,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -532,7 +559,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -540,7 +568,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -548,7 +577,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -556,7 +586,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -564,7 +595,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
       <Tabs.Screen
@@ -572,7 +604,8 @@ export default function RootLayout() {
         options={{
           href: null,
           tabBarButton: () => null,
-        }}
+        
+          tabBarItemStyle: { display: 'none' },}}
       />
 
     </Tabs>
