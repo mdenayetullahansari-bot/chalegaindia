@@ -1039,6 +1039,44 @@ export default function CompetitionsScreen() {
           )}
         </View>
 
+        {isWardCompetition ? (
+          <View style={styles.wardGuideCard}>
+            <View style={styles.wardGuideHeader}>
+              <View style={styles.wardGuideIcon}>
+                <Ionicons name="walk" size={22} color="#1769E0" />
+              </View>
+              <View style={styles.wardGuideHeaderText}>
+                <Text style={styles.wardGuideEyebrow}>HOW THE WARD CHAMPIONSHIP WORKS</Text>
+                <Text style={styles.wardGuideTitle}>Every verified walk helps your ward</Text>
+              </View>
+            </View>
+            <Text style={styles.wardGuideCopy}>
+              Join the competition, keep walking, and submit your daily result. Only verified walking activity is used for ward rankings.
+            </Text>
+            <View style={styles.wardGuideStep}>
+              <Text style={styles.wardGuideNumber}>1</Text>
+              <View style={styles.wardGuideStepText}>
+                <Text style={styles.wardGuideStepTitle}>Walk regularly</Text>
+                <Text style={styles.wardGuideStepCopy}>Your walking activity builds your contribution to your ward.</Text>
+              </View>
+            </View>
+            <View style={styles.wardGuideStep}>
+              <Text style={styles.wardGuideNumber}>2</Text>
+              <View style={styles.wardGuideStepText}>
+                <Text style={styles.wardGuideStepTitle}>Submit verified results</Text>
+                <Text style={styles.wardGuideStepCopy}>Unverified claims do not determine the ward ranking.</Text>
+              </View>
+            </View>
+            <View style={styles.wardGuideStep}>
+              <Text style={styles.wardGuideNumber}>3</Text>
+              <View style={styles.wardGuideStepText}>
+                <Text style={styles.wardGuideStepTitle}>Prize distribution follows the final result</Text>
+                <Text style={styles.wardGuideStepCopy}>If your ward qualifies for a prize, individual shares are shown here when the distribution is created.</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         {isWardCompetition && wardPrizeDistribution ? (
           <View style={styles.wardPrizeShareCard}>
             <View style={styles.wardPrizeShareIcon}>
@@ -1696,6 +1734,79 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: '900',
     letterSpacing: 0.6,
+    marginTop: 2,
+  },
+  wardGuideCard: {
+    backgroundColor: BRAND.white,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#D9E5F2',
+  },
+  wardGuideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  wardGuideIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#EEF5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  wardGuideHeaderText: {
+    flex: 1,
+  },
+  wardGuideEyebrow: {
+    color: '#1769E0',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  wardGuideTitle: {
+    color: '#0B2239',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  wardGuideCopy: {
+    color: '#667788',
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 12,
+  },
+  wardGuideStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 13,
+  },
+  wardGuideNumber: {
+    width: 27,
+    height: 27,
+    borderRadius: 9,
+    backgroundColor: '#EEF5FF',
+    color: '#1769E0',
+    fontSize: 11,
+    fontWeight: '900',
+    textAlign: 'center',
+    paddingTop: 6,
+    marginRight: 10,
+  },
+  wardGuideStepText: {
+    flex: 1,
+  },
+  wardGuideStepTitle: {
+    color: '#0B2239',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  wardGuideStepCopy: {
+    color: '#6C7A88',
+    fontSize: 10,
+    lineHeight: 15,
     marginTop: 2,
   },
   wardPrizeShareCard: {
