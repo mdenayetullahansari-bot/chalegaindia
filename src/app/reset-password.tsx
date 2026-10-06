@@ -99,9 +99,14 @@ export default function ResetPasswordScreen() {
       showMessage('Your reset link is verified. Choose a new password.');
     } catch (err: any) {
       console.error('RESET PASSWORD ERROR:', err);
-      showMessage(
+      const message =
         err?.message ||
-          'This reset link could not be completed. Please request a new one.',
+        'This reset link could not be completed. Please request a new one.';
+
+      showMessage(
+        message.includes('expired') || message.includes('invalid')
+          ? 'This reset link has already been used or expired. Please request a fresh password-reset email and use the newest email only.'
+          : message,
         true
       );
     } finally {
@@ -113,7 +118,12 @@ export default function ResetPasswordScreen() {
     let mounted = true;
 
     const run = async () => {
-      const initialUrl = await Linking.getInitialURL();
+      // On web, the browser URL is authoritative. Expo Linking may return
+      // null even though Supabase has already redirected this tab here.
+      const initialUrl =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.location.href
+          : await Linking.getInitialURL();
 
       if (mounted) {
         await completeRecovery(initialUrl);
