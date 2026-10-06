@@ -322,6 +322,7 @@ export default function RootLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          href: null,
           tabBarButton: () => null,
         }}
       />
@@ -434,6 +435,7 @@ export default function RootLayout() {
         name="auth"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
 
@@ -469,6 +471,110 @@ export default function RootLayout() {
             tabBarButton: () => null,
         }}
       />
+      <Tabs.Screen
+        name="admin-business"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin-community"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin-customers"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin-delivery-partners"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin-orders"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin-partner-applications"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="admin"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="community-checkout"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="community-market"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="garden"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="grower"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="partner"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="referral"
+        options={{
+          href: null,
+          tabBarButton: () => null,
+        }}
+      />
+
     </Tabs>
   );
 }
