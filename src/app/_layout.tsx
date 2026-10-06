@@ -163,6 +163,7 @@ export default function RootLayout() {
           name="auth"
           options={{
             href: null,
+            tabBarButton: () => null,
           }}
         />
       </Tabs>
@@ -314,6 +315,7 @@ export default function RootLayout() {
         name="competitions"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -328,6 +330,7 @@ export default function RootLayout() {
         name="profile-settings"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -335,6 +338,7 @@ export default function RootLayout() {
         name="rewards"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -342,6 +346,7 @@ export default function RootLayout() {
         name="points-activity"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -349,6 +354,7 @@ export default function RootLayout() {
         name="missions"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -356,6 +362,7 @@ export default function RootLayout() {
         name="product"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -363,6 +370,7 @@ export default function RootLayout() {
         name="checkout"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -370,6 +378,7 @@ export default function RootLayout() {
         name="order-confirmed"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -377,6 +386,7 @@ export default function RootLayout() {
         name="track-order"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -384,6 +394,7 @@ export default function RootLayout() {
         name="orders"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -391,6 +402,7 @@ export default function RootLayout() {
         name="customer-orders"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -398,6 +410,7 @@ export default function RootLayout() {
         name="health-topic"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -405,6 +418,7 @@ export default function RootLayout() {
         name="daily-health-checkin"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -412,6 +426,7 @@ export default function RootLayout() {
         name="entally"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -427,6 +442,7 @@ export default function RootLayout() {
         name="delivery-partner"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -434,6 +450,7 @@ export default function RootLayout() {
         name="delivery-dashboard"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -441,6 +458,7 @@ export default function RootLayout() {
         name="admin-payouts"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
 
@@ -448,6 +466,7 @@ export default function RootLayout() {
         name="kmc-ward"
         options={{
           href: null,
+            tabBarButton: () => null,
         }}
       />
     </Tabs>
