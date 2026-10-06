@@ -231,7 +231,7 @@ export default function CustomerOrdersScreen() {
 
           <View>
             <Text style={styles.brand}>
-              CHALEGA KOLKATA
+              CHALIGA KOLKATA
             </Text>
 
             <Text style={styles.title}>
@@ -277,7 +277,7 @@ export default function CustomerOrdersScreen() {
               </Text>
 
               <Text style={styles.introText}>
-                Track your Chalega orders
+                Track your Chaliga orders
                 anytime.
               </Text>
             </View>
@@ -480,7 +480,7 @@ export default function CustomerOrdersScreen() {
         {/* FOOTER */}
 
         <Text style={styles.footer}>
-          CHALEGA KOLKATA
+          CHALIGA KOLKATA
         </Text>
 
         <Text style={styles.footerSmall}>
