@@ -416,7 +416,7 @@ export default function AuthScreen() {
     try {
       setLoading(true);
 
-      const redirectTo = getAuthRedirectUrl('/auth?type=recovery');
+      const redirectTo = getAuthRedirectUrl('/reset-password');
 
       console.log(
         'Password recovery redirect:',
