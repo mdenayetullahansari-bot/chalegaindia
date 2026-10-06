@@ -79,7 +79,19 @@ export default function AuthScreen() {
 
   function getAuthRedirectUrl(path = '/auth') {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return `${window.location.origin}${path}`;
+      const host = window.location.hostname;
+      const isLocal =
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0';
+
+      // Never let a Vercel preview deployment become the recovery callback.
+      // Password-reset emails must always return to the stable public Chalega URL.
+      const baseUrl = isLocal
+        ? window.location.origin
+        : 'https://chalegaindia.vercel.app';
+
+      return `${baseUrl}${path}`;
     }
 
     return Linking.createURL(path);
@@ -436,7 +448,7 @@ export default function AuthScreen() {
       }
 
       showMessage(
-        'Password reset email sent. Open the email on this phone and follow the link.',
+        'Password reset email sent. Open the newest Chalega email and use that link. Older reset links are single-use and may no longer work.',
         'success'
       );
     } catch (error: any) {
