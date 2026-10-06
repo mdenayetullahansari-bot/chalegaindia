@@ -18,7 +18,7 @@ import {
 } from '@/lib/guest-session';
 
 import { BRAND } from '@/lib/brand';
-import { isChalegaAdmin } from '@/services/adminService';
+import { isChaligaAdmin } from '@/services/adminService';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -29,7 +29,7 @@ export default function MoreScreen() {
 
   useEffect(() => {
     hydrateGuestMode().then(setGuestMode);
-    isChalegaAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
+    isChaligaAdmin().then(setIsAdmin).catch(() => setIsAdmin(false));
 
     return subscribeToGuestMode(setGuestMode);
   }, []);
@@ -50,7 +50,7 @@ export default function MoreScreen() {
   const showComingSoon = (title: string) => {
     Alert.alert(
       title,
-      'This Chalega feature is being prepared for the next release.'
+      'This Chaliga feature is being prepared for the next release.'
     );
   };
 
@@ -116,12 +116,12 @@ export default function MoreScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>CHALEGA KOLKATA</Text>
+          <Text style={styles.eyebrow}>CHALIGA KOLKATA</Text>
 
           <Text style={styles.title}>More</Text>
 
           <Text style={styles.subtitle}>
-            Everything you need for your Chalega journey.
+            Everything you need for your Chaliga journey.
           </Text>
         </View>
 
@@ -202,7 +202,7 @@ export default function MoreScreen() {
         <MenuRow
           icon="trophy-outline"
           title="Rewards"
-          subtitle="View your Chalega Coins and unlock rewards."
+          subtitle="View your Chaliga Coins and unlock rewards."
           onPress={() => goTo('/rewards')}
         />
 
@@ -229,7 +229,7 @@ export default function MoreScreen() {
         <MenuRow
           icon="receipt-outline"
           title="My Orders"
-          subtitle="View and track your Chalega orders."
+          subtitle="View and track your Chaliga orders."
           onPress={() => goTo('/customer-orders')}
           tone="grey"
         />
@@ -250,7 +250,7 @@ export default function MoreScreen() {
 
         <MenuRow
           icon="bicycle-outline"
-          title="Chalega Delivery Partner"
+          title="Chaliga Delivery Partner"
           subtitle="Deliver local orders and earn from completed jobs."
           onPress={() => goTo('/delivery-dashboard')}
           tone="green"
@@ -284,7 +284,7 @@ export default function MoreScreen() {
         <TouchableOpacity
           style={styles.communityCard}
           onPress={() =>
-            showComingSoon('Chalega Community')
+            showComingSoon('Chaliga Community')
           }
           activeOpacity={0.86}
         >
@@ -298,7 +298,7 @@ export default function MoreScreen() {
 
           <View style={styles.communityText}>
             <Text style={styles.communityTitle}>
-              Chalega Circle
+              Chaliga Circle
             </Text>
 
             <Text style={styles.communitySubtitle}>
@@ -349,13 +349,13 @@ export default function MoreScreen() {
 
         {/* REFERRALS */}
         <Text style={styles.sectionTitle}>
-          GROW WITH CHALEGA
+          GROW WITH CHALIGA
         </Text>
 
         <MenuRow
           icon="people-outline"
           title="Refer & Grow"
-          subtitle="Invite friends and family to join Chalega."
+          subtitle="Invite friends and family to join Chaliga."
           onPress={() => goTo('/referral')}
           tone="green"
         />
@@ -408,9 +408,9 @@ export default function MoreScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* MORE FROM CHALEGA */}
+        {/* MORE FROM CHALIGA */}
         <Text style={styles.sectionTitle}>
-          MORE FROM CHALEGA
+          MORE FROM CHALIGA
         </Text>
 
         <View style={styles.smallGrid}>
@@ -435,7 +435,7 @@ export default function MoreScreen() {
           <TouchableOpacity
             style={styles.smallCard}
             onPress={() =>
-              showComingSoon('Chalega Circle')
+              showComingSoon('Chaliga Circle')
             }
             activeOpacity={0.84}
           >
@@ -492,7 +492,7 @@ export default function MoreScreen() {
         {/* FOOTER */}
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>
-            CHALEGA
+            CHALIGA
           </Text>
 
           <Text style={styles.footerTagline}>
