@@ -561,18 +561,10 @@ export default function CheckoutScreen() {
   });
 
       if (paymentMethod === 'online') {
-        const payment =
-          await startOnlinePayment({
-            chalegaOrderId: dbOrder.id,
-            publicOrderId: dbOrder.order_id,
-          });
-
-        await finishOrder({
-          orderId: dbOrder.order_id,
-          total: dbOrder.total,
-          deliveryDeadline: dbOrder.delivery_deadline,
+        await startOnlinePayment({
+          chalegaOrderId: dbOrder.id,
+          publicOrderId: dbOrder.order_id,
         });
-
       }
 
       await finishOrder({
