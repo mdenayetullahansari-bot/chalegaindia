@@ -161,7 +161,10 @@ export default function TrackOrderScreen() {
         return 3;
 
       case STATUS.DELIVERED:
-        return 4;
+        // Delivery is the final customer-facing milestone in the current
+        // order model. COD collection settles the delivery while the order
+        // remains stored as `delivered`, so show Completed as reached too.
+        return 5;
 
       case STATUS.COMPLETED:
         return 5;
