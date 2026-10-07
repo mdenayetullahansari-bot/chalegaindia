@@ -208,43 +208,6 @@ export default function GardenScreen() {
           </TouchableOpacity>
         </View>
 
-        {showAdd && (
-          <View style={styles.addCard}>
-            <Text style={styles.cardTitle}>Choose a plant</Text>
-            {availablePlants
-              .filter(product => !selectedProductId || product.id === selectedProductId)
-              .map(product => (
-              <TouchableOpacity
-                key={product.id}
-                style={styles.plantChoice}
-                onPress={() => setSelectedProductId(product.id)}
-              >
-                <Text style={styles.choiceEmoji}>{product.emoji}</Text>
-                <View style={styles.choiceBody}>
-                  <Text style={styles.choiceName}>{product.name}</Text>
-                  <Text style={styles.choiceMeta}>₹{product.price.toLocaleString('en-IN')} / {product.unit}</Text>
-                </View>
-                <Text style={styles.choiceArrow}>
-                  {selectedProductId === product.id ? 'SELECTED' : 'SELECT →'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.primary, !selectedProductId && { opacity: 0.45 }]}
-              disabled={!selectedProductId}
-              onPress={() => selectedProductId && addPlant(selectedProductId)}
-            >
-              <Text style={styles.primaryText}>ADD TO MY GARDEN</Text>
-            </TouchableOpacity>
-            <TextInput
-              value={nickname}
-              onChangeText={setNickname}
-              placeholder="Optional plant name, e.g. Maa's Tulsi"
-              placeholderTextColor="#82909D"
-              style={styles.input}
-            />
-          </View>
-        )}
 
         <Text style={styles.sectionTitle}>Your living ecosystem</Text>
 
@@ -350,3 +313,42 @@ const styles = StyleSheet.create({
   futureTitle: { color: BRAND.green, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   futureText: { marginTop: 7, color: '#DCEBFA', fontSize: 12, lineHeight: 18 },
 });
+
+        {showAdd && (
+          <View style={styles.addCard}>
+            <Text style={styles.cardTitle}>Choose a plant</Text>
+            {availablePlants
+              .filter(product => !selectedProductId || product.id === selectedProductId)
+              .map(product => (
+              <TouchableOpacity
+                key={product.id}
+                style={styles.plantChoice}
+                onPress={() => setSelectedProductId(product.id)}
+              >
+                <Text style={styles.choiceEmoji}>{product.emoji}</Text>
+                <View style={styles.choiceBody}>
+                  <Text style={styles.choiceName}>{product.name}</Text>
+                  <Text style={styles.choiceMeta}>₹{product.price.toLocaleString('en-IN')} / {product.unit}</Text>
+                </View>
+                <Text style={styles.choiceArrow}>
+                  {selectedProductId === product.id ? 'SELECTED' : 'SELECT →'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.primary, !selectedProductId && { opacity: 0.45 }]}
+              disabled={!selectedProductId}
+              onPress={() => selectedProductId && addPlant(selectedProductId)}
+            >
+              <Text style={styles.primaryText}>ADD TO MY GARDEN</Text>
+            </TouchableOpacity>
+            <TextInput
+              value={nickname}
+              onChangeText={setNickname}
+              placeholder="Optional plant name, e.g. Maa's Tulsi"
+              placeholderTextColor="#82909D"
+              style={styles.input}
+            />
+          </View>
+        )}
+
