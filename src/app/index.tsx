@@ -496,6 +496,22 @@ export default function HomeScreen() {
           <Text style={styles.gardenVerseArrow}>OPEN →</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={{marginTop:12,padding:15,borderRadius:20,backgroundColor:'#FFF8E8',borderWidth:1,borderColor:'#F1D48D',flexDirection:'row',alignItems:'center'}}
+          onPress={() => router.push('/home-kitchens')}
+          activeOpacity={0.9}
+        >
+          <View style={{width:48,height:48,borderRadius:16,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center',marginRight:12}}>
+            <Text style={{fontSize:25}}>👩‍🍳</Text>
+          </View>
+          <View style={{flex:1}}>
+            <Text style={{fontSize:9,fontWeight:'900',letterSpacing:1,color:'#7A5600'}}>CHALEGA COMMUNITY COMMERCE</Text>
+            <Text style={{marginTop:3,fontSize:18,fontWeight:'900',color:'#182B3D'}}>Home Kitchens</Text>
+            <Text style={{marginTop:2,fontSize:11,lineHeight:16,color:'#775E2A'}}>Discover verified home-cooked food from your neighbourhood.</Text>
+          </View>
+          <Text style={{fontSize:20,fontWeight:'900',color:'#182B3D'}}>→</Text>
+        </TouchableOpacity>
+
         {/* TODAY'S MISSION */}
 
         <View style={styles.sectionHeader}>
