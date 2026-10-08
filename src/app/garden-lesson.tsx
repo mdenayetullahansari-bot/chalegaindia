@@ -25,6 +25,7 @@ export default function GardenLesson() {
 
   const completeLesson = async () => {
     console.log('COMPLETE LESSON BUTTON FIRED');
+
     const { error } = await supabase.rpc(
       'complete_garden_lesson',
       { p_lesson_slug: 'what-plants-need' }
@@ -35,7 +36,7 @@ export default function GardenLesson() {
       return;
     }
 
-    router.replace('/garden-certificate');
+    router.replace('/garden-learn');
   };
 
   return (
