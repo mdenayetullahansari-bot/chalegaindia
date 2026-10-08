@@ -384,62 +384,240 @@ export default function CheckoutScreen() {
       );
     }
 
-    let RazorpayCheckout: any;
+    const paymentOptions = {
+      key: razorpayKey,
+      amount: serverAmount,
+      currency: order.currency || 'INR',
+      order_id: order.id,
+      name: 'Chalega',
+      description: 'Chalega Fresh order',
+      prefill: {
+        name: name.trim(),
+        contact: phone.trim(),
+      },
+      notes: {
+        chalega_order_id: publicOrderId,
+        chalega_order_uuid: chalegaOrderId,
+      },
+      theme: {
+        color: BRAND.teal,
+      },
+    };
+
+    const recoverPayment = async () => {
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const {
+          data: recovery,
+          error: recoveryError,
+        } = await supabase.functions.invoke(
+          'recover-razorpay-payment',
+          {
+            body: {
+              chalega_order_id:
+                chalegaOrderId,
+              razorpay_order_id:
+                order.id,
+            },
+          },
+        );
+
+        if (!recoveryError && recovery?.recovered === true) {
+          console.info(
+            'Razorpay payment recovered from server-side order status.',
+            recovery,
+          );
+
+          return {
+            razorpayOrderId:
+              recovery.payment?.razorpay_order_id ||
+              order.id,
+            razorpayPaymentId:
+              recovery.payment?.razorpay_payment_id ||
+              null,
+          };
+        }
+
+        if (attempt < 3) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1500),
+          );
+        }
+      }
+
+      return null;
+    };
+
+    let payment: RazorpayPaymentResult | undefined;
 
     try {
-      const RazorpayModule =
-        require('react-native-razorpay');
+      if (Platform.OS === 'web') {
+        await new Promise<void>((resolve, reject) => {
+          let settled = false;
 
-      RazorpayCheckout =
-        RazorpayModule?.default ||
-        RazorpayModule;
-    } catch (error) {
-      console.error(        'Razorpay native module unavailable:',
-        error,
+          const finish = (error?: Error) => {
+            if (settled) return;
+            settled = true;
+
+            if (error) reject(error);
+            else resolve();
+          };
+
+          const openCheckout = () => {
+            const RazorpayWeb =
+              (window as any).Razorpay;
+
+            if (!RazorpayWeb) {
+              finish(
+                new Error(
+                  'Online payment could not be loaded. Please refresh and try again.',
+                ),
+              );
+              return;
+            }
+
+            const checkout =
+              new RazorpayWeb({
+                ...paymentOptions,
+                handler: (
+                  response: RazorpayPaymentResult,
+                ) => {
+                  payment = response;
+                  finish();
+                },
+                modal: {
+                  ondismiss: () =>
+                    finish(
+                      new Error(
+                        'Payment cancelled by customer.',
+                      ),
+                    ),
+                },
+              });
+
+            checkout.on(
+              'payment.failed',
+              () =>
+                finish(
+                  new Error(
+                    'Payment failed. Please try again or choose Cash on Delivery.',
+                  ),
+                ),
+            );
+
+            checkout.open();
+          };
+
+          if ((window as any).Razorpay) {
+            openCheckout();
+            return;
+          }
+
+          const existingScript =
+            document.querySelector(
+              'script[src="https://checkout.razorpay.com/v1/checkout.js"]',
+            );
+
+          if (existingScript) {
+            existingScript.addEventListener(
+              'load',
+              openCheckout,
+              { once: true },
+            );
+            existingScript.addEventListener(
+              'error',
+              () =>
+                finish(
+                  new Error(
+                    'Online payment could not be loaded. Please refresh and try again.',
+                  ),
+                ),
+              { once: true },
+            );
+            return;
+          }
+
+          const script =
+            document.createElement('script');
+
+          script.src =
+            'https://checkout.razorpay.com/v1/checkout.js';
+          script.async = true;
+          script.onload = openCheckout;
+          script.onerror = () =>
+            finish(
+              new Error(
+                'Online payment could not be loaded. Please refresh and try again.',
+              ),
+            );
+
+          document.body.appendChild(script);
+        });
+      } else {
+        let RazorpayCheckout: any;
+
+        try {
+          const RazorpayModule =
+            require('react-native-razorpay');
+
+          RazorpayCheckout =
+            RazorpayModule?.default ||
+            RazorpayModule;
+        } catch (error) {
+          console.error(
+            'Razorpay native module unavailable:',
+            error,
+          );
+
+          throw new Error(
+            'Online payment is not available in this app build.',
+          );
+        }
+
+        if (
+          !RazorpayCheckout ||
+          typeof RazorpayCheckout.open !==
+            'function'
+        ) {
+          throw new Error(
+            'Razorpay payment module is not available in this app build.',
+          );
+        }
+
+        payment =
+          (await RazorpayCheckout.open(
+            paymentOptions,
+          )) as RazorpayPaymentResult;
+      }
+    } catch (paymentFlowError) {
+      console.error(
+        'Razorpay checkout flow ended before normal verification:',
+        paymentFlowError,
       );
 
-      throw new Error(
-        'Online payment is available only in the Chalega development build, not Expo Go.',
-      );
+      const recovered =
+        await recoverPayment();
+
+      if (recovered) {
+        return recovered;
+      }
+
+      throw paymentFlowError;
     }
-
-    if (
-      !RazorpayCheckout ||
-      typeof RazorpayCheckout.open !== 'function'
-    ) {
-      throw new Error(
-        'Razorpay payment module is not available in this app build.',
-      );
-    }
-
-    const payment =
-      (await RazorpayCheckout.open({
-        key: razorpayKey,
-        amount: serverAmount,
-        currency: order.currency || 'INR',
-        order_id: order.id,
-        name: 'Chalega',
-        description: 'Chalega Fresh order',
-        prefill: {
-          name: name.trim(),
-          contact: phone.trim(),
-        },
-        notes: {
-          chalega_order_id: publicOrderId,
-          chalega_order_uuid: chalegaOrderId,
-        },
-        theme: {
-          color: BRAND.teal,
-        },
-      })) as RazorpayPaymentResult;
 
     if (
       !payment?.razorpay_order_id ||
       !payment?.razorpay_payment_id ||
       !payment?.razorpay_signature
     ) {
+      const recovered =
+        await recoverPayment();
+
+      if (recovered) {
+        return recovered;
+      }
+
       throw new Error(
-        'Razorpay returned an incomplete payment response.',
+        'Razorpay returned an incomplete payment response. No captured payment could be confirmed.',
       );
     }
 
@@ -450,7 +628,8 @@ export default function CheckoutScreen() {
       'verify-razorpay-payment',
       {
         body: {
-          chalega_order_id: chalegaOrderId,
+          chalega_order_id:
+            chalegaOrderId,
           razorpay_order_id:
             payment.razorpay_order_id,
           razorpay_payment_id:
@@ -467,8 +646,15 @@ export default function CheckoutScreen() {
         verificationError,
       );
 
+      const recovered =
+        await recoverPayment();
+
+      if (recovered) {
+        return recovered;
+      }
+
       throw new Error(
-        'Payment was received but could not be verified. Please do not place another order until we confirm the payment.',
+        'Payment could not be verified. No captured payment could be confirmed. Please do not place another order until we confirm the payment.',
       );
     }
 
@@ -480,6 +666,13 @@ export default function CheckoutScreen() {
         'Payment verification failed:',
         verification,
       );
+
+      const recovered =
+        await recoverPayment();
+
+      if (recovered) {
+        return recovered;
+      }
 
       throw new Error(
         verification?.error ||
@@ -494,6 +687,7 @@ export default function CheckoutScreen() {
         payment.razorpay_payment_id,
     };
   };
+
   const placeOrder = async () => {
     if (selectedProducts.length === 0) {
       Alert.alert(

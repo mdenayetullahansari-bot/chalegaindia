@@ -36,3 +36,15 @@ export async function setAdminDeliveryPartnerStatus(
   if (error) throw error;
   return data;
 }
+
+export async function assignAdminDeliveryJob(
+  jobId: string,
+  partnerId: string
+) {
+  const { data, error } = await supabase.rpc('assign_delivery_job', {
+    p_job_id: jobId,
+    p_partner_id: partnerId,
+  });
+  if (error) throw error;
+  return data;
+}
