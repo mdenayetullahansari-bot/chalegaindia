@@ -248,6 +248,11 @@ export default function TrackOrderScreen() {
   const status =
     order?.status || STATUS.RECEIVED;
 
+  const deliveryLabel =
+    order?.delivery && /delivery$/i.test(order.delivery)
+      ? order.delivery
+      : `${order?.delivery || 'Standard'} Delivery`;
+
   const statusNumber =
     getStatusNumber(status);
 
@@ -732,7 +737,7 @@ export default function TrackOrderScreen() {
 
           <View style={styles.deliveryInfo}>
             <Text style={styles.deliveryTitle}>
-              {order.delivery || 'Standard'} Delivery
+              {deliveryLabel}
             </Text>
 
             <Text style={styles.deliveryText}>
