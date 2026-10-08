@@ -98,3 +98,4 @@ ward-rpc.txt
 *.web-redemption.tsx
 *.backup.ts
 .vercel
+.idea/

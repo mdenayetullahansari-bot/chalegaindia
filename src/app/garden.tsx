@@ -191,7 +191,28 @@ export default function GardenScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        <View style={styles.learnCard}>
+          <View style={styles.learnBody}>
+            <Text style={styles.learnEyebrow}>NEW IN GARDENVERSE</Text>
 
+            <Text style={styles.learnTitle}>
+              Learn & Grow
+            </Text>
+
+            <Text style={styles.learnText}>
+              Practical gardening, composting and plant-care lessons for every home.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.learnButton}
+            onPress={() => router.push('/garden-learn')}
+          >
+            <Text style={styles.learnButtonText}>
+              START LEARNING →
+            </Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.networkCard}>
           <View style={styles.networkBody}>
             <Text style={styles.networkEyebrow}>THE NEXT LEVEL OF GARDENVERSE</Text>
@@ -312,6 +333,56 @@ const styles = StyleSheet.create({
   primaryText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.6 },
   secondary: { marginTop: 14, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B9DCC3' },
   secondaryText: { color: '#1C6337', fontSize: 11, fontWeight: '900', letterSpacing: 0.4 },
+  learnCard: {
+    marginHorizontal: 18,
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#C9E5D1',
+  },
+
+  learnBody: {
+    flex: 1,
+  },
+
+  learnEyebrow: {
+    color: '#24633A',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  learnTitle: {
+    marginTop: 4,
+    color: BRAND.ink,
+    fontSize: 19,
+    fontWeight: '900',
+  },
+
+  learnText: {
+    marginTop: 4,
+    color: BRAND.muted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  learnButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: BRAND.midnight,
+  },
+
+  learnButtonText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
   networkCard: { marginHorizontal: 18, marginBottom: 8, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: BRAND.line },
   networkBody: {},
   networkEyebrow: { color: '#24633A', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
