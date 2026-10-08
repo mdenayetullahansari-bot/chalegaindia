@@ -1,0 +1,7 @@
+import {supabase}from'@/lib/supabase';
+export type AdminKitchen={id:string;user_id:string;kitchen_name:string;display_name:string;locality:string|null;city:string;women_led:boolean;fssai_status:string;fssai_number:string|null;hygiene_status:string;status:string;accepting_orders:boolean;created_at:string;item_count:number};
+export type AdminKitchenItem={id:string;kitchen_id:string;kitchen_name:string;title:string;emoji:string;category:string;price:number;unit:string;quantity_available:number;status:string;created_at:string};
+export async function getAdminHomeKitchens(){const{data,error}=await supabase.rpc('get_admin_home_kitchens');if(error)throw error;return(data||[])as AdminKitchen[]}
+export async function setAdminHomeKitchenStatus(id:string,status:string,fssaiStatus?:string,hygieneStatus?:string){const{data,error}=await supabase.rpc('set_admin_home_kitchen_status',{p_kitchen_id:id,p_status:status,p_fssai_status:fssaiStatus||null,p_hygiene_status:hygieneStatus||null});if(error)throw error;return data}
+export async function getAdminHomeKitchenItems(){const{data,error}=await supabase.rpc('get_admin_home_kitchen_items');if(error)throw error;return(data||[])as AdminKitchenItem[]}
+export async function setAdminHomeKitchenItemStatus(id:string,status:string){const{data,error}=await supabase.rpc('set_admin_home_kitchen_item_status',{p_item_id:id,p_status:status});if(error)throw error;return data}
