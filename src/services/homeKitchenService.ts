@@ -58,3 +58,13 @@ export async function getApprovedKitchenItems(kitchenId:string){
   if(error) throw error; return (data||[]) as HomeKitchenItem[];
 }
 export function kitchenOrderId(){return 'CI-HK-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-9)+String(Math.floor(Math.random()*90+10));}
+
+
+export async function getMyHomeKitchenOrders(kitchenId:string){
+  const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,item_id,quantity,unit_price,total,customer_name,customer_phone,delivery_address,delivery_area,status,payment_method,payment_status,created_at').eq('kitchen_id',kitchenId).order('created_at',{ascending:false});
+  if(error) throw error; return data||[];
+}
+export async function updateMyHomeKitchenOrderStatus(orderId:string,status:'accepted'|'preparing'|'ready'|'cancelled'){
+  const {data,error}=await supabase.rpc('update_my_home_kitchen_order_status',{p_order_id:orderId,p_status:status});
+  if(error) throw error; return data;
+}
