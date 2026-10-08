@@ -61,7 +61,7 @@ export function kitchenOrderId(){return 'CI-HK-'+new Date().getFullYear()+'-'+St
 
 
 export async function getMyHomeKitchenOrders(kitchenId:string){
-  const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,item_id,quantity,unit_price,total,customer_name,customer_phone,delivery_address,delivery_area,status,payment_method,payment_status,created_at').eq('kitchen_id',kitchenId).order('created_at',{ascending:false});
+  const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,item_id,quantity,unit_price,food_total,platform_fee,delivery_fee,kitchen_earnings,total,customer_name,customer_phone,delivery_address,delivery_area,status,payment_method,payment_status,created_at').eq('kitchen_id',kitchenId).order('created_at',{ascending:false});
   if(error) throw error; return data||[];
 }
 export async function updateMyHomeKitchenOrderStatus(orderId:string,status:'accepted'|'preparing'|'ready'|'cancelled'){
