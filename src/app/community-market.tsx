@@ -83,7 +83,9 @@ export default function CommunityMarketScreen() {
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Fresh from the community</Text>
+        <TouchableOpacity style={{marginHorizontal:18,marginTop:12,padding:15,borderRadius:19,backgroundColor:'#FFF8E8',borderWidth:1,borderColor:'#F1D48D'}} onPress={() => router.push('/home-kitchens')}><Text style={{color:'#6B4A00',fontSize:10,fontWeight:'900'}}>👩‍🍳 HOME KITCHENS · VERIFIED COMMUNITY FOOD →</Text><Text style={{marginTop:4,color:'#775E2A',fontSize:11}}>Discover home-cooked food from residents in your neighbourhood.</Text></TouchableOpacity>
+
+<Text style={styles.sectionTitle}>Fresh from the community</Text>
 
         {loading ? (
           <View style={styles.empty}><Text style={styles.emptyTitle}>Finding community growers...</Text></View>
