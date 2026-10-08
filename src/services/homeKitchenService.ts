@@ -74,3 +74,10 @@ export async function getMyCustomerHomeKitchenOrders(){
   const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,kitchen_id,item_id,quantity,unit_price,food_total,platform_fee,delivery_fee,total,status,payment_method,payment_status,delivery_area,created_at').order('created_at',{ascending:false});
   if(error) throw error; return data||[];
 }
+
+export async function getHomeKitchenPricing(kitchenId:string){
+  const {data,error}=await supabase.rpc('get_chalega_home_kitchen_pricing',{p_kitchen_id:kitchenId});
+  if(error) throw error;
+  const row=data?.[0]||{fee_rate:0,completed_orders:0};
+  return {feeRate:Number(row.fee_rate)||0,completedOrders:Number(row.completed_orders)||0};
+}
