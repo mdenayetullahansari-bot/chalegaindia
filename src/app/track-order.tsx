@@ -99,7 +99,78 @@ export default function TrackOrderScreen() {
       }
 
       if (!data) {
-        setOrder(null);
+        // Home Kitchen orders live in their own table.
+        // Fall back here so the shared Track Order page can track them too.
+        const {
+          data: homeOrder,
+          error: homeOrderError,
+        } = await supabase
+          .from('chalega_home_kitchen_orders')
+          .select(
+            'id, order_id, item_id, quantity, customer_name, total, delivery_fee, status, created_at'
+          )
+          .eq('customer_id', user.id)
+          .eq('order_id', orderId)
+          .maybeSingle();
+
+        if (homeOrderError) {
+          throw homeOrderError;
+        }
+
+        if (!homeOrder) {
+          setOrder(null);
+          return;
+        }
+
+        const {
+          data: homeItem,
+          error: homeItemError,
+        } = await supabase
+          .from('chalega_home_kitchen_items')
+          .select('id, title, price, emoji')
+          .eq('id', homeOrder.item_id)
+          .maybeSingle();
+
+        if (homeItemError) {
+          throw homeItemError;
+        }
+
+        const homeStatus =
+          homeOrder.status === 'preparing'
+            ? STATUS.PREPARING
+            : homeOrder.status === 'ready'
+            ? STATUS.OUT_FOR_DELIVERY
+            : homeOrder.status === 'delivered'
+            ? STATUS.DELIVERED
+            : homeOrder.status === 'completed'
+            ? STATUS.COMPLETED
+            : STATUS.RECEIVED;
+
+        const homeProducts = homeItem
+          ? [
+              {
+                id: homeItem.id,
+                name: homeItem.title,
+                price: Number(homeItem.price || 0),
+                emoji: homeItem.emoji || '🍲',
+                quantity: Number(homeOrder.quantity || 0),
+              },
+            ]
+          : [];
+
+        setOrder({
+          id: homeOrder.id,
+          orderId: homeOrder.order_id,
+          customer: {
+            name: homeOrder.customer_name || '',
+          },
+          products: homeProducts,
+          items: Number(homeOrder.quantity || 0),
+          total: Number(homeOrder.total || 0),
+          delivery: 'Home Kitchen Delivery',
+          status: homeStatus,
+          createdAt: homeOrder.created_at,
+        });
         return;
       }
 
