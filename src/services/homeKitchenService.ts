@@ -71,6 +71,6 @@ export async function updateMyHomeKitchenOrderStatus(orderId:string,status:'acce
 
 
 export async function getMyCustomerHomeKitchenOrders(){
-  const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,kitchen_id,item_id,quantity,total,status,payment_method,payment_status,delivery_area,created_at').order('created_at',{ascending:false});
+  const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,kitchen_id,item_id,quantity,unit_price,food_total,platform_fee,delivery_fee,total,status,payment_method,payment_status,delivery_area,created_at').order('created_at',{ascending:false});
   if(error) throw error; return data||[];
 }
