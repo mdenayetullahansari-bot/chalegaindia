@@ -36,7 +36,7 @@ export default function GardenLessonFood() {
       return;
     }
 
-    router.replace('/garden-learn');
+    router.replace('/garden-lesson-complete?lesson=start-growing-food');
   };
 
   return (
