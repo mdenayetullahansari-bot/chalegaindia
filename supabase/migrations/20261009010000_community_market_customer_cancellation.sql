@@ -94,7 +94,7 @@ BEGIN
       SELECT 1
       FROM public.chalega_delivery_payouts p
       WHERE p.job_id = v_job.id
-        AND p.status IN ('approved', 'paid')
+        AND p.status IN ('pending', 'approved', 'paid', 'failed')
     ) THEN
       RAISE EXCEPTION 'A delivery payout has already been approved or paid';
     END IF;
