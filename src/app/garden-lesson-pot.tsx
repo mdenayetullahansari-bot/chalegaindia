@@ -34,7 +34,7 @@ export default function GardenLessonPot() {
       return;
     }
 
-    router.replace('/garden-learn');
+    router.replace('/garden-lesson-complete?lesson=choose-the-right-pot');
   };
 
   return (
