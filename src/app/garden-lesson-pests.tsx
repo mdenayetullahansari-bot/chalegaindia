@@ -36,7 +36,7 @@ export default function GardenLessonPests() {
       return;
     }
 
-    router.replace('/garden-learn');
+    router.replace('/garden-lesson-complete?lesson=pests-and-plant-problems');
   };
 
   return (
