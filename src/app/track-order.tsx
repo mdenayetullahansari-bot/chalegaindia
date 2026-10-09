@@ -46,6 +46,8 @@ type Order = {
 const STATUS = {
   RECEIVED: 'Order Received',
   PREPARING: 'Preparing',
+  READY: 'Ready for Pickup',
+  PICKED_UP: 'Picked Up',
   OUT_FOR_DELIVERY: 'Out for Delivery',
   DELIVERED: 'Delivered',
   COMPLETED: 'Completed',
@@ -139,6 +141,10 @@ export default function TrackOrderScreen() {
           homeOrder.status === 'preparing'
             ? STATUS.PREPARING
             : homeOrder.status === 'ready'
+            ? STATUS.READY
+            : homeOrder.status === 'picked_up'
+            ? STATUS.PICKED_UP
+            : homeOrder.status === 'out_for_delivery'
             ? STATUS.OUT_FOR_DELIVERY
             : homeOrder.status === 'delivered'
             ? STATUS.DELIVERED
@@ -228,6 +234,10 @@ export default function TrackOrderScreen() {
       case STATUS.PREPARING:
         return 2;
 
+      case STATUS.READY:
+        return 2;
+
+      case STATUS.PICKED_UP:
       case STATUS.OUT_FOR_DELIVERY:
         return 3;
 
@@ -378,6 +388,10 @@ export default function TrackOrderScreen() {
               ? 'Order Delivered'
               : status === STATUS.OUT_FOR_DELIVERY
               ? 'Out for Delivery'
+              : status === STATUS.PICKED_UP
+              ? 'Picked Up by Delivery Partner'
+              : status === STATUS.READY
+              ? 'Ready for Pickup'
               : status === STATUS.PREPARING
               ? 'Preparing Your Order'
               : 'Order Received'}
@@ -390,6 +404,10 @@ export default function TrackOrderScreen() {
               ? 'Your order has been delivered successfully.'
               : status === STATUS.OUT_FOR_DELIVERY
               ? 'Your order is on its way to you.'
+              : status === STATUS.PICKED_UP
+              ? 'The delivery partner has picked up your order.'
+              : status === STATUS.READY
+              ? 'Your order is ready and waiting for the delivery partner.'
               : status === STATUS.PREPARING
               ? 'Your order is being prepared.'
               : 'We have received your order.'}
