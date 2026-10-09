@@ -98,8 +98,11 @@ export default function GardenLessonComplete() {
   }, []);
 
   const isComplete = completedCount === lessons.length;
+  const currentIndex = lessons.findIndex((item) => item.slug === lesson);
   const nextLesson =
-    lessons.find((item) => !completedSlugs.includes(item.slug)) ?? null;
+    lessons
+      .slice(currentIndex >= 0 ? currentIndex + 1 : 0)
+      .find((item) => !completedSlugs.includes(item.slug)) ?? null;
 
   return (
     <SafeAreaView style={styles.container}>
