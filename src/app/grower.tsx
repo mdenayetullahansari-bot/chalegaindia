@@ -22,6 +22,11 @@ type GrowerProfile = {
   space_type: string;
   locality: string | null;
   city: string;
+  pickup_address: string | null;
+  pickup_area: string | null;
+  pickup_pin: string | null;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
   status: string;
   plants_grown: number;
   plants_sold: number;
@@ -73,6 +78,9 @@ export default function GrowerScreen() {
   const [locality, setLocality] = useState('');
   const [spaceType, setSpaceType] = useState('balcony');
   const [bio, setBio] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [pickupArea, setPickupArea] = useState('');
+  const [pickupPin, setPickupPin] = useState('');
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
@@ -99,7 +107,7 @@ export default function GrowerScreen() {
 
       const { data: profileData, error: profileError } = await supabase
         .from('chalega_community_growers')
-        .select('id, user_id, display_name, bio, space_type, locality, city, status, plants_grown, plants_sold')
+        .select('id, user_id, display_name, bio, space_type, locality, city, pickup_address, pickup_area, pickup_pin, pickup_latitude, pickup_longitude, status, plants_grown, plants_sold')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -112,6 +120,9 @@ export default function GrowerScreen() {
         setLocality(p.locality ?? '');
         setSpaceType(p.space_type);
         setBio(p.bio ?? '');
+        setPickupAddress(p.pickup_address ?? '');
+        setPickupArea(p.pickup_area ?? p.locality ?? '');
+        setPickupPin(p.pickup_pin ?? '');
 
         const { data: listingData, error: listingError } = await supabase
           .from('chalega_grower_listings')
@@ -135,6 +146,9 @@ export default function GrowerScreen() {
         setListings([]);
         setEarnings([]);
         setDisplayName(user.user_metadata?.full_name ?? '');
+        setPickupAddress('');
+        setPickupArea('');
+        setPickupPin('');
       }
     } catch (error) {
       console.log('Grower load error:', error);
@@ -168,6 +182,9 @@ export default function GrowerScreen() {
         city: 'Kolkata',
         space_type: spaceType,
         bio: bio.trim() || null,
+        pickup_address: pickupAddress.trim() || null,
+        pickup_area: pickupArea.trim() || null,
+        pickup_pin: pickupPin.trim() || null,
       }, { onConflict: 'user_id' });
 
     setSaving(false);
@@ -324,6 +341,15 @@ export default function GrowerScreen() {
             <Text style={styles.label}>LOCALITY</Text>
             <TextInput value={locality} onChangeText={setLocality} placeholder="e.g. Entally" placeholderTextColor="#8794A0" style={styles.input} />
 
+            <Text style={styles.label}>PICKUP ADDRESS</Text>
+            <TextInput value={pickupAddress} onChangeText={setPickupAddress} placeholder="Where should CHALEGA collect from?" placeholderTextColor="#8794A0" style={styles.input} />
+
+            <Text style={styles.label}>PICKUP AREA / LOCALITY</Text>
+            <TextInput value={pickupArea} onChangeText={setPickupArea} placeholder="e.g. Entally" placeholderTextColor="#8794A0" style={styles.input} />
+
+            <Text style={styles.label}>PICKUP PIN CODE</Text>
+            <TextInput value={pickupPin} onChangeText={setPickupPin} keyboardType="number-pad" placeholder="700014" placeholderTextColor="#8794A0" style={styles.input} />
+
             <Text style={styles.label}>YOUR GROWING SPACE</Text>
             <View style={styles.chips}>
               {SPACE_TYPES.map(([value, label]) => (
@@ -381,6 +407,30 @@ export default function GrowerScreen() {
                   <Text style={styles.earningLabel}>UNITS SOLD</Text>
                 </View>
               </View>
+            </View>
+
+            <View style={styles.pickupCard}>
+              <Text style={styles.sectionEyebrow}>DELIVERY PICKUP POINT</Text>
+              <Text style={styles.pickupTitle}>Where CHALEGA should collect from you</Text>
+              <Text style={styles.sectionText}>Add the collection address used by our delivery partner. GPS can be added later; area and PIN help matching.</Text>
+
+              <Text style={styles.label}>PICKUP ADDRESS</Text>
+              <TextInput value={pickupAddress} onChangeText={setPickupAddress} placeholder="Full collection address" placeholderTextColor="#8794A0" style={styles.input} />
+
+              <View style={styles.twoCol}>
+                <View style={styles.col}>
+                  <Text style={styles.label}>AREA / LOCALITY</Text>
+                  <TextInput value={pickupArea} onChangeText={setPickupArea} placeholder="Entally" placeholderTextColor="#8794A0" style={styles.input} />
+                </View>
+                <View style={styles.col}>
+                  <Text style={styles.label}>PIN</Text>
+                  <TextInput value={pickupPin} onChangeText={setPickupPin} keyboardType="number-pad" placeholder="700014" placeholderTextColor="#8794A0" style={styles.input} />
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.secondaryButton} onPress={saveGrower} disabled={saving}>
+                <Text style={styles.secondaryButtonText}>{saving ? 'SAVING...' : 'SAVE PICKUP DETAILS'}</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.formCard}>
@@ -490,6 +540,10 @@ const styles = StyleSheet.create({
   marketText: { marginTop: 3, color: BRAND.muted, fontSize: 11, lineHeight: 16 },
   marketArrow: { marginLeft: 10, color: BRAND.midnight, fontSize: 25, fontWeight: '900' },
   formCard: { margin: 18, marginBottom: 8, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: BRAND.line },
+  pickupCard: { margin: 18, marginBottom: 8, padding: 16, borderRadius: 20, backgroundColor: '#FFF8E8', borderWidth: 1, borderColor: '#F1D48D' },
+  pickupTitle: { marginTop: 4, color: '#6B4A00', fontSize: 17, fontWeight: '900' },
+  secondaryButton: { marginTop: 12, minHeight: 44, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1C26D', alignItems: 'center', justifyContent: 'center' },
+  secondaryButtonText: { color: '#6B4A00', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
   sectionEyebrow: { color: '#24633A', fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
   sectionTitle: { marginTop: 4, color: BRAND.ink, fontSize: 20, fontWeight: '900' },
   sectionText: { marginTop: 5, color: BRAND.muted, fontSize: 12, lineHeight: 18 },
