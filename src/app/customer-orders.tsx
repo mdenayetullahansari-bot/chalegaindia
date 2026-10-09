@@ -2,6 +2,7 @@ import { BRAND } from '@/lib/brand';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   SafeAreaView,
   ScrollView,
