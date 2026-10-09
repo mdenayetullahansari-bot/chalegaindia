@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 export type HomeKitchen = {
   id:string; user_id:string; kitchen_name:string; display_name:string; bio:string|null;
   locality:string|null; city:string; service_radius_km:number; cuisine_types:string[];
-  women_led:boolean; fssai_status:string; fssai_number:string|null; hygiene_status:string;
+  women_led:boolean; fssai_status:string; fssai_number:string|null; fssai_document_ref?:string|null; fssai_valid_until?:string|null; fssai_rejection_reason?:string|null; fssai_verified_at?:string|null; hygiene_status:string; hygiene_notes?:string|null; hygiene_rejection_reason?:string|null; hygiene_verified_at?:string|null;
   status:string; accepting_orders:boolean; min_order_amount:number;
 };
 
@@ -60,7 +60,24 @@ export async function getApprovedKitchenItems(kitchenId:string){
 export function kitchenOrderId(){return 'CI-HK-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-9)+String(Math.floor(Math.random()*90+10));}
 
 
-export async function submitMyHomeKitchenCompliance(input:{fssaiNumber:string;documentRef?:string;validUntil?:string;hygieneNotes?:string}){\n  const {data,error}=await supabase.rpc('submit_my_home_kitchen_compliance',{p_fssai_number:input.fssaiNumber,p_fssai_document_ref:input.documentRef||null,p_fssai_valid_until:input.validUntil||null,p_hygiene_notes:input.hygieneNotes||null});\n  if(error) throw error; return data as HomeKitchen;\n}\nexport async function setMyHomeKitchenAcceptingOrders(enabled:boolean){\n  const {data,error}=await supabase.rpc('set_my_home_kitchen_accepting_orders',{p_enabled:enabled});\n  if(error) throw error; return data as HomeKitchen;\n}\nexport async function setMyHomeKitchenItemInventory(itemId:string,quantity:number){\n  const {data,error}=await supabase.rpc('set_my_home_kitchen_item_inventory',{p_item_id:itemId,p_quantity:quantity});\n  if(error) throw error; return data as HomeKitchenItem;\n}\nexport async function getMyHomeKitchenDashboard(){\n  const {data,error}=await supabase.rpc('get_my_home_kitchen_dashboard');\n  if(error) throw error; return data?.[0]||null;\n}\n\nexport async function getMyHomeKitchenOrders(kitchenId:string){
+export async function submitMyHomeKitchenCompliance(input:{fssaiNumber:string;documentRef?:string;validUntil?:string;hygieneNotes?:string}){
+  const {data,error}=await supabase.rpc('submit_my_home_kitchen_compliance',{p_fssai_number:input.fssaiNumber,p_fssai_document_ref:input.documentRef||null,p_fssai_valid_until:input.validUntil||null,p_hygiene_notes:input.hygieneNotes||null});
+  if(error) throw error; return data as HomeKitchen;
+}
+export async function setMyHomeKitchenAcceptingOrders(enabled:boolean){
+  const {data,error}=await supabase.rpc('set_my_home_kitchen_accepting_orders',{p_enabled:enabled});
+  if(error) throw error; return data as HomeKitchen;
+}
+export async function setMyHomeKitchenItemInventory(itemId:string,quantity:number){
+  const {data,error}=await supabase.rpc('set_my_home_kitchen_item_inventory',{p_item_id:itemId,p_quantity:quantity});
+  if(error) throw error; return data as HomeKitchenItem;
+}
+export async function getMyHomeKitchenDashboard(){
+  const {data,error}=await supabase.rpc('get_my_home_kitchen_dashboard');
+  if(error) throw error; return data?.[0]||null;
+}
+
+export async function getMyHomeKitchenOrders(kitchenId:string){
   const {data,error}=await supabase.from('chalega_home_kitchen_orders').select('order_id,item_id,quantity,unit_price,food_total,platform_fee,delivery_fee,kitchen_earnings,total,customer_name,customer_phone,delivery_address,delivery_area,status,payment_method,payment_status,created_at').eq('kitchen_id',kitchenId).order('created_at',{ascending:false});
   if(error) throw error; return data||[];
 }
