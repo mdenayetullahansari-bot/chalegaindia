@@ -26,6 +26,7 @@ type Order = {
     emoji: string;
     quantity: number;
     total: number;
+    community_listing_id?: string;
   }[];
   items?: number;
   total?: number;
@@ -44,6 +45,8 @@ const getStatusNumber = (status?: string) => {
       return 4;
     case 'Completed':
       return 5;
+    case 'Cancelled':
+      return 0;
     default:
       return 1;
   }
@@ -59,6 +62,8 @@ const getStatusText = (status?: string) => {
       return 'Delivered';
     case 'Completed':
       return 'Completed';
+    case 'Cancelled':
+      return 'Cancelled';
     default:
       return 'Order Received';
   }
@@ -74,6 +79,8 @@ const getStatusEmoji = (status?: string) => {
       return '✓';
     case 'Completed':
       return '✓';
+    case 'Cancelled':
+      return '✕';
     default:
       return '✓';
   }
@@ -85,6 +92,7 @@ export default function CustomerOrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
 
   const loadOrders = async () => {
     try {
@@ -185,6 +193,44 @@ export default function CustomerOrdersScreen() {
         orderId,
       },
     });
+  };
+
+  const cancelCommunityOrder = (order: Order) => {
+    const orderId = order.orderId || order.id;
+    if (!orderId || cancellingOrderId) return;
+
+    Alert.alert(
+      'Cancel Community Market order?',
+      'This is only available before preparation starts. Your reserved stock will be restored.',
+      [
+        { text: 'Keep order', style: 'cancel' },
+        {
+          text: 'Cancel order',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setCancellingOrderId(orderId);
+              try {
+                const { error } = await supabase.rpc(
+                  'cancel_my_community_order',
+                  { p_order_id: orderId }
+                );
+                if (error) throw error;
+                await loadOrders();
+                Alert.alert('Order cancelled', 'Your Community Market order has been cancelled and the stock reservation released.');
+              } catch (error: any) {
+                Alert.alert(
+                  'Could not cancel order',
+                  error?.message || 'This order can no longer be cancelled. Please contact support if you need help.'
+                );
+              } finally {
+                setCancellingOrderId(null);
+              }
+            })();
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -470,6 +516,19 @@ export default function CustomerOrdersScreen() {
                       TRACK ORDER  →
                     </Text>
                   </TouchableOpacity>
+
+                  {status === 'Order Received' &&
+                  order.products?.some((product: any) => Boolean(product.community_listing_id)) ? (
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => cancelCommunityOrder(order)}
+                      disabled={cancellingOrderId === orderId}
+                    >
+                      <Text style={styles.cancelButtonText}>
+                        {cancellingOrderId === orderId ? 'CANCELLING…' : 'CANCEL COMMUNITY ORDER'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
 
                 </View>
               );
@@ -792,6 +851,22 @@ const styles = StyleSheet.create({
   trackButtonText: {
     color: BRAND.white,
     fontSize: 12,
+    fontWeight: '900',
+  },
+
+  cancelButton: {
+    borderWidth: 1,
+    borderColor: '#D94343',
+    borderRadius: 15,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginTop: 9,
+    backgroundColor: '#FFF7F7',
+  },
+
+  cancelButtonText: {
+    color: '#B42323',
+    fontSize: 11,
     fontWeight: '900',
   },
 
