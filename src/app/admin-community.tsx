@@ -12,7 +12,7 @@ export default function AdminCommunity(){
  const listing=async(x:AdminCommunityListing,status:'approved'|'rejected')=>{if(typeof window!=='undefined'&&!window.confirm(status==='approved'?'Approve this listing for customers?':'Reject this listing?'))return;setAction(x.id);try{await setAdminCommunityListingStatus(x.id,status);await load()}catch(x:any){alert(x?.message||'Could not update listing.')}finally{setAction('')}};
  const pay=async(x:AdminCommunityEarning)=>{if(typeof window!=='undefined'&&!window.confirm(`Mark ₹${Number(x.gross_sale).toLocaleString('en-IN')} grower earning as PAID?`))return;setAction(x.id);try{await markAdminCommunityEarningPaid(x.id);await load()}catch(x:any){alert(x?.message||'Could not mark grower earning paid.')}finally{setAction('')}};
  if(loading)return <SafeAreaView style={s.loading}><ActivityIndicator size="large" color={BRAND.teal}/><Text style={s.muted}>Loading community marketplace...</Text></SafeAreaView>;
- const pendingE=e.filter(x=>x.status==='pending');const eligibleE=e.filter(x=>x.status==='eligible');const paidE=e.filter(x=>x.status==='paid');
+ const eligibleE=e.filter(x=>x.status==='eligible');const paidE=e.filter(x=>x.status==='paid');
  return <SafeAreaView style={s.c}><ScrollView refreshControl={<RefreshControl refreshing={false} onRefresh={load}/>} contentContainerStyle={s.content}>
  <TouchableOpacity onPress={()=>router.back()}><Text style={s.back}>‹ BACK</Text></TouchableOpacity>
  <Text style={s.eye}>GARDENVERSE OPERATIONS</Text><Text style={s.title}>Grower & Listing Control</Text><Text style={s.sub}>Approve residents and the products they grow before customers can buy them.</Text>
