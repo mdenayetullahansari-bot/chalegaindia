@@ -36,7 +36,7 @@ export default function GardenLesson() {
       return;
     }
 
-    router.replace('/garden-learn');
+    router.replace('/garden-lesson-complete?lesson=what-plants-need');
   };
 
   return (
