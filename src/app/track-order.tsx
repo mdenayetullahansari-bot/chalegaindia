@@ -51,6 +51,7 @@ const STATUS = {
   OUT_FOR_DELIVERY: 'Out for Delivery',
   DELIVERED: 'Delivered',
   COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 };
 
 export default function TrackOrderScreen() {
@@ -250,6 +251,9 @@ export default function TrackOrderScreen() {
       case STATUS.COMPLETED:
         return 5;
 
+      case STATUS.CANCELLED:
+        return 0;
+
       default:
         return 1;
     }
@@ -369,7 +373,9 @@ export default function TrackOrderScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroCircle}>
             <Text style={styles.heroIcon}>
-              {statusNumber >= 5
+              {status === STATUS.CANCELLED
+                ? '✕'
+                : statusNumber >= 5
                 ? '✓'
                 : statusNumber >= 4
                 ? '✓'
@@ -382,7 +388,9 @@ export default function TrackOrderScreen() {
           </View>
 
           <Text style={styles.heroTitle}>
-            {status === STATUS.COMPLETED
+            {status === STATUS.CANCELLED
+              ? 'Order Cancelled'
+              : status === STATUS.COMPLETED
               ? 'Order Completed'
               : status === STATUS.DELIVERED
               ? 'Order Delivered'
@@ -398,7 +406,9 @@ export default function TrackOrderScreen() {
           </Text>
 
           <Text style={styles.heroText}>
-            {status === STATUS.COMPLETED
+            {status === STATUS.CANCELLED
+              ? 'This order was cancelled. The reserved Community Market stock has been released.'
+              : status === STATUS.COMPLETED
               ? 'Your order has been completed.'
               : status === STATUS.DELIVERED
               ? 'Your order has been delivered successfully.'
