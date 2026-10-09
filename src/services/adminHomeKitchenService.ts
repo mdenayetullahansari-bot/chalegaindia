@@ -1,5 +1,5 @@
 import {supabase}from'@/lib/supabase';
-export type AdminKitchen={id:string;user_id:string;kitchen_name:string;display_name:string;locality:string|null;city:string;women_led:boolean;fssai_status:string;fssai_number:string|null;hygiene_status:string;status:string;accepting_orders:boolean;created_at:string;item_count:number};
+export type AdminKitchen={id:string;user_id:string;kitchen_name:string;display_name:string;locality:string|null;city:string;women_led:boolean;fssai_status:string;fssai_number:string|null;fssai_document_ref?:string|null;fssai_valid_until?:string|null;fssai_rejection_reason?:string|null;hygiene_status:string;hygiene_notes?:string|null;hygiene_rejection_reason?:string|null;status:string;accepting_orders:boolean;created_at:string;item_count:number};
 export type AdminKitchenItem={id:string;kitchen_id:string;kitchen_name:string;title:string;emoji:string;category:string;price:number;unit:string;quantity_available:number;status:string;created_at:string};
 export async function getAdminHomeKitchens(){const{data,error}=await supabase.rpc('get_admin_home_kitchens');if(error)throw error;return(data||[])as AdminKitchen[]}
 export async function setAdminHomeKitchenStatus(id:string,status:string,fssaiStatus?:string,hygieneStatus?:string){const{data,error}=await supabase.rpc('set_admin_home_kitchen_status',{p_kitchen_id:id,p_status:status,p_fssai_status:fssaiStatus||null,p_hygiene_status:hygieneStatus||null});if(error)throw error;return data}
@@ -10,3 +10,6 @@ export type AdminHomeKitchenOrder={order_id:string;kitchen_id:string;kitchen_nam
 export async function getAdminHomeKitchenOrders(){const{data,error}=await supabase.rpc('get_admin_home_kitchen_orders');if(error)throw error;return(data||[])as AdminHomeKitchenOrder[]}
 export async function setAdminHomeKitchenOrderStatus(orderId:string,status:string){const{data,error}=await supabase.rpc('set_admin_home_kitchen_order_status',{p_order_id:orderId,p_status:status});if(error)throw error;return data}
 export async function collectHomeKitchenCodPayment(orderId:string){const{data,error}=await supabase.rpc('collect_home_kitchen_cod_payment',{p_order_id:orderId});if(error)throw error;return data}
+
+export async function reviewHomeKitchenFssai(id:string,status:'verified'|'rejected'|'pending'|'unverified',reason?:string){const{data,error}=await supabase.rpc('review_home_kitchen_fssai',{p_kitchen_id:id,p_status:status,p_reason:reason||null});if(error)throw error;return data}
+export async function reviewHomeKitchenHygiene(id:string,status:'verified'|'rejected'|'pending',reason?:string){const{data,error}=await supabase.rpc('review_home_kitchen_hygiene',{p_kitchen_id:id,p_status:status,p_reason:reason||null});if(error)throw error;return data}
