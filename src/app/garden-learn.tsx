@@ -84,30 +84,29 @@ export default function GardenLearnScreen() {
   const loadProgress = React.useCallback(async () => {
     setProgressLoading(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data: userData } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (!userData.user) {
       setCompletedSlugs([]);
       setProgressLoading(false);
       return;
     }
 
-    const { data } = await supabase
-      .from('garden_lesson_completions')
-      .select('lesson_slug')
-      .eq('user_id', user.id)
-      .in(
-        'lesson_slug',
-        lessons.map((lesson) => lesson.slug)
-      );
-
-    setCompletedSlugs(
-      (data ?? [])
-        .map((row) => row.lesson_slug)
-        .filter((slug): slug is string => Boolean(slug))
+    const { data, error } = await supabase.rpc(
+      'get_my_garden_lesson_progress'
     );
+
+    if (error) {
+      console.error('GardenVerse progress load failed:', error);
+      setCompletedSlugs([]);
+    } else {
+      setCompletedSlugs(
+        (data ?? [])
+          .map((row: { lesson_slug?: string }) => row.lesson_slug)
+          .filter((slug: string | undefined): slug is string => Boolean(slug))
+      );
+    }
+
     setProgressLoading(false);
   }, []);
 
