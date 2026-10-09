@@ -27,7 +27,6 @@ DECLARE
   v_order public.orders%ROWTYPE;
   v_listing_id uuid;
   v_quantity integer;
-  v_listing_status text;
   v_job public.chalega_delivery_jobs%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -109,7 +108,7 @@ BEGIN
     END IF;
   END IF;
 
-  SELECT l.status INTO v_listing_status
+  PERFORM 1
   FROM public.chalega_grower_listings l
   WHERE l.id = v_listing_id
   FOR UPDATE;
@@ -119,9 +118,9 @@ BEGIN
   END IF;
 
   -- Restore the reserved quantity once, in the same transaction as cancellation.
+  -- Keep listing moderation status unchanged; the grower/admin can republish a sold-out listing.
   UPDATE public.chalega_grower_listings l
   SET quantity_available = l.quantity_available + v_quantity,
-      status = CASE WHEN l.status = 'sold_out' THEN 'approved' ELSE l.status END,
       updated_at = now()
   WHERE l.id = v_listing_id;
 
