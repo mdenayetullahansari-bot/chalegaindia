@@ -36,7 +36,7 @@ export default function GardenLessonWater() {
       return;
     }
 
-    router.replace('/garden-learn');
+    router.replace('/garden-lesson-complete?lesson=how-to-water');
   };
 
   return (
