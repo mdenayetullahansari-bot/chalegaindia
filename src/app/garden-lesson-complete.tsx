@@ -62,6 +62,7 @@ export default function GardenLessonComplete() {
   const router = useRouter();
   const { lesson } = useLocalSearchParams<{ lesson?: string }>();
   const [completedCount, setCompletedCount] = React.useState<number | null>(null);
+  const [completedSlugs, setCompletedSlugs] = React.useState<string[]>([]);
 
   const current = lessons.find((item) => item.slug === lesson) ?? lessons[0];
 
@@ -77,9 +78,11 @@ export default function GardenLessonComplete() {
             .map((row: { lesson_slug?: string }) => row.lesson_slug)
             .filter(Boolean)
         );
-        setCompletedCount(
-          lessons.filter((item) => completed.has(item.slug)).length
-        );
+        const slugs = lessons
+          .filter((item) => completed.has(item.slug))
+          .map((item) => item.slug);
+        setCompletedSlugs(slugs);
+        setCompletedCount(slugs.length);
       }
     };
 
@@ -87,9 +90,7 @@ export default function GardenLessonComplete() {
   }, []);
 
   const isComplete = completedCount === lessons.length;
-  const nextLesson =
-    lessons.find((item) => item.slug !== lesson && !(completedCount === lessons.length)) ??
-    null;
+  const nextLesson = lessons.find((item) => !completedSlugs.includes(item.slug)) ?? null;
 
   return (
     <SafeAreaView style={styles.container}>
