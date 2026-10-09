@@ -263,7 +263,7 @@ export default function GardenLearnScreen() {
               key={lesson.title}
               style={styles.lessonCard}
               activeOpacity={0.85}
-              onPress={() => router.push(lesson.route)}
+              onPress={() => router.push(lesson.route as any)}
             >
               <View style={styles.lessonIcon}>
                 <Text style={styles.lessonEmoji}>

@@ -15,7 +15,7 @@ export default function AdminCompetitions(){
  const load=useCallback(async()=>{try{const ok=await isChalegaAdmin();setAdmin(ok);if(!ok)return;
   const{data,error}=await supabase.from('competitions').select('id,name,status,starts_at,ends_at,first_place_points,second_place_points,third_place_points,rules_version').eq('rules_version','ward-championship-v1').order('starts_at',{ascending:false}).limit(1).maybeSingle();if(error)throw error;
   setC(data as Competition|null);if(!data){setWards([]);setDists([]);return;}
-  const[w,e1]=await supabase.rpc('get_ward_competition_leaderboard',{p_competition_id:data.id});if(e1)throw e1;setWards(Array.isArray(w)?w as WardRow[]:[]);
+  const { data: w, error: e1 } = await supabase.rpc('get_ward_competition_leaderboard', { p_competition_id: data.id }); if (e1) throw e1; setWards(Array.isArray(w) ? w as WardRow[] : []);
   const{data:ds,error:e2}=await supabase.from('ward_competition_prize_distributions').select('points_amount,status,issued_at').eq('competition_id',data.id);if(!e2)setDists(Array.isArray(ds)?ds as Distribution[]:[]);
  }catch(e){console.log('[ADMIN COMPETITIONS]',e);Alert.alert('Could not load competition','Please try again.')}finally{setLoading(false)}},[]);
  useEffect(()=>{load()},[load]);

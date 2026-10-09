@@ -185,7 +185,7 @@ export default function GardenLessonComplete() {
                 style={styles.primaryButton}
                 onPress={() =>
                   nextLesson
-                    ? router.replace(nextLesson.route)
+                    ? router.replace(nextLesson.route as any)
                     : router.replace('/garden-learn')
                 }
               >
