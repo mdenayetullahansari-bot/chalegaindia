@@ -81,6 +81,14 @@ export default function GardenLessonComplete() {
         const slugs = lessons
           .filter((item) => completed.has(item.slug))
           .map((item) => item.slug);
+
+        // The lesson was just completed. If the progress read briefly lags,
+        // include the lesson from the current route so the success screen
+        // never shows stale progress immediately after completion.
+        if (lesson && lessons.some((item) => item.slug === lesson) && !slugs.includes(lesson)) {
+          slugs.push(lesson);
+        }
+
         setCompletedSlugs(slugs);
         setCompletedCount(slugs.length);
       }
@@ -90,7 +98,8 @@ export default function GardenLessonComplete() {
   }, []);
 
   const isComplete = completedCount === lessons.length;
-  const nextLesson = lessons.find((item) => !completedSlugs.includes(item.slug)) ?? null;
+  const nextLesson =
+    lessons.find((item) => !completedSlugs.includes(item.slug)) ?? null;
 
   return (
     <SafeAreaView style={styles.container}>
