@@ -201,7 +201,7 @@ export default function GrowerScreen() {
 
   const grossSales = earnings.reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
   const paidEarnings = earnings.filter(item => item.status === 'paid').reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
-  const pendingEarnings = earnings.filter(item => item.status !== 'paid').reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
+  const eligibleEarnings = earnings.filter(item => item.status === 'eligible').reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
   const unitsSold = earnings.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
   const addListing = async () => {
@@ -399,8 +399,8 @@ export default function GrowerScreen() {
                   <Text style={styles.earningLabel}>PAID</Text>
                 </View>
                 <View style={styles.earningStat}>
-                  <Text style={styles.earningNumber}>₹{pendingEarnings.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.earningLabel}>PENDING</Text>
+                  <Text style={styles.earningNumber}>₹{eligibleEarnings.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.earningLabel}>READY TO PAY</Text>
                 </View>
                 <View style={styles.earningStat}>
                   <Text style={styles.earningNumber}>{unitsSold}</Text>
