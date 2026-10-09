@@ -1,4 +1,5 @@
 import { BRAND } from '@/lib/brand';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -20,51 +21,103 @@ const categories = [
 
 const lessons = [
   {
+    slug: 'what-plants-need',
     emoji: '🌱',
     title: 'What Plants Need',
     time: '3 min',
     description:
       'Learn the basics: light, water, air, nutrients and the right growing space.',
+    route: '/garden-lesson?lesson=what-plants-need',
   },
   {
+    slug: 'choose-the-right-pot',
     emoji: '🪴',
     title: 'Choose the Right Pot',
     time: '3 min',
     description:
       'Understand pot size and drainage for healthier roots.',
+    route: '/garden-lesson-pot',
   },
   {
+    slug: 'how-to-water',
     emoji: '💧',
     title: 'How to Water',
     time: '3 min',
     description:
       'Learn how to check the soil before watering instead of watering automatically.',
+    route: '/garden-lesson-water',
   },
   {
+    slug: 'start-growing-food',
     emoji: '🥬',
     title: 'Start Growing Food',
     time: '5 min',
     description:
       'Simple ideas for herbs and vegetables in small Kolkata homes.',
+    route: '/garden-lesson-food',
   },
   {
+    slug: 'composting-101',
     emoji: '♻️',
     title: 'Composting 101',
     time: '5 min',
     description:
       'Learn how suitable kitchen and garden waste can become a useful garden resource.',
+    route: '/garden-lesson-compost',
   },
   {
+    slug: 'pests-and-plant-problems',
     emoji: '🐛',
     title: 'Pests & Plant Problems',
     time: '5 min',
     description:
       'Learn what to check when leaves change colour, curl or show damage.',
+    route: '/garden-lesson-pests',
   },
 ];
 
 export default function GardenLearnScreen() {
   const router = useRouter();
+  const [completedSlugs, setCompletedSlugs] = React.useState<string[]>([]);
+  const [progressLoading, setProgressLoading] = React.useState(true);
+
+  const loadProgress = React.useCallback(async () => {
+    setProgressLoading(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setCompletedSlugs([]);
+      setProgressLoading(false);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('garden_lesson_completions')
+      .select('lesson_slug')
+      .eq('user_id', user.id)
+      .in(
+        'lesson_slug',
+        lessons.map((lesson) => lesson.slug)
+      );
+
+    setCompletedSlugs(
+      (data ?? [])
+        .map((row) => row.lesson_slug)
+        .filter((slug): slug is string => Boolean(slug))
+    );
+    setProgressLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    loadProgress();
+  }, [loadProgress]);
+
+  const completedCount = completedSlugs.length;
+  const allComplete = completedCount === lessons.length;
+  const remainingCount = lessons.length - completedCount;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -100,6 +153,62 @@ export default function GardenLearnScreen() {
           </Text>
         </View>
 
+        <View style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <View>
+              <Text style={styles.progressEyebrow}>YOUR PROGRESS</Text>
+              <Text style={styles.progressTitle}>
+                {progressLoading
+                  ? 'Checking your lessons...'
+                  : `${completedCount} / ${lessons.length} lessons completed`}
+              </Text>
+            </View>
+
+            <View style={styles.progressBadge}>
+              <Text style={styles.progressBadgeText}>
+                {Math.round((completedCount / lessons.length) * 100)}%
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${(completedCount / lessons.length) * 100}%` },
+              ]}
+            />
+          </View>
+
+          {!progressLoading && !allComplete && (
+            <Text style={styles.progressHint}>
+              {remainingCount === 1
+                ? '1 more lesson to unlock your certificate.'
+                : `${remainingCount} more lessons to unlock your certificate.`}
+            </Text>
+          )}
+
+          {allComplete && (
+            <Text style={styles.progressComplete}>
+              🎉 All 6 lessons complete. Your certificate is ready!
+            </Text>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.certificateButton,
+              !allComplete && styles.certificateButtonLocked,
+            ]}
+            onPress={() => router.push('/garden-certificate')}
+          >
+            <Text style={styles.certificateButtonText}>
+              {allComplete
+                ? '🏆 CLAIM YOUR CERTIFICATE'
+                : '🔒 CERTIFICATE — COMPLETE ALL 6 LESSONS'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.sectionTitle}>Explore</Text>
 
         <View style={styles.categoryGrid}>
@@ -132,12 +241,14 @@ export default function GardenLearnScreen() {
               to your garden.
             </Text>
 
-           <TouchableOpacity
-  style={styles.primaryButton}
-  onPress={() => router.push('/garden-lesson?lesson=what-plants-need')}
->
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.push('/garden-lesson?lesson=what-plants-need')}
+            >
               <Text style={styles.primaryButtonText}>
-                START LESSON →
+                {completedSlugs.includes('what-plants-need')
+                  ? 'REVIEW LESSON →'
+                  : 'START LESSON →'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -145,55 +256,47 @@ export default function GardenLearnScreen() {
 
         <Text style={styles.sectionTitle}>More lessons</Text>
 
-        {lessons.slice(1).map((lesson) => (
-        <TouchableOpacity
-  key={lesson.title}
-  style={styles.lessonCard}
-  activeOpacity={0.85}
- onPress={() => {
-  if (lesson.title === 'Choose the Right Pot') {
-    router.push('/garden-lesson-pot');
-  }
+        {lessons.slice(1).map((lesson) => {
+          const completed = completedSlugs.includes(lesson.slug);
 
-  if (lesson.title === 'How to Water') {
-    router.push('/garden-lesson-water');
-  }
-if (lesson.title === 'Start Growing Food') {
-  router.push('/garden-lesson-food');
-}
+          return (
+            <TouchableOpacity
+              key={lesson.title}
+              style={styles.lessonCard}
+              activeOpacity={0.85}
+              onPress={() => router.push(lesson.route)}
+            >
+              <View style={styles.lessonIcon}>
+                <Text style={styles.lessonEmoji}>
+                  {lesson.emoji}
+                </Text>
+              </View>
 
-if (lesson.title === 'Composting 101') {
-  router.push('/garden-lesson-compost');
-}
+              <View style={styles.lessonBody}>
+                <View style={styles.lessonMetaRow}>
+                  <Text style={styles.lessonMeta}>
+                    BEGINNER • {lesson.time.toUpperCase()}
+                  </Text>
+                  {completed && (
+                    <Text style={styles.completedLabel}>✓ COMPLETE</Text>
+                  )}
+                </View>
 
-if (lesson.title === 'Pests & Plant Problems') {
-  router.push('/garden-lesson-pests');
-}
-}}
->
-            <View style={styles.lessonIcon}>
-              <Text style={styles.lessonEmoji}>
-                {lesson.emoji}
+                <Text style={styles.lessonTitle}>
+                  {lesson.title}
+                </Text>
+
+                <Text style={styles.lessonDescription}>
+                  {lesson.description}
+                </Text>
+              </View>
+
+              <Text style={styles.arrow}>
+                {completed ? '✓' : '›'}
               </Text>
-            </View>
-
-            <View style={styles.lessonBody}>
-              <Text style={styles.lessonMeta}>
-                BEGINNER • {lesson.time.toUpperCase()}
-              </Text>
-
-              <Text style={styles.lessonTitle}>
-                {lesson.title}
-              </Text>
-
-              <Text style={styles.lessonDescription}>
-                {lesson.description}
-              </Text>
-            </View>
-
-            <Text style={styles.arrow}>›</Text>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
 
         <View style={styles.bottomCard}>
           <Text style={styles.bottomTitle}>
@@ -286,6 +389,99 @@ const styles = StyleSheet.create({
     color: '#4C6B57',
     fontSize: 13,
     lineHeight: 19,
+  },
+
+  progressCard: {
+    marginHorizontal: 18,
+    marginBottom: 18,
+    padding: 17,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: BRAND.line,
+  },
+
+  progressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  progressEyebrow: {
+    color: BRAND.green,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+
+  progressTitle: {
+    marginTop: 4,
+    color: BRAND.ink,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  progressBadge: {
+    minWidth: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E8F3EA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  progressBadgeText: {
+    color: BRAND.green,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  progressTrack: {
+    height: 9,
+    marginTop: 14,
+    borderRadius: 5,
+    backgroundColor: '#E7ECE8',
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    height: '100%',
+    borderRadius: 5,
+    backgroundColor: BRAND.green,
+  },
+
+  progressHint: {
+    marginTop: 9,
+    color: BRAND.muted,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+
+  progressComplete: {
+    marginTop: 9,
+    color: BRAND.green,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  certificateButton: {
+    marginTop: 13,
+    paddingVertical: 13,
+    borderRadius: 13,
+    backgroundColor: BRAND.midnight,
+    alignItems: 'center',
+  },
+
+  certificateButtonLocked: {
+    backgroundColor: '#7A857D',
+  },
+
+  certificateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
 
   sectionTitle: {
@@ -421,6 +617,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  lessonMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+
+  completedLabel: {
+    color: BRAND.green,
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+
   lessonTitle: {
     marginTop: 3,
     color: BRAND.ink,
@@ -437,9 +647,9 @@ const styles = StyleSheet.create({
 
   arrow: {
     marginLeft: 8,
-    color: '#24633A',
-    fontSize: 25,
-    fontWeight: '400',
+    color: BRAND.green,
+    fontSize: 20,
+    fontWeight: '800',
   },
 
   bottomCard: {
