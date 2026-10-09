@@ -95,7 +95,7 @@ BEGIN
       WHERE p.job_id = v_job.id
         AND p.status IN ('pending', 'approved', 'paid', 'failed')
     ) THEN
-      RAISE EXCEPTION 'A delivery payout has already been approved or paid';
+      RAISE EXCEPTION 'A delivery payout record exists; contact support to cancel';
     END IF;
 
     IF EXISTS (
