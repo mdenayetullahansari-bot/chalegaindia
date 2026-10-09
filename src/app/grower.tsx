@@ -40,6 +40,17 @@ type GrowerListing = {
   notes: string | null;
 };
 
+type GrowerEarning = {
+  id: string;
+  listing_id: string;
+  order_id: string;
+  quantity: number;
+  gross_sale: number;
+  status: string;
+  paid_at: string | null;
+  created_at: string;
+};
+
 const SPACE_TYPES = [
   ['balcony', '🏡 Balcony'],
   ['terrace', '🌤️ Terrace'],
@@ -54,6 +65,7 @@ export default function GrowerScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<GrowerProfile | null>(null);
   const [listings, setListings] = useState<GrowerListing[]>([]);
+  const [earnings, setEarnings] = useState<GrowerEarning[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -109,9 +121,19 @@ export default function GrowerScreen() {
 
         if (listingError) throw listingError;
         setListings((listingData ?? []) as GrowerListing[]);
+
+        const { data: earningData, error: earningError } = await supabase
+          .from('chalega_grower_earnings')
+          .select('id, listing_id, order_id, quantity, gross_sale, status, paid_at, created_at')
+          .eq('grower_id', p.id)
+          .order('created_at', { ascending: false });
+
+        if (earningError) throw earningError;
+        setEarnings((earningData ?? []) as GrowerEarning[]);
       } else {
         setProfile(null);
         setListings([]);
+        setEarnings([]);
         setDisplayName(user.user_metadata?.full_name ?? '');
       }
     } catch (error) {
@@ -159,6 +181,11 @@ export default function GrowerScreen() {
     await load();
     Alert.alert('Welcome to GardenVerse', 'You are now a CHALEGA Community Grower. You can start listing what you grow.');
   };
+
+  const grossSales = earnings.reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
+  const paidEarnings = earnings.filter(item => item.status === 'paid').reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
+  const pendingEarnings = earnings.filter(item => item.status !== 'paid').reduce((sum, item) => sum + Number(item.gross_sale || 0), 0);
+  const unitsSold = earnings.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
   const addListing = async () => {
     if (!profile || !userId) return;
@@ -324,6 +351,38 @@ export default function GrowerScreen() {
               </View>
             </View>
 
+            <View style={styles.earningsCard}>
+              <View style={styles.earningsHeader}>
+                <View style={styles.earningsBody}>
+                  <Text style={styles.sectionEyebrow}>YOUR GROWER BUSINESS</Text>
+                  <Text style={styles.earningsTitle}>Sales & Earnings</Text>
+                  <Text style={styles.earningsText}>
+                    Track what the community has bought from you and what has been paid.
+                  </Text>
+                </View>
+                <Text style={styles.earningsEmoji}>💰</Text>
+              </View>
+
+              <View style={styles.earningsGrid}>
+                <View style={styles.earningStat}>
+                  <Text style={styles.earningNumber}>₹{grossSales.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.earningLabel}>GROSS SALES</Text>
+                </View>
+                <View style={styles.earningStat}>
+                  <Text style={styles.earningNumber}>₹{paidEarnings.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.earningLabel}>PAID</Text>
+                </View>
+                <View style={styles.earningStat}>
+                  <Text style={styles.earningNumber}>₹{pendingEarnings.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.earningLabel}>PENDING</Text>
+                </View>
+                <View style={styles.earningStat}>
+                  <Text style={styles.earningNumber}>{unitsSold}</Text>
+                  <Text style={styles.earningLabel}>UNITS SOLD</Text>
+                </View>
+              </View>
+            </View>
+
             <View style={styles.formCard}>
               <Text style={styles.sectionEyebrow}>STEP 02</Text>
               <Text style={styles.sectionTitle}>List something you grow</Text>
@@ -444,6 +503,16 @@ const styles = StyleSheet.create({
   chipTextSelected: { color: '#1C6337' },
   primary: { marginTop: 16, minHeight: 48, paddingHorizontal: 16, borderRadius: 14, backgroundColor: BRAND.midnight, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+  earningsCard: { marginHorizontal: 18, marginBottom: 8, padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: BRAND.line },
+  earningsHeader: { flexDirection: 'row', alignItems: 'center' },
+  earningsBody: { flex: 1 },
+  earningsTitle: { marginTop: 4, color: BRAND.ink, fontSize: 20, fontWeight: '900' },
+  earningsText: { marginTop: 4, color: BRAND.muted, fontSize: 11, lineHeight: 17 },
+  earningsEmoji: { fontSize: 34, marginLeft: 10 },
+  earningsGrid: { marginTop: 13, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  earningStat: { width: '48%', padding: 11, borderRadius: 14, backgroundColor: '#F3F8F4', borderWidth: 1, borderColor: '#E0EAE2' },
+  earningNumber: { color: BRAND.ink, fontSize: 17, fontWeight: '900' },
+  earningLabel: { marginTop: 3, color: '#5E7464', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 },
   profileCard: { margin: 18, marginBottom: 8, padding: 15, borderRadius: 20, backgroundColor: '#EAF7EE', borderWidth: 1, borderColor: '#C9E5D1', flexDirection: 'row', alignItems: 'center' },
   profileIcon: { width: 54, height: 54, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   profileEmoji: { fontSize: 27 },
