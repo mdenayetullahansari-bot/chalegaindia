@@ -237,7 +237,13 @@ export default function MoreScreen() {
         <Text style={styles.sectionTitle}>
           SHOPPING
         </Text>
-
+        <MenuRow
+          icon="leaf-outline"
+          title="Community Market"
+          subtitle="Discover locally grown products and support resident growers."
+          onPress={() => goTo('/community-market')}
+          tone="green"
+        />
         <MenuRow
           icon="receipt-outline"
           title="My Orders"

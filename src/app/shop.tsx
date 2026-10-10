@@ -844,8 +844,30 @@ export default function ShopScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.gardenCard} onPress={() => router.push('/garden')} activeOpacity={0.9}>
-          <View style={styles.gardenCardIcon}><Text style={styles.gardenCardEmoji}>🌌</Text></View>
+        <TouchableOpacity
+          style={[styles.gardenCard, { backgroundColor: '#EAF6EC', marginBottom: 12 }]}
+          onPress={() => router.push('/community-market')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.gardenCardIcon}>
+            <Text style={styles.gardenCardEmoji}>🌱</Text>
+          </View>
+          <View style={styles.gardenCardBody}>
+            <Text style={styles.gardenCardEyebrow}>GROWN BY KOLKATA RESIDENTS</Text>
+            <Text style={styles.gardenCardTitle}>COMMUNITY MARKET</Text>
+            <Text style={styles.gardenCardText}>Discover local produce and support neighbourhood growers.</Text>
+          </View>
+          <Text style={styles.gardenCardArrow}>EXPLORE →</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.gardenCard}
+          onPress={() => router.push('/garden')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.gardenCardIcon}>
+            <Text style={styles.gardenCardEmoji}>🌌</Text>
+          </View>
           <View style={styles.gardenCardBody}>
             <Text style={styles.gardenCardEyebrow}>CHALEGA GARDENVERSE</Text>
             <Text style={styles.gardenCardTitle}>MY GARDEN</Text>

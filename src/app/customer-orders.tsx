@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -204,6 +205,55 @@ export default function CustomerOrdersScreen() {
     const orderId = order.orderId || order.id;
     if (!orderId || cancellingOrderId) return;
 
+    const performCancellation = async () => {
+      setCancellingOrderId(orderId);
+
+      try {
+        const { error } = await supabase.rpc(
+          'cancel_my_community_order',
+          { p_order_id: orderId }
+        );
+
+        if (error) throw error;
+
+        await loadOrders();
+
+        const message =
+          'Your Community Market order has been cancelled and the stock reservation released.';
+
+        if (Platform.OS === 'web') {
+          window.alert(message);
+        } else {
+          Alert.alert('Order cancelled', message);
+        }
+      } catch (error: any) {
+        const message =
+          error?.message ||
+          'This order could not be cancelled. Please contact support if you need help.';
+
+        if (Platform.OS === 'web') {
+          window.alert(`Could not cancel order: ${message}`);
+        } else {
+          Alert.alert('Could not cancel order', message);
+        }
+      } finally {
+        setCancellingOrderId(null);
+      }
+    };
+
+    const confirmCancellation = () => {
+      void performCancellation();
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        'Cancel this Community Market order? Your reserved stock will be restored.'
+      );
+
+      if (confirmed) confirmCancellation();
+      return;
+    }
+
     Alert.alert(
       'Cancel Community Market order?',
       'This is only available before preparation starts. Your reserved stock will be restored.',
@@ -212,27 +262,7 @@ export default function CustomerOrdersScreen() {
         {
           text: 'Cancel order',
           style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              setCancellingOrderId(orderId);
-              try {
-                const { error } = await supabase.rpc(
-                  'cancel_my_community_order',
-                  { p_order_id: orderId }
-                );
-                if (error) throw error;
-                await loadOrders();
-                Alert.alert('Order cancelled', 'Your Community Market order has been cancelled and the stock reservation released.');
-              } catch (error: any) {
-                Alert.alert(
-                  'Could not cancel order',
-                  error?.message || 'This order can no longer be cancelled. Please contact support if you need help.'
-                );
-              } finally {
-                setCancellingOrderId(null);
-              }
-            })();
-          },
+          onPress: confirmCancellation,
         },
       ]
     );
