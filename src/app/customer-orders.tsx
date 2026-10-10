@@ -528,7 +528,11 @@ export default function CustomerOrdersScreen() {
                     <View style={styles.paymentStatusRow}>
                       <Text style={styles.paymentStatusLabel}>Payment status</Text>
                       <Text style={styles.paymentStatusValue}>
-                        {formatPaymentStatus(order.payment_status)}
+                        {status === 'Cancelled' &&
+                        order.payment_method?.trim().toLowerCase() === 'cod' &&
+                        order.payment_status?.trim().toLowerCase() === 'pending'
+                          ? 'Not collected — order cancelled'
+                          : formatPaymentStatus(order.payment_status)}
                       </Text>
                     </View>
                   </View>
