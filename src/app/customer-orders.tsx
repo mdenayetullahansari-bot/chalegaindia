@@ -33,6 +33,8 @@ type Order = {
   total?: number;
   delivery?: string;
   status?: string;
+  payment_method?: string | null;
+  payment_status?: string | null;
   createdAt?: string;
 };
 
@@ -114,7 +116,7 @@ export default function CustomerOrdersScreen() {
       const { data, error } = await supabase
         .from('orders')
         .select(
-          'id, order_id, customer_name, products, total, delivery, status, created_at'
+          'id, order_id, customer_name, products, total, delivery, status, created_at, payment_method, payment_status'
         )
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -142,6 +144,8 @@ export default function CustomerOrdersScreen() {
           total: Number(row.total || 0),
           delivery: row.delivery || 'Standard',
           status: row.status || 'Order Received',
+          payment_method: row.payment_method,
+          payment_status: row.payment_status,
           createdAt: row.created_at,
         };
       });
@@ -519,6 +523,8 @@ export default function CustomerOrdersScreen() {
                   </TouchableOpacity>
 
                   {status === 'Order Received' &&
+                  order.payment_method?.trim().toLowerCase() === 'cod' &&
+                  order.payment_status?.trim().toLowerCase() === 'pending' &&
                   order.products?.some((product: any) => Boolean(product.community_listing_id)) ? (
                     <TouchableOpacity
                       style={styles.cancelButton}
