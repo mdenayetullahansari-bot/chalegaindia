@@ -39,6 +39,32 @@ type Order = {
   createdAt?: string;
 };
 
+const formatPaymentMethod = (value?: string | null) => {
+  if (!value?.trim()) return 'Not available';
+
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'cod' || normalized === 'cash on delivery') {
+    return 'Cash on Delivery';
+  }
+  if (normalized === 'upi') return 'UPI';
+  if (normalized === 'card') return 'Card';
+  if (normalized === 'online') return 'Online Payment';
+
+  return value
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
+const formatPaymentStatus = (value?: string | null) => {
+  if (!value?.trim()) return 'Not available';
+
+  return value
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
 const getStatusNumber = (status?: string) => {
   switch (status) {
     case 'Preparing':
@@ -490,6 +516,23 @@ export default function CustomerOrdersScreen() {
 
                   </View>
 
+                  {/* PAYMENT DETAILS */}
+
+                  <View style={styles.paymentBox}>
+                    <View style={styles.paymentHeadingRow}>
+                      <Text style={styles.paymentHeading}>PAYMENT</Text>
+                      <Text style={styles.paymentMethod}>
+                        {formatPaymentMethod(order.payment_method)}
+                      </Text>
+                    </View>
+                    <View style={styles.paymentStatusRow}>
+                      <Text style={styles.paymentStatusLabel}>Payment status</Text>
+                      <Text style={styles.paymentStatusValue}>
+                        {formatPaymentStatus(order.payment_status)}
+                      </Text>
+                    </View>
+                  </View>
+
                   {/* PRODUCTS */}
 
                   {order.products &&
@@ -831,6 +874,54 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     marginTop: 3,
+  },
+
+  paymentBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#F7FAF9',
+    borderWidth: 1,
+    borderColor: '#E7EFEC',
+  },
+
+  paymentHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+
+  paymentHeading: {
+    color: '#888888',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+
+  paymentMethod: {
+    color: BRAND.ink,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  paymentStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+
+  paymentStatusLabel: {
+    color: '#777777',
+    fontSize: 11,
+  },
+
+  paymentStatusValue: {
+    color: BRAND.teal,
+    fontSize: 11,
+    fontWeight: '900',
   },
 
   productsBox: {
