@@ -32,6 +32,21 @@ export default function OrderConfirmedScreen() {
       ? params.total
       : '';
 
+  const deliveryDeadline =
+    typeof params.deliveryDeadline === 'string'
+      ? params.deliveryDeadline
+      : '';
+
+  const formattedDeliveryDeadline = (() => {
+    if (!deliveryDeadline) return '';
+    const date = new Date(deliveryDeadline);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  })();
+
   const trackOrder = () => {
     if (!orderId) {
       router.replace('/shop');
@@ -106,6 +121,17 @@ export default function OrderConfirmedScreen() {
 
               <Text style={styles.totalAmount}>
                 ₹{Number(total).toLocaleString('en-IN')}
+              </Text>
+            </View>
+          ) : null}
+
+          {formattedDeliveryDeadline ? (
+            <View style={styles.totalBox}>
+              <Text style={styles.totalLabel}>
+                DELIVERY DEADLINE
+              </Text>
+              <Text style={styles.orderMessage}>
+                {formattedDeliveryDeadline}
               </Text>
             </View>
           ) : null}
