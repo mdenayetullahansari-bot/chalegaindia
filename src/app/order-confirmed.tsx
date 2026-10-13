@@ -17,6 +17,11 @@ import { supabase } from '@/lib/supabase';
 export default function OrderConfirmedScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+
+  const orderId =
+    typeof params.orderId === 'string'
+      ? params.orderId
+      : '';
   const isCommunityOrder = params.source === 'community';
   const [verificationStatus, setVerificationStatus] = useState<'checking' | 'verified' | 'not_found' | 'error'>(isCommunityOrder ? 'checking' : 'verified');
   const [verifiedDeliveryDeadline, setVerifiedDeliveryDeadline] = useState('');
@@ -58,11 +63,6 @@ export default function OrderConfirmedScreen() {
     verifyCommunityOrder();
     return () => { active = false; };
   }, [isCommunityOrder, orderId]);
-
-  const orderId =
-    typeof params.orderId === 'string'
-      ? params.orderId
-      : '';
 
   const customerName =
     typeof params.name === 'string'
