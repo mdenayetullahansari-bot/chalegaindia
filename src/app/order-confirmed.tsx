@@ -1,5 +1,5 @@
 import { BRAND } from '@/lib/brand';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -12,10 +12,52 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function OrderConfirmedScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const isCommunityOrder = params.source === 'community';
+  const [verificationStatus, setVerificationStatus] = useState<'checking' | 'verified' | 'not_found' | 'error'>(isCommunityOrder ? 'checking' : 'verified');
+  const [verifiedDeliveryDeadline, setVerifiedDeliveryDeadline] = useState('');
+
+  useEffect(() => {
+    if (!isCommunityOrder) return;
+    let active = true;
+    const verifyCommunityOrder = async () => {
+      try {
+        if (!orderId) {
+          if (active) setVerificationStatus('not_found');
+          return;
+        }
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) {
+          if (active) setVerificationStatus('not_found');
+          return;
+        }
+        const { data, error } = await supabase
+          .from('orders')
+          .select('order_id, delivery_deadline')
+          .eq('user_id', user.id)
+          .eq('order_id', orderId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) {
+          if (active) setVerificationStatus('not_found');
+          return;
+        }
+        if (active) {
+          setVerifiedDeliveryDeadline(data.delivery_deadline || '');
+          setVerificationStatus('verified');
+        }
+      } catch {
+        if (active) setVerificationStatus('error');
+      }
+    };
+    verifyCommunityOrder();
+    return () => { active = false; };
+  }, [isCommunityOrder, orderId]);
 
   const orderId =
     typeof params.orderId === 'string'
@@ -38,8 +80,9 @@ export default function OrderConfirmedScreen() {
       : '';
 
   const formattedDeliveryDeadline = (() => {
-    if (!deliveryDeadline) return '';
-    const date = new Date(deliveryDeadline);
+    const deadlineToFormat = isCommunityOrder ? verifiedDeliveryDeadline : deliveryDeadline;
+    if (!deadlineToFormat) return '';
+    const date = new Date(deadlineToFormat);
     if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleString('en-IN', {
       dateStyle: 'medium',
@@ -81,11 +124,19 @@ export default function OrderConfirmedScreen() {
         </Text>
 
         <Text style={styles.title}>
-          Order Confirmed!
+          {isCommunityOrder && verificationStatus !== 'verified'
+            ? verificationStatus === 'checking' ? 'Checking Your Order…' : 'Order Not Verified'
+            : 'Order Confirmed!'}
         </Text>
 
         <Text style={styles.subtitle}>
-          Thank you for choosing Chalega.
+          {isCommunityOrder && verificationStatus === 'checking'
+            ? 'We are checking the saved order details.'
+            : isCommunityOrder && verificationStatus === 'not_found'
+            ? 'We could not verify this order for your account. Please check My Orders before placing it again.'
+            : isCommunityOrder && verificationStatus === 'error'
+            ? 'We could not check the saved order right now. Please check My Orders before trying again.'
+            : 'Thank you for choosing Chalega.'}
         </Text>
 
         {customerName ? (
@@ -110,7 +161,9 @@ export default function OrderConfirmedScreen() {
           </Text>
 
           <Text style={styles.orderMessage}>
-            Your order has been successfully received.
+            {isCommunityOrder && verificationStatus !== 'verified'
+              ? 'Order status is not confirmed on this screen.'
+              : 'Your order has been successfully received.'}
           </Text>
 
           {total ? (
@@ -125,7 +178,7 @@ export default function OrderConfirmedScreen() {
             </View>
           ) : null}
 
-          {formattedDeliveryDeadline ? (
+          {formattedDeliveryDeadline && (!isCommunityOrder || verificationStatus === 'verified') ? (
             <View style={styles.totalBox}>
               <Text style={styles.totalLabel}>
                 DELIVERY DEADLINE
@@ -152,6 +205,8 @@ export default function OrderConfirmedScreen() {
           Check your order status anytime.
         </Text>
 
+        {(!isCommunityOrder || verificationStatus === 'verified') && (
+        <>
         {/* WHAT'S NEXT */}
 
         <Text style={styles.sectionTitle}>
@@ -239,6 +294,8 @@ export default function OrderConfirmedScreen() {
           </View>
 
         </View>
+        </>
+        )}
 
         {/* HEALTH MESSAGE */}
 
