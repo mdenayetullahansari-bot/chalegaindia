@@ -25,6 +25,8 @@ export default function OrderConfirmedScreen() {
   const isCommunityOrder = params.source === 'community';
   const [verificationStatus, setVerificationStatus] = useState<'checking' | 'verified' | 'not_found' | 'error'>(isCommunityOrder ? 'checking' : 'verified');
   const [verifiedDeliveryDeadline, setVerifiedDeliveryDeadline] = useState('');
+  const [verifiedPaymentMethod, setVerifiedPaymentMethod] = useState('');
+  const [verifiedPaymentStatus, setVerifiedPaymentStatus] = useState('');
 
   useEffect(() => {
     if (!isCommunityOrder) return;
@@ -43,7 +45,7 @@ export default function OrderConfirmedScreen() {
         }
         const { data, error } = await supabase
           .from('orders')
-          .select('order_id, delivery_deadline')
+          .select('order_id, delivery_deadline, status, payment_method, payment_status')
           .eq('user_id', user.id)
           .eq('order_id', orderId)
           .maybeSingle();
@@ -54,6 +56,8 @@ export default function OrderConfirmedScreen() {
         }
         if (active) {
           setVerifiedDeliveryDeadline(data.delivery_deadline || '');
+          setVerifiedPaymentMethod(data.payment_method || '');
+          setVerifiedPaymentStatus(data.payment_status || '');
           setVerificationStatus('verified');
         }
       } catch {
@@ -163,8 +167,18 @@ export default function OrderConfirmedScreen() {
           <Text style={styles.orderMessage}>
             {isCommunityOrder && verificationStatus !== 'verified'
               ? 'Order status is not confirmed on this screen.'
+              : isCommunityOrder && verifiedPaymentMethod.toUpperCase() === 'COD'
+              ? 'Your order has been received. Payment is due on delivery.'
               : 'Your order has been successfully received.'}
           </Text>
+
+          {isCommunityOrder && verificationStatus === 'verified' && verifiedPaymentStatus ? (
+            <Text style={styles.orderMessage}>
+              Payment status: {verifiedPaymentStatus.toLowerCase() === 'pending' && verifiedPaymentMethod.toUpperCase() === 'COD'
+                ? 'Due on delivery'
+                : verifiedPaymentStatus.replace(/_/g, ' ')}
+            </Text>
+          ) : null}
 
           {total ? (
             <View style={styles.totalBox}>
