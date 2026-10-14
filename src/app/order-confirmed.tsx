@@ -115,17 +115,21 @@ export default function OrderConfirmedScreen() {
         contentContainerStyle={styles.content}
       >
 
-        {/* SUCCESS */}
+        {/* SUCCESS — only show success decoration after verification */}
 
-        <View style={styles.successCircle}>
-          <Text style={styles.successIcon}>
-            ✓
-          </Text>
-        </View>
+        {(!isCommunityOrder || verificationStatus === 'verified') && (
+          <>
+            <View style={styles.successCircle}>
+              <Text style={styles.successIcon}>
+                ✓
+              </Text>
+            </View>
 
-        <Text style={styles.celebration}>
-          🎉
-        </Text>
+            <Text style={styles.celebration}>
+              🎉
+            </Text>
+          </>
+        )}
 
         <Text style={styles.title}>
           {isCommunityOrder && verificationStatus !== 'verified'
@@ -204,20 +208,24 @@ export default function OrderConfirmedScreen() {
           ) : null}
         </View>
 
-        {/* TRACK ORDER */}
+        {/* TRACK ORDER — only available for verified orders */}
 
-        <TouchableOpacity
-          style={styles.trackButton}
-          onPress={trackOrder}
-        >
-          <Text style={styles.trackButtonText}>
-            TRACK MY ORDER  →
-          </Text>
-        </TouchableOpacity>
+        {(!isCommunityOrder || verificationStatus === 'verified') && (
+          <>
+            <TouchableOpacity
+              style={styles.trackButton}
+              onPress={trackOrder}
+            >
+              <Text style={styles.trackButtonText}>
+                TRACK MY ORDER  →
+              </Text>
+            </TouchableOpacity>
 
-        <Text style={styles.trackHint}>
-          Check your order status anytime.
-        </Text>
+            <Text style={styles.trackHint}>
+              Check your order status anytime.
+            </Text>
+          </>
+        )}
 
         {(!isCommunityOrder || verificationStatus === 'verified') && (
         <>
