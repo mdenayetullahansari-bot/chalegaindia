@@ -1,5 +1,5 @@
 import { BRAND } from '@/lib/brand';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -12,6 +12,7 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function OrderConfirmedScreen() {
   const router = useRouter();
@@ -21,6 +22,51 @@ export default function OrderConfirmedScreen() {
     typeof params.orderId === 'string'
       ? params.orderId
       : '';
+  const isCommunityOrder = params.source === 'community';
+  const [verificationStatus, setVerificationStatus] = useState<'checking' | 'verified' | 'not_found' | 'error'>(isCommunityOrder ? 'checking' : 'verified');
+  const [verifiedDeliveryDeadline, setVerifiedDeliveryDeadline] = useState('');
+  const [verifiedPaymentMethod, setVerifiedPaymentMethod] = useState('');
+  const [verifiedPaymentStatus, setVerifiedPaymentStatus] = useState('');
+
+  useEffect(() => {
+    if (!isCommunityOrder) return;
+    let active = true;
+    const verifyCommunityOrder = async () => {
+      try {
+        if (!orderId) {
+          if (active) setVerificationStatus('not_found');
+          return;
+        }
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError) throw userError;
+        if (!user) {
+          if (active) setVerificationStatus('not_found');
+          return;
+        }
+        const { data, error } = await supabase
+          .from('orders')
+          .select('order_id, delivery_deadline, status, payment_method, payment_status')
+          .eq('user_id', user.id)
+          .eq('order_id', orderId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) {
+          if (active) setVerificationStatus('not_found');
+          return;
+        }
+        if (active) {
+          setVerifiedDeliveryDeadline(data.delivery_deadline || '');
+          setVerifiedPaymentMethod(data.payment_method || '');
+          setVerifiedPaymentStatus(data.payment_status || '');
+          setVerificationStatus('verified');
+        }
+      } catch {
+        if (active) setVerificationStatus('error');
+      }
+    };
+    verifyCommunityOrder();
+    return () => { active = false; };
+  }, [isCommunityOrder, orderId]);
 
   const customerName =
     typeof params.name === 'string'
@@ -31,6 +77,22 @@ export default function OrderConfirmedScreen() {
     typeof params.total === 'string'
       ? params.total
       : '';
+
+  const deliveryDeadline =
+    typeof params.deliveryDeadline === 'string'
+      ? params.deliveryDeadline
+      : '';
+
+  const formattedDeliveryDeadline = (() => {
+    const deadlineToFormat = isCommunityOrder ? verifiedDeliveryDeadline : deliveryDeadline;
+    if (!deadlineToFormat) return '';
+    const date = new Date(deadlineToFormat);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  })();
 
   const trackOrder = () => {
     if (!orderId) {
@@ -53,24 +115,36 @@ export default function OrderConfirmedScreen() {
         contentContainerStyle={styles.content}
       >
 
-        {/* SUCCESS */}
+        {/* SUCCESS — only show success decoration after verification */}
 
-        <View style={styles.successCircle}>
-          <Text style={styles.successIcon}>
-            ✓
-          </Text>
-        </View>
+        {(!isCommunityOrder || verificationStatus === 'verified') && (
+          <>
+            <View style={styles.successCircle}>
+              <Text style={styles.successIcon}>
+                ✓
+              </Text>
+            </View>
 
-        <Text style={styles.celebration}>
-          🎉
-        </Text>
+            <Text style={styles.celebration}>
+              🎉
+            </Text>
+          </>
+        )}
 
         <Text style={styles.title}>
-          Order Confirmed!
+          {isCommunityOrder && verificationStatus !== 'verified'
+            ? verificationStatus === 'checking' ? 'Checking Your Order…' : 'Order Not Verified'
+            : 'Order Confirmed!'}
         </Text>
 
         <Text style={styles.subtitle}>
-          Thank you for choosing Chalega.
+          {isCommunityOrder && verificationStatus === 'checking'
+            ? 'We are checking the saved order details.'
+            : isCommunityOrder && verificationStatus === 'not_found'
+            ? 'We could not verify this order for your account. Please check My Orders before placing it again.'
+            : isCommunityOrder && verificationStatus === 'error'
+            ? 'We could not check the saved order right now. Please check My Orders before trying again.'
+            : 'Thank you for choosing Chalega.'}
         </Text>
 
         {customerName ? (
@@ -95,8 +169,20 @@ export default function OrderConfirmedScreen() {
           </Text>
 
           <Text style={styles.orderMessage}>
-            Your order has been successfully received.
+            {isCommunityOrder && verificationStatus !== 'verified'
+              ? 'Order status is not confirmed on this screen.'
+              : isCommunityOrder && verifiedPaymentMethod.toUpperCase() === 'COD'
+              ? 'Your order has been received. Payment is due on delivery.'
+              : 'Your order has been successfully received.'}
           </Text>
+
+          {isCommunityOrder && verificationStatus === 'verified' && verifiedPaymentStatus ? (
+            <Text style={styles.orderMessage}>
+              Payment status: {verifiedPaymentStatus.toLowerCase() === 'pending' && verifiedPaymentMethod.toUpperCase() === 'COD'
+                ? 'Due on delivery'
+                : verifiedPaymentStatus.replace(/_/g, ' ')}
+            </Text>
+          ) : null}
 
           {total ? (
             <View style={styles.totalBox}>
@@ -109,23 +195,40 @@ export default function OrderConfirmedScreen() {
               </Text>
             </View>
           ) : null}
+
+          {formattedDeliveryDeadline && (!isCommunityOrder || verificationStatus === 'verified') ? (
+            <View style={styles.totalBox}>
+              <Text style={styles.totalLabel}>
+                DELIVERY DEADLINE
+              </Text>
+              <Text style={styles.orderMessage}>
+                {formattedDeliveryDeadline}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* TRACK ORDER */}
+        {/* TRACK ORDER — only available for verified orders */}
 
-        <TouchableOpacity
-          style={styles.trackButton}
-          onPress={trackOrder}
-        >
-          <Text style={styles.trackButtonText}>
-            TRACK MY ORDER  →
-          </Text>
-        </TouchableOpacity>
+        {(!isCommunityOrder || verificationStatus === 'verified') && (
+          <>
+            <TouchableOpacity
+              style={styles.trackButton}
+              onPress={trackOrder}
+            >
+              <Text style={styles.trackButtonText}>
+                TRACK MY ORDER  →
+              </Text>
+            </TouchableOpacity>
 
-        <Text style={styles.trackHint}>
-          Check your order status anytime.
-        </Text>
+            <Text style={styles.trackHint}>
+              Check your order status anytime.
+            </Text>
+          </>
+        )}
 
+        {(!isCommunityOrder || verificationStatus === 'verified') && (
+        <>
         {/* WHAT'S NEXT */}
 
         <Text style={styles.sectionTitle}>
@@ -213,6 +316,8 @@ export default function OrderConfirmedScreen() {
           </View>
 
         </View>
+        </>
+        )}
 
         {/* HEALTH MESSAGE */}
 
