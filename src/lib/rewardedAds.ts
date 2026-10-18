@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import {
   RewardedAd,
   RewardedAdEventType,
@@ -22,7 +24,12 @@ export type RewardedAdController = {
   ) => () => void;
 };
 
-const REWARDED_AD_UNIT_ID = TestIds.REWARDED;
+const REWARDED_AD_UNIT_ID =
+  __DEV__ || Platform.OS === 'web'
+    ? TestIds.REWARDED
+    : Platform.OS === 'ios'
+      ? 'ca-app-pub-7471260232247954/1235093912'
+      : 'ca-app-pub-7471260232247954/6487420596';
 
 const POLL_ATTEMPTS = 15;
 const POLL_INTERVAL_MS = 1000;
