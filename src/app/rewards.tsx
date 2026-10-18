@@ -50,6 +50,7 @@ export default function RewardsScreen() {
   const [rewards, setRewards] = useState<Reward[]>(DEFAULT_REWARDS);
   const [loading, setLoading] = useState(true);
   const [adReady, setAdReady] = useState(false);
+  const [adStatus, setAdStatus] = useState<'loading' | 'ready' | 'error' | 'sign-in'>('loading');
   const [adBusy, setAdBusy] = useState(false);
 
   const loadWallet = useCallback(async () => {
@@ -163,17 +164,30 @@ export default function RewardsScreen() {
 
     const removeLoaded = rewardedAd.addListener(
       'loaded',
-      () => setAdReady(true)
+      () => {
+        setAdReady(true);
+        setAdStatus('ready');
+      }
     );
 
     const removeClosed = rewardedAd.addListener(
       'closed',
-      () => setAdReady(false)
+      () => {
+        setAdReady(false);
+        setAdStatus('loading');
+      }
     );
 
     const removeError = rewardedAd.addListener(
       'error',
-      () => setAdReady(false)
+      error => {
+        setAdReady(false);
+        setAdStatus(
+          error instanceof Error && /sign in/i.test(error.message)
+            ? 'sign-in'
+            : 'error'
+        );
+      }
     );
 
     rewardedAd.load();
@@ -196,9 +210,32 @@ export default function RewardsScreen() {
       return;
     }
 
+    if (adStatus === 'sign-in') {
+      Alert.alert(
+        'Sign in to earn Coins',
+        'Create an account to watch rewarded ads and have your Coins saved to your wallet.',
+        [
+          { text: 'NOT NOW', style: 'cancel' },
+          { text: 'SIGN IN', onPress: () => router.push('/auth') },
+        ]
+      );
+      return;
+    }
+
+    if (!adReady) {
+      if (adStatus === 'error') {
+        setAdStatus('loading');
+        rewardedAd.load();
+      }
+      return;
+    }
+
+    let signInRequired = false;
+
     try {
       setAdBusy(true);
       setAdReady(false);
+      setAdStatus('loading');
 
       await rewardedAd.show();
       await loadWallet();
@@ -209,13 +246,30 @@ export default function RewardsScreen() {
       );
     } catch (error) {
       console.warn('[REWARDED AD] Error:', error);
-      Alert.alert(
-        'Reward Verification',
-        'The ad completed, but verification is still pending. Please check your Coin wallet again shortly.'
-      );
+
+      if (error instanceof Error && /sign in/i.test(error.message)) {
+        signInRequired = true;
+        setAdStatus('sign-in');
+        Alert.alert(
+          'Sign in to earn Coins',
+          'Create an account to watch rewarded ads and have your Coins saved to your wallet.',
+          [
+            { text: 'NOT NOW', style: 'cancel' },
+            { text: 'SIGN IN', onPress: () => router.push('/auth') },
+          ]
+        );
+      } else {
+        setAdStatus('error');
+        Alert.alert(
+          'Reward Verification',
+          'The ad completed, but verification is still pending. Please check your Coin wallet again shortly.'
+        );
+      }
     } finally {
       setAdBusy(false);
-      rewardedAd.load();
+      if (!signInRequired) {
+        rewardedAd.load();
+      }
     }
   };
 
@@ -594,7 +648,7 @@ export default function RewardsScreen() {
             ]}
             onPress={watchAdForCoins}
             activeOpacity={0.84}
-            disabled={adBusy}
+            disabled={adBusy || (adStatus === 'loading' && Platform.OS !== 'web')}
           >
             <Text style={styles.earnEmoji}>
               📺
@@ -607,9 +661,13 @@ export default function RewardsScreen() {
             <Text style={styles.earnDescription}>
               {adBusy
                 ? 'Verifying your reward...'
-                : adReady
+                : adStatus === 'ready'
                   ? 'Watch a short ad and earn +25 Coins.'
-                  : 'Loading a rewarded ad...'}
+                  : adStatus === 'sign-in'
+                    ? 'Sign in to watch ads and earn +25 Coins.'
+                    : adStatus === 'error'
+                      ? 'Ad unavailable. Tap to try again.'
+                      : 'Loading a rewarded ad...'}
             </Text>
           </TouchableOpacity>
         </View>
