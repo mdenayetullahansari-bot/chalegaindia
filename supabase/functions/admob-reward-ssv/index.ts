@@ -104,6 +104,15 @@ async function verifyCallback(requestUrl: string) {
   if (!valid) throw new Error("Invalid AdMob signature.");
 
   const url = new URL(requestUrl);
+  if (
+    url.searchParams.get("ad_unit") === "1234567890" &&
+    url.searchParams.get("transaction_id") === "123456789" &&
+    !url.searchParams.has("user_id") &&
+    !url.searchParams.has("custom_data")
+  ) {
+    return { verificationProbe: true as const };
+  }
+
   const userId = url.searchParams.get("user_id");
   const transactionId = url.searchParams.get("transaction_id");
   const customData = url.searchParams.get("custom_data");
@@ -142,16 +151,12 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const requestUrl = new URL(req.url);
-  if (
-    !requestUrl.searchParams.has("signature") &&
-    !requestUrl.searchParams.has("key_id")
-  ) {
-    return Response.json({ ok: true, verification_probe: true });
-  }
-
   try {
     const verified = await verifyCallback(req.url);
+    if ("verificationProbe" in verified) {
+      return Response.json({ ok: true, verification_probe: true });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
