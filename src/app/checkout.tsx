@@ -781,7 +781,7 @@ export default function CheckoutScreen() {
           .includes('cancel')      ) {
         Alert.alert(
           'Payment Cancelled',
-          'Your order was not placed. You can choose another payment method and try again.',
+          'Payment was cancelled or could not be completed. Your order may still exist, and payment is not confirmed. Please check My Orders or contact Chalega support before trying again.',
         );
       } else {
         Alert.alert(
