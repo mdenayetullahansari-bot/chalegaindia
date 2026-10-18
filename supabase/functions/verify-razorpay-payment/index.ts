@@ -14,6 +14,7 @@ interface ChalegaOrder {
   order_id: string;
   user_id: string | null;
   total: number;
+  status: string;
   payment_status: string;
   payment_method: string;
   razorpay_order_id: string | null;
@@ -149,7 +150,18 @@ export default {
           );
         }
 
-        const userId = ctx.userClaims.id;
+        const userId = ctx.userClaims?.id;
+
+        if (typeof userId !== "string" || !userId.trim()) {
+          return jsonResponse(
+            {
+              success: false,
+              verified: false,
+              error: "Authentication required.",
+            },
+            401,
+          );
+        }
 
         const supabaseUrl =
           Deno.env.get("SUPABASE_URL");
@@ -227,19 +239,7 @@ export default {
           error: orderError,
         } = await adminSupabase
           .from("orders")
-          .select(
-            [
-              "id",
-              "order_id",
-              "user_id",
-              "total",
-              "payment_status",
-              "payment_method",
-              "razorpay_order_id",
-              "razorpay_payment_id",
-              "razorpay_signature",
-            ].join(","),
-          )
+          .select("id, order_id, user_id, total, status, payment_status, payment_method, razorpay_order_id, razorpay_payment_id, razorpay_signature")
           .eq("id", chalegaOrderId)
           .eq("user_id", userId)
           .maybeSingle();
@@ -279,6 +279,17 @@ export default {
 
         const chalegaOrder =
           order as ChalegaOrder;
+
+        if (chalegaOrder.status === "Cancelled") {
+          return jsonResponse(
+            {
+              success: false,
+              verified: false,
+              error: "Cancelled orders cannot be marked as paid.",
+            },
+            400,
+          );
+        }
 
         /*
          * -------------------------------------------------------
@@ -494,41 +505,36 @@ export default {
           Number(chalegaOrder.total);
 
         if (
-          !Number.isFinite(
-            orderTotalRupees,
-          ) ||
-          orderTotalRupees <= 0
+          !Number.isFinite(orderTotalRupees) ||
+          orderTotalRupees <= 0 ||
+          Math.round(orderTotalRupees * 100) / 100 !== orderTotalRupees
         ) {
-          console.error(
-            "Invalid Chalega order total.",
-            {
-              userId,
-              chalegaOrderId:
-                chalegaOrder.id,
-              total:
-                chalegaOrder.total,
-            },
-          );
+          console.error("Invalid Chalega order total.", {
+            userId,
+            chalegaOrderId: chalegaOrder.id,
+            total: chalegaOrder.total,
+          });
 
           return jsonResponse(
             {
               success: false,
               verified: false,
-              error:
-                "The Chalega order has an invalid total.",
+              error: "The Chalega order has an invalid total.",
             },
             400,
           );
         }
-
         const expectedAmountPaise =
           Math.round(
             orderTotalRupees * 100,
           );
 
         if (
-          payment.amount !==
-          expectedAmountPaise
+          !Number.isSafeInteger(expectedAmountPaise) ||
+          expectedAmountPaise < 100 ||
+          expectedAmountPaise > 99999999 ||
+          !Number.isSafeInteger(payment.amount) ||
+          payment.amount !== expectedAmountPaise
         ) {
           console.warn(
             "Payment amount mismatch.",
@@ -605,390 +611,81 @@ export default {
 
         /*
          * -------------------------------------------------------
-         * 9. Idempotency / replay protection.
+         * 9. Atomically reconcile the verified payment.
          * -------------------------------------------------------
          *
-         * If the same payment has already been recorded, return
-         * success instead of creating another payment record.
+         * The database transaction updates the order and saves
+         * its payment record together. Never report success unless
+         * the RPC confirms both reconciliation and record storage.
          */
         const {
-          data: existingPayment,
-          error:
-            existingPaymentError,
-        } = await adminSupabase
-          .from("payment_records")
-          .select(
-            "id, order_id, razorpay_order_id, razorpay_payment_id, amount, currency, status",
-          )
-          .eq(
-            "razorpay_payment_id",
-            razorpayPaymentId,
-          )
-          .maybeSingle();
+          data: reconciliationResult,
+          error: reconciliationError,
+        } = await adminSupabase.rpc("reconcile_razorpay_payment", {
+          p_order_id: chalegaOrder.id,
+          p_user_id: userId,
+          p_razorpay_order_id: razorpayOrderId,
+          p_payment_id: razorpayPaymentId,
+          p_amount_paise: payment.amount,
+          p_currency: payment.currency,
+          p_payment_method: payment.method ?? null,
+          p_payment_status: payment.status,
+          p_razorpay_signature: razorpaySignature,
+        });
 
-        if (existingPaymentError) {
-          console.error(
-            "Failed to check existing payment record.",
-            {
-              userId,
-              chalegaOrderId:
-                chalegaOrder.id,
-              razorpayPaymentId,
-              error:
-                existingPaymentError,
-            },
-          );
+        if (
+          reconciliationError ||
+          reconciliationResult?.success !== true ||
+          reconciliationResult?.payment_record_saved !== true
+        ) {
+          console.error("Atomic payment reconciliation failed.", {
+            userId,
+            chalegaOrderId: chalegaOrder.id,
+            razorpayOrderId,
+            razorpayPaymentId,
+            error: reconciliationError,
+            result: reconciliationResult,
+          });
 
           return jsonResponse(
             {
               success: false,
               verified: false,
-              error:
-                "Unable to check payment history.",
+              error: "Payment was verified but database reconciliation could not be confirmed.",
             },
             500,
           );
         }
 
-        if (existingPayment) {
-          if (
-            existingPayment.order_id !==
-            chalegaOrder.id
-          ) {
-            console.error(
-              "Payment ID is already attached to a different order.",
-              {
-                userId,
-                chalegaOrderId:
-                  chalegaOrder.id,
-                razorpayPaymentId,
-                existingOrderId:
-                  existingPayment.order_id,
-              },
-            );
-
-            return jsonResponse(
-              {
-                success: false,
-                verified: false,
-                error:
-                  "This payment is already attached to another order.",
-              },
-              409,
-            );
-          }
-
-          console.info(
-            "Payment verification replay detected; returning existing success.",
-            {
-              userId,
-              chalegaOrderId:
-                chalegaOrder.id,
-              razorpayPaymentId,
-            },
-          );
-
-          return jsonResponse({
-            success: true,
-            verified: true,
-            captured: true,
-            already_recorded: true,
-            payment: {
-              razorpay_order_id:
-                razorpayOrderId,
-              razorpay_payment_id:
-                razorpayPaymentId,
-              amount:
-                payment.amount,
-              currency:
-                payment.currency,
-              status:
-                payment.status,
-              method:
-                payment.method ??
-                null,
-            },
-          });
-        }
-
-        /*
-         * -------------------------------------------------------
-         * 10. Reconcile the Chalega order.
-         * -------------------------------------------------------
-         *
-         * We use a guarded update:
-         * - exact order UUID
-         * - exact authenticated user
-         * - exact Razorpay order ID
-         *
-         * The payment status is changed by the server only.
-         */
-        const {
-          data: updatedOrder,
-          error:
-            updateOrderError,
-        } = await adminSupabase
-          .from("orders")
-          .update({
-            payment_status:
-              "paid",
-            razorpay_payment_id:
-              razorpayPaymentId,
-            razorpay_signature:
-              razorpaySignature,
-          })
-          .eq(
-            "id",
-            chalegaOrder.id,
-          )
-          .eq(
-            "user_id",
-            userId,
-          )
-          .eq(
-            "razorpay_order_id",
-            razorpayOrderId,
-          )
-          .select(
-            "id, order_id, payment_status, razorpay_order_id, razorpay_payment_id",
-          )
-          .maybeSingle();
-
-        if (updateOrderError) {
-          console.error(
-            "Failed to mark Chalega order as paid.",
-            {
-              userId,
-              chalegaOrderId:
-                chalegaOrder.id,
-              razorpayOrderId,
-              razorpayPaymentId,
-              error:
-                updateOrderError,
-            },
-          );
-
-          return jsonResponse(
-            {
-              success: false,
-              verified: false,
-              error:
-                "Payment was verified but the order could not be updated.",
-            },
-            500,
-          );
-        }
-
-        if (!updatedOrder) {
-          /*
-           * This can occur if another request reconciled the order
-           * between our initial read and this update.
-           *
-           * Re-read it before treating the operation as a failure.
-           */
-          const {
-            data: currentOrder,
-            error:
-              currentOrderError,
-          } = await adminSupabase
-            .from("orders")
-            .select(
-              "id, order_id, user_id, payment_status, razorpay_order_id, razorpay_payment_id",
-            )
-            .eq(
-              "id",
-              chalegaOrder.id,
-            )
-            .eq(
-              "user_id",
-              userId,
-            )
-            .maybeSingle();
-
-          if (currentOrderError) {
-            console.error(
-              "Failed to re-read Chalega order after guarded update.",
-              {
-                userId,
-                chalegaOrderId:
-                  chalegaOrder.id,
-                error:
-                  currentOrderError,
-              },
-            );
-
-            return jsonResponse(
-              {
-                success: false,
-                verified: false,
-                error:
-                  "Payment was verified but order reconciliation could not be confirmed.",
-              },
-              500,
-            );
-          }
-
-          if (
-            currentOrder?.payment_status ===
-              "paid" &&
-            currentOrder.razorpay_payment_id ===
-              razorpayPaymentId
-          ) {
-            console.info(
-              "Concurrent payment reconciliation detected.",
-              {
-                userId,
-                chalegaOrderId:
-                  chalegaOrder.id,
-                razorpayPaymentId,
-              },
-            );
-          } else {
-            return jsonResponse(
-              {
-                success: false,
-                verified: false,
-                error:
-                  "Payment was verified but order reconciliation could not be completed.",
-              },
-              500,
-            );
-          }
-        }
-
-        /*
-         * -------------------------------------------------------
-         * 11. Create the payment audit record.
-         * -------------------------------------------------------
-         *
-         * amount is stored in paise here because it is the exact
-         * amount returned by Razorpay.
-         */
-        const {
-          error:
-            paymentRecordError,
-        } = await adminSupabase
-          .from("payment_records")
-          .insert({
-            order_id:
-              chalegaOrder.id,
-            provider:
-              "razorpay",
-            razorpay_order_id:
-              razorpayOrderId,
-            razorpay_payment_id:
-              razorpayPaymentId,
-            razorpay_signature:
-              razorpaySignature,
-            amount:
-              payment.amount,
-            currency:
-              payment.currency,
-            payment_method:
-              payment.method ??
-              null,
-            status:
-              payment.status,
-          });
-
-        if (paymentRecordError) {
-          /*
-           * The order is already marked paid at this point.
-           * Never tell the customer the payment failed merely
-           * because the audit insert failed.
-           *
-           * Log it clearly so it can be repaired/reconciled.
-           */
-          console.error(
-            "Payment verified and order marked paid, but payment record insertion failed.",
-            {
-              userId,
-              chalegaOrderId:
-                chalegaOrder.id,
-              razorpayOrderId,
-              razorpayPaymentId,
-              error:
-                paymentRecordError,
-            },
-          );
-
-          return jsonResponse(
-            {
-              success: true,
-              verified: true,
-              captured: true,
-              reconciled: true,
-              payment_record_saved:
-                false,
-              warning:
-                "Payment was verified and the order was marked paid. Payment audit record requires reconciliation.",
-              payment: {
-                razorpay_order_id:
-                  razorpayOrderId,
-                razorpay_payment_id:
-                  razorpayPaymentId,
-                amount:
-                  payment.amount,
-                currency:
-                  payment.currency,
-                status:
-                  payment.status,
-                method:
-                  payment.method ??
-                  null,
-              },
-            },
-          );
-        }
-
-        console.info(
-          "Razorpay payment fully verified and reconciled.",
-          {
-            userId,
-            chalegaOrderId:
-              chalegaOrder.id,
-            publicOrderId:
-              chalegaOrder.order_id,
-            razorpayOrderId,
-            razorpayPaymentId,
-            amount:
-              payment.amount,
-            currency:
-              payment.currency,
-            status:
-              payment.status,
-          },
-        );
+        console.info("Razorpay payment fully verified and atomically reconciled.", {
+          userId,
+          chalegaOrderId: chalegaOrder.id,
+          publicOrderId: chalegaOrder.order_id,
+          razorpayOrderId,
+          razorpayPaymentId,
+          amount: payment.amount,
+          currency: payment.currency,
+          status: payment.status,
+        });
 
         return jsonResponse({
           success: true,
           verified: true,
           captured: true,
           reconciled: true,
-          payment_record_saved:
-            true,
+          payment_record_saved: true,
           order: {
-            id:
-              chalegaOrder.id,
-            order_id:
-              chalegaOrder.order_id,
-            payment_status:
-              "paid",
+            id: chalegaOrder.id,
+            order_id: chalegaOrder.order_id,
+            payment_status: "paid",
           },
           payment: {
-            razorpay_order_id:
-              razorpayOrderId,
-            razorpay_payment_id:
-              razorpayPaymentId,
-            amount:
-              payment.amount,
-            currency:
-              payment.currency,
-            status:
-              payment.status,
-            method:
-              payment.method ??
-              null,
+            razorpay_order_id: razorpayOrderId,
+            razorpay_payment_id: razorpayPaymentId,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            method: payment.method ?? null,
           },
         });
       } catch (error) {
