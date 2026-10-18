@@ -279,48 +279,40 @@ export default {
           );
 
         if (
-          !Number.isFinite(
-            orderTotalRupees
-          ) ||
-          orderTotalRupees <= 0
+          !Number.isFinite(orderTotalRupees) ||
+          orderTotalRupees <= 0 ||
+          Math.round(orderTotalRupees * 100) / 100 !== orderTotalRupees
         ) {
-          console.error(
-            "Invalid Chalega order total.",
-            {
-              userId,
-              chalegaOrderId:
-                chalegaOrder.id,
-              total:
-                chalegaOrder.total,
-            }
-          );
+          console.error("Invalid Chalega order total.", {
+            userId,
+            chalegaOrderId: chalegaOrder.id,
+            total: chalegaOrder.total,
+          });
 
           return Response.json(
             {
               success: false,
-              error:
-                "The order has an invalid total.",
+              error: "The order has an invalid total.",
             },
             { status: 400 }
           );
         }
 
-        const amount =
-          Math.round(
-            orderTotalRupees * 100
-          );
+        const amount = Math.round(orderTotalRupees * 100);
 
-        if (amount < 100) {
+        if (
+          !Number.isSafeInteger(amount) ||
+          amount < 100 ||
+          amount > 99999999
+        ) {
           return Response.json(
             {
               success: false,
-              error:
-                "The payment amount is below the Razorpay minimum.",
+              error: "The payment amount is outside the allowed range.",
             },
             { status: 400 }
           );
         }
-
         /*
          * -------------------------------------------------------
          * 5. Create Razorpay order.
