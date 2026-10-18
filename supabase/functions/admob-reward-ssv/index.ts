@@ -142,13 +142,13 @@ Deno.serve(async (req) => {
     return new Response("Method Not Allowed", { status: 405 });
   }
 
-    const requestUrl = new URL(req.url);
-    if (
-      !requestUrl.searchParams.has("signature") &&
-      !requestUrl.searchParams.has("key_id")
-    ) {
-      return Response.json({ ok: true, verification_probe: true });
-    }
+  const requestUrl = new URL(req.url);
+  if (
+    !requestUrl.searchParams.has("signature") &&
+    !requestUrl.searchParams.has("key_id")
+  ) {
+    return Response.json({ ok: true, verification_probe: true });
+  }
 
   try {
     const verified = await verifyCallback(req.url);
